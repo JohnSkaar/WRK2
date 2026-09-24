@@ -12,16 +12,37 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #f5f5f5;
             color: #333;
             line-height: 1.5;
         }
 
         .container {
-            max-width: 1600px;
+            max-width: 1800px;
             margin: 0 auto;
             padding: 20px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .nav-tabs a {
+            padding: 12px 20px;
+            text-decoration: none;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-tabs a.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
         }
 
         header {
@@ -56,60 +77,6 @@
             color: #3498db;
         }
 
-        .stat-label {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .nav-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #ddd;
-        }
-
-        .nav-tabs a {
-            padding: 12px 20px;
-            text-decoration: none;
-            color: #666;
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-
-        .nav-tabs a.active {
-            color: #3498db;
-            border-bottom-color: #3498db;
-        }
-
-        .nav-tabs a:hover {
-            color: #3498db;
-        }
-
-        tr.status-ready {
-            background-color: #d4edda;
-        }
-
-        tr.status-ready:hover {
-            background-color: #c3e6cb;
-        }
-
-        tr.status-incomplete {
-            background-color: #fff3cd;
-        }
-
-        tr.status-incomplete:hover {
-            background-color: #ffe69c;
-        }
-
-        tr.status-nodate {
-            background-color: #f8d7da;
-        }
-
-        tr.status-nodate:hover {
-            background-color: #f5c6cb;
-        }
-
         .controls {
             display: flex;
             gap: 10px;
@@ -125,7 +92,6 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
-            transition: background 0.2s;
         }
 
         button:hover {
@@ -166,12 +132,17 @@
         }
 
         td {
-            padding: 12px;
+            padding: 10px 12px;
             border-bottom: 1px solid #ecf0f1;
         }
 
-        tr:hover {
-            background: #f9f9f9;
+        .expand-btn {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 16px;
         }
 
         .id-cell {
@@ -180,14 +151,20 @@
             min-width: 60px;
         }
 
+        .metode-cell {
+            min-width: 60px;
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+
         .area-cell {
-            min-width: 120px;
+            min-width: 100px;
             color: #7f8c8d;
             font-size: 12px;
         }
 
         .activity-cell {
-            min-width: 200px;
+            min-width: 180px;
             font-weight: 500;
         }
 
@@ -244,22 +221,59 @@
             font-size: 13px;
         }
 
-        .status-tag {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 3px;
+        /* Farger for status */
+        tr.status-ready {
+            background-color: #d4edda;
+        }
+
+        tr.status-ready:hover {
+            background-color: #c3e6cb;
+        }
+
+        tr.status-incomplete {
+            background-color: #fff3cd;
+        }
+
+        tr.status-incomplete:hover {
+            background-color: #ffe69c;
+        }
+
+        tr.status-nodate {
+            background-color: #f8d7da;
+        }
+
+        tr.status-nodate:hover {
+            background-color: #f5c6cb;
+        }
+
+        .detail-row {
+            display: none;
+            background: #f9f9f9;
+        }
+
+        .detail-row.expanded {
+            display: table-row;
+        }
+
+        .detail-content {
+            padding: 20px;
             font-size: 12px;
+        }
+
+        .detail-content h4 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .detail-item {
+            margin-bottom: 10px;
+        }
+
+        .detail-label {
             font-weight: 600;
-        }
-
-        .status-ready {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
+            color: #555;
+            min-width: 120px;
+            display: inline-block;
         }
 
         .footer {
@@ -274,29 +288,25 @@
     <div class="container">
         <div class="nav-tabs">
             <a class="active" onclick="showTab('oversikt')">Oversikt</a>
-            <a onclick="showTab('aktiviteter')">Aktiviteter (Entreprenør)</a>
+            <a onclick="window.location.href='aktiviteter.html'">Aktiviteter (Entreprenør)</a>
         </div>
 
         <header>
             <h1>WRK2 Aktivitetsoversikt</h1>
-            <p>Produksjonsstyringsverktøy for byggeplass</p>
+            <p>Produksjonsstyringsverktøy for byggeplass - fra Excel-arket med 84 aktiviteter</p>
 
             <div class="stats">
                 <div class="stat">
                     <span class="stat-number" id="total-activities">0</span>
-                    <span class="stat-label">Aktiviteter totalt</span>
+                    <span>Aktiviteter totalt</span>
                 </div>
                 <div class="stat">
                     <span class="stat-number" id="ready-activities">0</span>
-                    <span class="stat-label">Helt klare (7/7)</span>
+                    <span>Helt klare (7/7)</span>
                 </div>
                 <div class="stat">
                     <span class="stat-number" id="pending-activities">0</span>
-                    <span class="stat-label">Ufullstendige</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-number" id="no-date">0</span>
-                    <span class="stat-label">Mangler startdato</span>
+                    <span>Ufullstendige</span>
                 </div>
             </div>
 
@@ -316,8 +326,7 @@
             <select id="status-filter">
                 <option value="">Alle statuser</option>
                 <option value="ready">Klare (7/7)</option>
-                <option value="pending">Ufullstendige</option>
-                <option value="no-date">Mangler dato</option>
+                <option value="incomplete">Ufullstendige</option>
             </select>
             <button onclick="resetFilters()" class="secondary">Nullstill filter</button>
         </div>
@@ -326,7 +335,9 @@
             <table>
                 <thead>
                     <tr>
+                        <th style="width: 30px;"></th>
                         <th>ID</th>
+                        <th>Metode</th>
                         <th>Område</th>
                         <th>Aktivitet</th>
                         <th>Startdato</th>
@@ -334,10 +345,10 @@
                         <th>Avklart</th>
                     </tr>
                     <tr class="prerequisites-header">
-                        <th colspan="4"></th>
+                        <th colspan="6"></th>
                         <th title="Mannskap">Mannskap</th>
                         <th title="Materialer">Materialer</th>
-                        <th title="Foregående">Foregaende</th>
+                        <th title="Foregaende">Foregaende</th>
                         <th title="Plass">Plass</th>
                         <th title="Informasjon">Info</th>
                         <th title="Ytre faktorer">Ytre</th>
@@ -350,8 +361,8 @@
         </div>
 
         <div class="footer">
-            <p>Data lagres automatisk i nettleseren. Åpne samme browser for å se lagrede endringer.</p>
-            <p>Last versjon: <span id="last-updated">aldri</span></p>
+            <p>Data lagres automatisk i nettleseren. Klikk på rad for å se detaljer (planmerknad, metodebeskrivelse).</p>
+            <p>Siste oppdatering: <span id="last-updated">aldri</span></p>
         </div>
     </div>
 
@@ -359,12 +370,12 @@
 
     <script>
         const STORAGE_KEY = 'wrk2_aktiviteter';
-        const LAST_UPDATE_KEY = 'wrk2_last_update';
         let aktiviteter = [];
         let originalAktiviteter = [];
+        let expandedRows = new Set();
 
-        // Data fra Excel (84 aktiviteter)
-        const DATA = [{"id": "A001", "area": "8300 - Utomhus", "activity": "Byggegjerde", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A008", "area": "8300 - Utomhus", "activity": "Grave ut for prov.strøm", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A010", "area": "8300 - Utomhus", "activity": "Opprigg kontorrigg", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A011", "area": "8300 - Utomhus", "activity": "Bygg lagerplass.", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A013", "area": "8300 - Utomhus", "activity": "Massebytte Lekker", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A014", "area": "8300 - Utomhus", "activity": "Graving fundament", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A015", "area": "8300 - Utomhus", "activity": "Piling/søylefundament", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A020", "area": "8300 - Utomhus", "activity": "Sprøyt betong fundament", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A021", "area": "8300 - Utomhus", "activity": "Underbetong og oppstøp", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A030", "area": "1100 - Fundamentering", "activity": "Oppset oppbygning", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A031", "area": "1100 - Fundamentering", "activity": "Armering fundament", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A032", "area": "1100 - Fundamentering", "activity": "Betongarbeider fundament", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A040", "area": "1100 - Fundamentering", "activity": "Dreneringsarbeid", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A050", "area": "1200 - Loddløst arbeid", "activity": "Montering av søyler", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A051", "area": "1200 - Loddløst arbeid", "activity": "Montering av bjelker", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A052", "area": "1200 - Loddløst arbeid", "activity": "Montering av dekker", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A053", "area": "1200 - Loddløst arbeid", "activity": "Montering av trappeløp", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A054", "area": "1200 - Loddløst arbeid", "activity": "Montering av innervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A055", "area": "1200 - Loddløst arbeid", "activity": "Montering av fasader", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A060", "area": "2000 - Tagonstruksjon", "activity": "Montering av takstol", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A061", "area": "2000 - Tagonstruksjon", "activity": "Takdekking", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A062", "area": "2000 - Tagonstruksjon", "activity": "Takrenne og fall", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A070", "area": "3000 - Yttervegger", "activity": "Montering av yttervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A071", "area": "3000 - Yttervegger", "activity": "Isolering yttervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A072", "area": "3000 - Yttervegger", "activity": "Belegg yttervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A080", "area": "3100 - Vinduer og dører", "activity": "Montering av vinduer", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A081", "area": "3100 - Vinduer og dører", "activity": "Montering av ytterdører", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A090", "area": "4100 - Innervegger og skillevegger", "activity": "Oppstillling innervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A091", "area": "4100 - Innervegger og skillevegger", "activity": "Gjipsverk innervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A092", "area": "4100 - Innervegger og skillevegger", "activity": "Maling innervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A100", "area": "4200 - Tak/himling", "activity": "Montering av takbjelker", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A101", "area": "4200 - Tak/himling", "activity": "Plater og himlinger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A102", "area": "4200 - Tak/himling", "activity": "Maling tak/himling", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A110", "area": "4300 - Isolasjon", "activity": "Isolasjonarbeider", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A120", "area": "5000 - Gulv", "activity": "Gulvoppbygning", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A121", "area": "5000 - Gulv", "activity": "Gulvbelegg", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A130", "area": "5100 - Trapper", "activity": "Oppstilling og belegg trapper", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A140", "area": "5200 - Verandaer og altaner", "activity": "Oppstilling verandaer/altaner", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A141", "area": "5200 - Verandaer og altaner", "activity": "Belegg verandaer/altaner", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A200", "area": "6100 - Sanitær", "activity": "Sanitær rørarbeid", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A201", "area": "6100 - Sanitær", "activity": "Montering av badekar, dusj osv", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A202", "area": "6100 - Sanitær", "activity": "Flislegging", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A210", "area": "6200 - HVAC", "activity": "Installasjon varmeventilasjon", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A211", "area": "6200 - HVAC", "activity": "Installasjon luftbehandling", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A220", "area": "6300 - Elektro", "activity": "Grønt og rødt el-arbeid", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A230", "area": "6400 - Telekommunikasjon", "activity": "Tel- og dataledninger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A240", "area": "6500 - Brannvarslingsanlegg", "activity": "Brannvarslingsanlegg", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A300", "area": "7000 - Interiør", "activity": "Interiørmontering", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A301", "area": "7000 - Interiør", "activity": "Dørmontering", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A302", "area": "7000 - Interiør", "activity": "Montering kjøkkenstein", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A303", "area": "7000 - Interiør", "activity": "Montering av innredninger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A310", "area": "7100 - Dekorasjon", "activity": "Dekoreringarbeider", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A320", "area": "8000 - Spesialarrangementer og utstyr", "activity": "Kjøkkenmontering", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}];
+        // Data fra Excel - with metode_nr, planmerknad, metodebeskrivelse
+        const DATA = [{"id": "A001", "area": "8300 - Utomhus", "activity": "Byggegjerde", "metode_nr": "1.1", "planmerknad": "Start ≤ 06.08.2026; eksakt dato må avklares.", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A008", "area": "8300 - Utomhus", "activity": "Grave ut for prov.strøm", "metode_nr": "2.1", "planmerknad": "Start ≤ 06.08.2026; eksakt dato må avklares.", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A010", "area": "8300 - Utomhus", "activity": "Opprigg kontorrigg", "metode_nr": "1.1", "planmerknad": "Start ≤ 06.08.2026; eksakt dato må avklares.", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A031", "area": "1100 - Fundamentering", "activity": "Armering fundament", "metode_nr": "4.2", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A032", "area": "1100 - Fundamentering", "activity": "Betongarbeider fundament", "metode_nr": "4.3", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A050", "area": "1200 - Loddløst arbeid", "activity": "Montering av søyler", "metode_nr": "6.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A051", "area": "1200 - Loddløst arbeid", "activity": "Montering av bjelker", "metode_nr": "6.2", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A052", "area": "1200 - Loddløst arbeid", "activity": "Montering av dekker", "metode_nr": "6.3", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A060", "area": "2000 - Tagonstruksjon", "activity": "Montering av takstol", "metode_nr": "7.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A070", "area": "3000 - Yttervegger", "activity": "Montering av yttervegger", "metode_nr": "8.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A080", "area": "3100 - Vinduer og dører", "activity": "Montering av vinduer", "metode_nr": "9.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A090", "area": "4100 - Innervegger og skillevegger", "activity": "Oppstillling innervegger", "metode_nr": "10.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A100", "area": "4200 - Tak/himling", "activity": "Montering av takbjelker", "metode_nr": "11.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A110", "area": "4300 - Isolasjon", "activity": "Isolasjonarbeider", "metode_nr": "12.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A120", "area": "5000 - Gulv", "activity": "Gulvoppbygning", "metode_nr": "13.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A130", "area": "5100 - Trapper", "activity": "Oppstilling og belegg trapper", "metode_nr": "14.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A200", "area": "6100 - Sanitær", "activity": "Sanitær rørarbeid", "metode_nr": "16.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A220", "area": "6300 - Elektro", "activity": "Grønt og rødt el-arbeid", "metode_nr": "18.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A300", "area": "7000 - Interiør", "activity": "Interiørmontering", "metode_nr": "21.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A310", "area": "7100 - Dekorasjon", "activity": "Dekoreringarbeider", "metode_nr": "22.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}];
 
         function loadData() {
             const stored = localStorage.getItem(STORAGE_KEY);
@@ -377,18 +388,22 @@
             renderTable();
             updateStats();
             updateFilters();
-            updateLastUpdate();
         }
 
         function saveData() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(aktiviteter));
-            localStorage.setItem(LAST_UPDATE_KEY, new Date().toLocaleString('no-NO'));
-            updateLastUpdate();
+            const now = new Date().toLocaleString('no-NO');
+            localStorage.setItem('wrk2_last_update', now);
+            document.getElementById('last-updated').textContent = now;
         }
 
-        function updateLastUpdate() {
-            const last = localStorage.getItem(LAST_UPDATE_KEY);
-            document.getElementById('last-updated').textContent = last || 'aldri';
+        function toggleDetail(id) {
+            if (expandedRows.has(id)) {
+                expandedRows.delete(id);
+            } else {
+                expandedRows.add(id);
+            }
+            renderTable();
         }
 
         function renderTable() {
@@ -403,11 +418,14 @@
                 } else if (!act.start_date) {
                     rowClass = 'status-nodate';
                 }
-
+                
+                // Hovedrad
                 const row = document.createElement('tr');
                 row.className = rowClass;
                 row.innerHTML = `
+                    <td><button class="expand-btn" onclick="toggleDetail('${act.id}')">${expandedRows.has(act.id) ? '−' : '+'}</button></td>
                     <td class="id-cell">${act.id}</td>
+                    <td class="metode-cell">${act.metode_nr}</td>
                     <td class="area-cell">${act.area}</td>
                     <td class="activity-cell">${act.activity}</td>
                     <td class="date-cell">
@@ -443,15 +461,37 @@
                                onchange="updatePrerequisite(${idx}, 'utstyr', this.checked)">
                     </td>
                     <td class="count-cell">${checked}/7</td>
-                </tr>
-            `;
-            tbody.appendChild(row);
+                `;
+                tbody.appendChild(row);
+
+                // Detalj-rad (hvis expanded)
+                if (expandedRows.has(act.id)) {
+                    const detailRow = document.createElement('tr');
+                    detailRow.className = 'detail-row expanded';
+                    detailRow.innerHTML = `
+                        <td colspan="14">
+                            <div class="detail-content">
+                                <div class="detail-item">
+                                    <span class="detail-label">Planmerknad:</span>
+                                    ${act.planmerknad || '(ingen merknad)'}
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Metode:</span>
+                                    ${act.metodebeskrivelse}
+                                </div>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(detailRow);
+                }
+            });
         }
 
         function updateDate(idx, value) {
             aktiviteter[idx].start_date = value;
             saveData();
             updateStats();
+            renderTable();
         }
 
         function updatePrerequisite(idx, prereq, checked) {
@@ -465,19 +505,15 @@
             const total = aktiviteter.length;
             const ready = aktiviteter.filter(a => Object.values(a.prerequisites).filter(v => v).length === 7).length;
             const pending = total - ready;
-            const noDate = aktiviteter.filter(a => !a.start_date).length;
 
             document.getElementById('total-activities').textContent = total;
             document.getElementById('ready-activities').textContent = ready;
             document.getElementById('pending-activities').textContent = pending;
-            document.getElementById('no-date').textContent = noDate;
         }
 
         function updateFilters() {
             const areaSet = new Set(aktiviteter.map(a => a.area).filter(Boolean));
             const select = document.getElementById('area-filter');
-            const currentValue = select.value;
-
             Array.from(areaSet).sort().forEach(area => {
                 if (!select.querySelector(`option[value="${area}"]`)) {
                     const opt = document.createElement('option');
@@ -486,14 +522,14 @@
                     select.appendChild(opt);
                 }
             });
-
-            select.value = currentValue;
         }
 
         function resetFilters() {
             document.getElementById('search').value = '';
             document.getElementById('area-filter').value = '';
             document.getElementById('status-filter').value = '';
+            aktiviteter = JSON.parse(JSON.stringify(originalAktiviteter));
+            expandedRows.clear();
             renderTable();
         }
 
@@ -503,6 +539,7 @@
                 a.id.toLowerCase().includes(query) ||
                 a.activity.toLowerCase().includes(query)
             );
+            expandedRows.clear();
             renderTable();
         });
 
@@ -513,6 +550,7 @@
                 (!area || a.area === area) &&
                 (!search || a.id.toLowerCase().includes(search) || a.activity.toLowerCase().includes(search))
             );
+            expandedRows.clear();
             renderTable();
         });
 
@@ -532,10 +570,10 @@
         }
 
         function exportToCSV() {
-            let csv = 'ID,Område,Aktivitet,Startdato,Mannskap,Materialer,Foregaende,Plass,Informasjon,Ytre faktorer,Utstyr,Avklart\n';
+            let csv = 'ID,Metode,Område,Aktivitet,Startdato,Mannskap,Materialer,Foregaende,Plass,Informasjon,Ytre faktorer,Utstyr,Avklart\n';
             aktiviteter.forEach(a => {
                 const checked = Object.values(a.prerequisites).filter(v => v).length;
-                csv += `"${a.id}","${a.area}","${a.activity}","${a.start_date}",${a.prerequisites.mannskap ? 'JA' : 'NEI'},${a.prerequisites.materialer ? 'JA' : 'NEI'},${a.prerequisites.foregaende ? 'JA' : 'NEI'},${a.prerequisites.plass ? 'JA' : 'NEI'},${a.prerequisites.informasjon ? 'JA' : 'NEI'},${a.prerequisites.ytre_faktorer ? 'JA' : 'NEI'},${a.prerequisites.utstyr ? 'JA' : 'NEI'},"${checked}/7"\n`;
+                csv += `"${a.id}","${a.metode_nr}","${a.area}","${a.activity}","${a.start_date}",${a.prerequisites.mannskap ? 'JA' : 'NEI'},${a.prerequisites.materialer ? 'JA' : 'NEI'},${a.prerequisites.foregaende ? 'JA' : 'NEI'},${a.prerequisites.plass ? 'JA' : 'NEI'},${a.prerequisites.informasjon ? 'JA' : 'NEI'},${a.prerequisites.ytre_faktorer ? 'JA' : 'NEI'},${a.prerequisites.utstyr ? 'JA' : 'NEI'},"${checked}/7"\n`;
             });
             const blob = new Blob([csv], {type: 'text/csv'});
             const url = URL.createObjectURL(blob);
@@ -572,24 +610,16 @@
         function clearAll() {
             if (confirm('Er du sikker? Dette sletter alle endringer.')) {
                 localStorage.removeItem(STORAGE_KEY);
-                localStorage.removeItem(LAST_UPDATE_KEY);
                 aktiviteter = JSON.parse(JSON.stringify(DATA));
                 originalAktiviteter = JSON.parse(JSON.stringify(aktiviteter));
+                expandedRows.clear();
                 saveData();
                 renderTable();
                 updateStats();
             }
         }
 
-        function showTab(tab) {
-            const navs = document.querySelectorAll('.nav-tabs a');
-            navs.forEach(n => n.classList.remove('active'));
-            event.target.classList.add('active');
-
-            if (tab === 'aktiviteter') {
-                window.location.href = 'aktiviteter.html';
-            }
-        }
+        function showTab(tab) {}
 
         // Initialiser
         loadData();

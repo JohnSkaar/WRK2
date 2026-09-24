@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WRK2 Aktivitetsstyring</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Login Screen */
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .login-screen.active {
+            display: flex;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-box h1 {
+            margin-bottom: 30px;
+            text-align: center;
+            color: #2c3e50;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .login-box button:hover {
+            background: #5568d3;
+        }
+
+        /* Header */
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 24px;
+            color: #2c3e50;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-role {
+            background: #ecf0f1;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #34495e;
+        }
+
+        .logout-btn {
+            padding: 8px 16px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #2c3e50;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button.secondary {
+            background: #95a5a6;
+        }
+
+        button.secondary:hover {
+            background: #7f8c8d;
+        }
+
+        button.danger {
+            background: #e74c3c;
+        }
+
+        button.danger:hover {
+            background: #c0392b;
+        }
+
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .activity-item {
+            border: 1px solid #ecf0f1;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .activity-header {
+            padding: 15px;
+            background: #f8f9fa;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .activity-header:hover {
+            background: #f0f2f5;
+        }
+
+        .activity-header-info {
+            flex: 1;
+        }
+
+        .activity-id {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 16px;
+        }
+
+        .activity-name {
+            color: #2c3e50;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        .activity-meta {
+            color: #95a5a6;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .activity-progress {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 20px;
+        }
+
+        .progress-bar {
+            width: 100px;
+            height: 6px;
+            background: #ecf0f1;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #27ae60;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: #34495e;
+            min-width: 40px;
+        }
+
+        .activity-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .activity-content.active {
+            display: block;
+        }
+
+        .prerequisites-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .prerequisite-card {
+            border: 1px solid #ecf0f1;
+            border-radius: 6px;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+
+        .prerequisite-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .prerequisite-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .prerequisite-info {
+            margin-top: 10px;
+        }
+
+        .prerequisite-info textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        .filter-bar {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .filter-bar label {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .filter-bar select,
+        .filter-bar input {
+            padding: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            min-width: 180px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #95a5a6;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #95a5a6;
+            padding: 0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-ja {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+
+        .status-nei {
+            background: #fadbd8;
+            color: #c0392b;
+        }
+
+        .status-uavklart {
+            background: #ffeaa7;
+            color: #d63031;
+        }
+
+        .status-irrelevant {
+            background: #dfe6e9;
+            color: #636e72;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 15px;
+        }
+
+        th {
+            background: #f5f7fa;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .prerequisite-labels {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-screen active" id="loginScreen">
+        <div class="login-box">
+            <h1>WRK2 Aktivitetsstyring</h1>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>E-post</label>
+                    <input type="email" id="loginEmail" placeholder="ditt@email.no" required>
+                </div>
+                <div class="form-group">
+                    <label>Rolle</label>
+                    <select id="loginRole" required>
+                        <option value="">Velg rolle...</option>
+                        <option value="admin">Administrator</option>
+                        <option value="entrepreneur">Entreprenør</option>
+                    </select>
+                </div>
+                <button type="submit">Logg inn</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="container">
+        <div class="content" id="mainContent">
+            <header>
+                <h1>WRK2 Aktivitetsstyring</h1>
+                <div class="user-info">
+                    <div class="user-role" id="userRole"></div>
+                    <button class="logout-btn" onclick="logout()">Logg ut</button>
+                </div>
+            </header>
+
+            <!-- Admin Panel -->
+            <div id="adminPanel" style="display: none;">
+                <div class="action-buttons">
+                    <button onclick="openAddActivityModal()">Legg til aktivitet</button>
+                    <button onclick="importActivities()" class="secondary">Importer JSON</button>
+                    <button onclick="exportData()" class="secondary">Eksporter alle</button>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalActivities">0</div>
+                        <div class="stat-label">Aktiviteter</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="readyActivities">0</div>
+                        <div class="stat-label">Klare (7/7)</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Aktiviteter fra framdriftsplan</h2>
+                    <div class="filter-bar">
+                        <label>
+                            Område
+                            <select id="adminAreaFilter" onchange="filterActivitiesAdmin()">
+                                <option value="">Alle områder</option>
+                            </select>
+                        </label>
+                        <label>
+                            Søk
+                            <input type="text" id="adminSearch" placeholder="ID eller navn..." onkeyup="filterActivitiesAdmin()">
+                        </label>
+                    </div>
+                    <div class="activity-list" id="adminActivityList"></div>
+                </div>
+            </div>
+
+            <!-- Entrepreneur Panel -->
+            <div id="entrepreneurPanel" style="display: none;">
+                <div class="card">
+                    <h2>Klargjøring av aktiviteter</h2>
+                    <div class="filter-bar">
+                        <label>
+                            Område
+                            <select id="entrepreneurAreaFilter" onchange="filterActivitiesEntrepreneur()">
+                                <option value="">Alle områder</option>
+                            </select>
+                        </label>
+                        <label>
+                            Søk
+                            <input type="text" id="entrepreneurSearch" placeholder="ID eller navn..." onkeyup="filterActivitiesEntrepreneur()">
+                        </label>
+                    </div>
+                    <div class="activity-list" id="entrepreneurActivityList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Activity Modal -->
+    <div class="modal" id="addActivityModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Legg til ny aktivitet</h2>
+                <button class="modal-close" onclick="closeModal('addActivityModal')">×</button>
+            </div>
+            <form onsubmit="handleAddActivity(event)">
+                <div class="form-group">
+                    <label>ID</label>
+                    <input type="text" id="activityId" placeholder="A001" required>
+                </div>
+                <div class="form-group">
+                    <label>Område</label>
+                    <input type="text" id="activityArea" placeholder="1100 - Fundamentering" required>
+                </div>
+                <div class="form-group">
+                    <label>Aktivitet / Produksjonslinje</label>
+                    <input type="text" id="activityName" placeholder="Navn på aktivitet" required>
+                </div>
+                <div class="form-group">
+                    <label>Startdato</label>
+                    <input type="date" id="activityDate">
+                </div>
+                <div class="form-group">
+                    <label>Metodebeskrivelse</label>
+                    <input type="text" id="activityMethod" placeholder="f.eks. Armering betong">
+                </div>
+                <div class="form-group">
+                    <label>AT nummer</label>
+                    <input type="text" id="activityAT" placeholder="f.eks. 1.1">
+                </div>
+                <div style="margin-top: 20px;">
+                    <button type="submit">Legg til aktivitet</button>
+                    <button type="button" class="secondary" onclick="closeModal('addActivityModal')" style="margin-left: 10px;">Avbryt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <input type="file" id="importFile" style="display: none;" accept=".json">
+
+    <script>
+        const STORAGE_KEY = 'wrk2_activities';
+        const USER_KEY = 'wrk2_user';
+        const STATUS_OPTIONS = ['Uavklart', 'Ja', 'Nei', 'Ikke relevant'];
+        const PREREQUISITES = [
+            { key: 'mannskap', label: 'Mannskap' },
+            { key: 'materialer', label: 'Materialer' },
+            { key: 'foregaende', label: 'Foregående aktivitet' },
+            { key: 'plass', label: 'Plass' },
+            { key: 'informasjon', label: 'Informasjon' },
+            { key: 'ytre_faktorer', label: 'Ytre faktorer' },
+            { key: 'utstyr', label: 'Utstyr' }
+        ];
+
+        let activities = [];
+        let currentUser = null;
+        let filteredActivities = [];
+        let expandedActivities = {};
+
+        function init() {
+            const stored = localStorage.getItem(USER_KEY);
+            if (stored) {
+                currentUser = JSON.parse(stored);
+                showApp();
+            } else {
+                showLogin();
+            }
+            loadActivities();
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            currentUser = {
+                email: document.getElementById('loginEmail').value,
+                role: document.getElementById('loginRole').value
+            };
+            localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+            showApp();
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem(USER_KEY);
+            location.reload();
+        }
+
+        function showLogin() {
+            document.getElementById('loginScreen').classList.add('active');
+            document.getElementById('mainContent').style.display = 'none';
+        }
+
+        function showApp() {
+            document.getElementById('loginScreen').classList.remove('active');
+            document.getElementById('mainContent').classList.add('active');
+            document.getElementById('userRole').textContent = currentUser.role === 'admin' ? 'Administrator' : 'Entreprenør';
+
+            if (currentUser.role === 'admin') {
+                document.getElementById('adminPanel').style.display = 'block';
+                document.getElementById('entrepreneurPanel').style.display = 'none';
+            } else {
+                document.getElementById('adminPanel').style.display = 'none';
+                document.getElementById('entrepreneurPanel').style.display = 'block';
+            }
+            renderActivities();
+        }
+
+        function loadActivities() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                activities = JSON.parse(stored);
+            }
+            filteredActivities = [...activities];
+        }
+
+        function saveActivities() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(activities));
+        }
+
+        function renderActivities() {
+            populateAreaFilters();
+            updateStats();
+
+            const listId = currentUser.role === 'admin' ? 'adminActivityList' : 'entrepreneurActivityList';
+            const list = document.getElementById(listId);
+            list.innerHTML = '';
+
+            filteredActivities.forEach((act, idx) => {
+                const realIdx = activities.indexOf(act);
+                const checked = PREREQUISITES.filter(p => act.prerequisites[p]?.status && act.prerequisites[p].status !== 'Uavklart').length;
+                const expanded = expandedActivities[realIdx];
+
+                const html = `
+                    <div class="activity-item">
+                        <div class="activity-header" onclick="toggleActivity(${realIdx})">
+                            <div class="activity-header-info">
+                                <div class="activity-id">${act.id}</div>
+                                <div class="activity-name">${act.activity}</div>
+                                <div class="activity-meta">${act.area}${act.method ? ' • ' + act.method : ''}${act.at_nr ? ' • AT ' + act.at_nr : ''}</div>
+                            </div>
+                            <div class="activity-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${(checked/7)*100}%"></div>
+                                </div>
+                                <div class="progress-text">${checked}/7</div>
+                            </div>
+                        </div>
+                        <div class="activity-content ${expanded ? 'active' : ''}">
+                            <div class="prerequisites-grid">
+                                ${PREREQUISITES.map(prereq => `
+                                    <div class="prerequisite-card">
+                                        <div class="prerequisite-title">
+                                            ${prereq.label}
+                                            <span class="status-badge status-${(act.prerequisites[prereq.key]?.status || 'Uavklart').toLowerCase()}">
+                                                ${act.prerequisites[prereq.key]?.status || 'Uavklart'}
+                                            </span>
+                                        </div>
+                                        <select class="prerequisite-select" onchange="updateStatus(${realIdx}, '${prereq.key}', this.value)">
+                                            ${STATUS_OPTIONS.map(opt => `<option ${(act.prerequisites[prereq.key]?.status || 'Uavklart') === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                                        </select>
+                                        <div class="prerequisite-info">
+                                            <textarea placeholder="Detaljer om ${prereq.label.toLowerCase()}..." onchange="updateInfo(${realIdx}, '${prereq.key}', this.value)">${act.prerequisites[prereq.key]?.info || ''}</textarea>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ${currentUser.role === 'admin' ? `
+                                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                                    <button onclick="editActivity(${realIdx})" class="secondary" style="padding: 6px 12px;">Rediger</button>
+                                    <button onclick="deleteActivity(${realIdx})" class="danger" style="padding: 6px 12px;">Slett</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                list.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function toggleActivity(idx) {
+            expandedActivities[idx] = !expandedActivities[idx];
+            renderActivities();
+        }
+
+        function updateStatus(idx, prereq, value) {
+            if (!activities[idx].prerequisites[prereq]) {
+                activities[idx].prerequisites[prereq] = { status: value, info: '' };
+            } else {
+                activities[idx].prerequisites[prereq].status = value;
+            }
+            saveActivities();
+            renderActivities();
+        }
+
+        function updateInfo(idx, prereq, value) {
+            if (!activities[idx].prerequisites[prereq]) {
+                activities[idx].prerequisites[prereq] = { status: 'Uavklart', info: value };
+            } else {
+                activities[idx].prerequisites[prereq].info = value;
+            }
+            saveActivities();
+        }
+
+        function populateAreaFilters() {
+            const areas = [...new Set(activities.map(a => a.area))].sort();
+            ['adminAreaFilter', 'entrepreneurAreaFilter'].forEach(id => {
+                const select = document.getElementById(id);
+                const current = select.value;
+                select.innerHTML = '<option value="">Alle områder</option>';
+                areas.forEach(area => {
+                    select.innerHTML += `<option value="${area}">${area}</option>`;
+                });
+                select.value = current;
+            });
+        }
+
+        function filterActivitiesAdmin() {
+            const area = document.getElementById('adminAreaFilter').value;
+            const search = document.getElementById('adminSearch').value.toLowerCase();
+            filteredActivities = activities.filter(a =>
+                (!area || a.area === area) &&
+                (!search || a.id.toLowerCase().includes(search) || a.activity.toLowerCase().includes(search))
+            );
+            renderActivities();
+        }
+
+        function filterActivitiesEntrepreneur() {
+            const area = document.getElementById('entrepreneurAreaFilter').value;
+            const search = document.getElementById('entrepreneurSearch').value.toLowerCase();
+            filteredActivities = activities.filter(a =>
+                (!area || a.area === area) &&
+                (!search || a.id.toLowerCase().includes(search) || a.activity.toLowerCase().includes(search))
+            );
+            renderActivities();
+        }
+
+        function openAddActivityModal() {
+            document.getElementById('addActivityModal').classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function handleAddActivity(e) {
+            e.preventDefault();
+            const prerequisites = {};
+            PREREQUISITES.forEach(p => {
+                prerequisites[p.key] = { status: 'Uavklart', info: '' };
+            });
+
+            activities.push({
+                id: document.getElementById('activityId').value,
+                area: document.getElementById('activityArea').value,
+                activity: document.getElementById('activityName').value,
+                start_date: document.getElementById('activityDate').value,
+                method: document.getElementById('activityMethod').value,
+                at_nr: document.getElementById('activityAT').value,
+                prerequisites: prerequisites
+            });
+
+            saveActivities();
+            closeModal('addActivityModal');
+            document.getElementById('addActivityModal').querySelector('form').reset();
+            renderActivities();
+        }
+
+        function deleteActivity(idx) {
+            if (confirm('Slett denne aktiviteten?')) {
+                activities.splice(idx, 1);
+                saveActivities();
+                renderActivities();
+            }
+        }
+
+        function editActivity(idx) {
+            const act = activities[idx];
+            document.getElementById('activityId').value = act.id;
+            document.getElementById('activityArea').value = act.area;
+            document.getElementById('activityName').value = act.activity;
+            document.getElementById('activityDate').value = act.start_date || '';
+            document.getElementById('activityMethod').value = act.method || '';
+            document.getElementById('activityAT').value = act.at_nr || '';
+            deleteActivity(idx);
+            openAddActivityModal();
+        }
+
+        function updateStats() {
+            const total = activities.length;
+            const ready = activities.filter(a =>
+                PREREQUISITES.every(p => a.prerequisites[p.key]?.status && a.prerequisites[p.key].status !== 'Uavklart')
+            ).length;
+            document.getElementById('totalActivities').textContent = total;
+            document.getElementById('readyActivities').textContent = ready;
+        }
+
+        function exportData() {
+            const blob = new Blob([JSON.stringify(activities, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `WRK2_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+
+        function importActivities() {
+            document.getElementById('importFile').click();
+        }
+
+        document.getElementById('importFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    activities = JSON.parse(event.target.result);
+                    saveActivities();
+                    renderActivities();
+                    alert('Aktiviteter importert!');
+                } catch (err) {
+                    alert('Feil: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        init();
+    </script>
+</body>
+</html>

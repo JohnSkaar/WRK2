@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WRK2 Aktivitetsoversikt</title>
+    <title>WRK2 Aktiviteter - Entreprenør</title>
     <style>
         * {
             margin: 0;
@@ -22,43 +22,6 @@
             max-width: 1600px;
             margin: 0 auto;
             padding: 20px;
-        }
-
-        header {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        h1 {
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-
-        .stats {
-            display: flex;
-            gap: 30px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-
-        .stat {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #3498db;
-        }
-
-        .stat-label {
-            color: #666;
-            font-size: 14px;
         }
 
         .nav-tabs {
@@ -86,28 +49,66 @@
             color: #3498db;
         }
 
-        tr.status-ready {
-            background-color: #d4edda;
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        tr.status-ready:hover {
-            background-color: #c3e6cb;
+        h1 {
+            margin-bottom: 10px;
+            color: #2c3e50;
         }
 
-        tr.status-incomplete {
-            background-color: #fff3cd;
+        .contractor-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        tr.status-incomplete:hover {
-            background-color: #ffe69c;
+        .contractor-selector label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #2c3e50;
         }
 
-        tr.status-nodate {
-            background-color: #f8d7da;
+        .contractor-selector select,
+        .contractor-selector input {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 100%;
+            max-width: 400px;
         }
 
-        tr.status-nodate:hover {
-            background-color: #f5c6cb;
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
         }
 
         .controls {
@@ -244,85 +245,91 @@
             font-size: 13px;
         }
 
-        .status-tag {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-ready {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-
         .footer {
             margin-top: 20px;
             text-align: center;
             color: #7f8c8d;
             font-size: 12px;
         }
+
+        .empty-state {
+            background: white;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            color: #7f8c8d;
+        }
+
+        .empty-state p {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        tr.status-ready {
+            background-color: #d4edda;
+        }
+
+        tr.status-ready:hover {
+            background-color: #c3e6cb;
+        }
+
+        tr.status-incomplete {
+            background-color: #fff3cd;
+        }
+
+        tr.status-incomplete:hover {
+            background-color: #ffe69c;
+        }
+
+        tr.status-nodate {
+            background-color: #f8d7da;
+        }
+
+        tr.status-nodate:hover {
+            background-color: #f5c6cb;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="nav-tabs">
-            <a class="active" onclick="showTab('oversikt')">Oversikt</a>
-            <a onclick="showTab('aktiviteter')">Aktiviteter (Entreprenør)</a>
+            <a onclick="window.location.href='oversikt.html'">Oversikt</a>
+            <a class="active" onclick="showTab('aktiviteter')">Aktiviteter (Entreprenør)</a>
         </div>
 
         <header>
-            <h1>WRK2 Aktivitetsoversikt</h1>
-            <p>Produksjonsstyringsverktøy for byggeplass</p>
+            <h1>Mine Aktiviteter</h1>
+            <p>Oversikt over dine aktiviteter og forutsetninger</p>
 
             <div class="stats">
                 <div class="stat">
-                    <span class="stat-number" id="total-activities">0</span>
-                    <span class="stat-label">Aktiviteter totalt</span>
+                    <span class="stat-number" id="my-total">0</span>
+                    <span class="stat-label">Mine aktiviteter</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-number" id="ready-activities">0</span>
+                    <span class="stat-number" id="my-ready">0</span>
                     <span class="stat-label">Helt klare (7/7)</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-number" id="pending-activities">0</span>
+                    <span class="stat-number" id="my-pending">0</span>
                     <span class="stat-label">Ufullstendige</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-number" id="no-date">0</span>
-                    <span class="stat-label">Mangler startdato</span>
                 </div>
             </div>
 
             <div class="controls">
                 <button onclick="exportToJSON()">Lagre JSON</button>
                 <button onclick="exportToCSV()" class="secondary">Eksporter CSV</button>
-                <button onclick="importData()" class="secondary">Importer data</button>
-                <button onclick="clearAll()" class="secondary" style="background: #e74c3c;">Nullstill alt</button>
             </div>
         </header>
 
-        <div class="filter-bar">
-            <input type="text" id="search" placeholder="Søk etter ID eller aktivitet..." style="flex: 1; min-width: 200px;">
-            <select id="area-filter">
-                <option value="">Alle områder</option>
-            </select>
-            <select id="status-filter">
-                <option value="">Alle statuser</option>
-                <option value="ready">Klare (7/7)</option>
-                <option value="pending">Ufullstendige</option>
-                <option value="no-date">Mangler dato</option>
-            </select>
-            <button onclick="resetFilters()" class="secondary">Nullstill filter</button>
+        <div class="contractor-selector">
+            <label for="contractor-name">Velg ditt område eller navn:</label>
+            <input type="text" id="contractor-name" placeholder="F.eks. Armering, Betongarbeid, eller ditt navn..."
+                   onchange="filterByContractor()" style="width: 100%; max-width: 400px;">
+            <p style="margin-top: 10px; font-size: 12px; color: #7f8c8d;">Søk etter område du jobber i eller skriv ditt navn</p>
         </div>
 
-        <div class="table-wrapper">
+        <div class="table-wrapper" id="table-container" style="display: none;">
             <table>
                 <thead>
                     <tr>
@@ -349,53 +356,67 @@
             </table>
         </div>
 
+        <div class="empty-state" id="empty-state">
+            <p>Velg ditt område eller navn ovenfor for å se dine aktiviteter</p>
+        </div>
+
         <div class="footer">
-            <p>Data lagres automatisk i nettleseren. Åpne samme browser for å se lagrede endringer.</p>
-            <p>Last versjon: <span id="last-updated">aldri</span></p>
+            <p>Data lagres automatisk i nettleseren.</p>
         </div>
     </div>
 
-    <input type="file" id="import-file" style="display: none;" accept=".json">
-
     <script>
         const STORAGE_KEY = 'wrk2_aktiviteter';
-        const LAST_UPDATE_KEY = 'wrk2_last_update';
-        let aktiviteter = [];
-        let originalAktiviteter = [];
+        let allAktiviteter = [];
+        let filteredAktiviteter = [];
 
-        // Data fra Excel (84 aktiviteter)
         const DATA = [{"id": "A001", "area": "8300 - Utomhus", "activity": "Byggegjerde", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A008", "area": "8300 - Utomhus", "activity": "Grave ut for prov.strøm", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A010", "area": "8300 - Utomhus", "activity": "Opprigg kontorrigg", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A011", "area": "8300 - Utomhus", "activity": "Bygg lagerplass.", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A013", "area": "8300 - Utomhus", "activity": "Massebytte Lekker", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A014", "area": "8300 - Utomhus", "activity": "Graving fundament", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A015", "area": "8300 - Utomhus", "activity": "Piling/søylefundament", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A020", "area": "8300 - Utomhus", "activity": "Sprøyt betong fundament", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A021", "area": "8300 - Utomhus", "activity": "Underbetong og oppstøp", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A030", "area": "1100 - Fundamentering", "activity": "Oppset oppbygning", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A031", "area": "1100 - Fundamentering", "activity": "Armering fundament", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A032", "area": "1100 - Fundamentering", "activity": "Betongarbeider fundament", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A040", "area": "1100 - Fundamentering", "activity": "Dreneringsarbeid", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A050", "area": "1200 - Loddløst arbeid", "activity": "Montering av søyler", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A051", "area": "1200 - Loddløst arbeid", "activity": "Montering av bjelker", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A052", "area": "1200 - Loddløst arbeid", "activity": "Montering av dekker", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A053", "area": "1200 - Loddløst arbeid", "activity": "Montering av trappeløp", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A054", "area": "1200 - Loddløst arbeid", "activity": "Montering av innervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A055", "area": "1200 - Loddløst arbeid", "activity": "Montering av fasader", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A060", "area": "2000 - Tagonstruksjon", "activity": "Montering av takstol", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A061", "area": "2000 - Tagonstruksjon", "activity": "Takdekking", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A062", "area": "2000 - Tagonstruksjon", "activity": "Takrenne og fall", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A070", "area": "3000 - Yttervegger", "activity": "Montering av yttervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A071", "area": "3000 - Yttervegger", "activity": "Isolering yttervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A072", "area": "3000 - Yttervegger", "activity": "Belegg yttervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A080", "area": "3100 - Vinduer og dører", "activity": "Montering av vinduer", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A081", "area": "3100 - Vinduer og dører", "activity": "Montering av ytterdører", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A090", "area": "4100 - Innervegger og skillevegger", "activity": "Oppstillling innervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A091", "area": "4100 - Innervegger og skillevegger", "activity": "Gjipsverk innervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A092", "area": "4100 - Innervegger og skillevegger", "activity": "Maling innervegger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A100", "area": "4200 - Tak/himling", "activity": "Montering av takbjelker", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A101", "area": "4200 - Tak/himling", "activity": "Plater og himlinger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A102", "area": "4200 - Tak/himling", "activity": "Maling tak/himling", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A110", "area": "4300 - Isolasjon", "activity": "Isolasjonarbeider", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A120", "area": "5000 - Gulv", "activity": "Gulvoppbygning", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A121", "area": "5000 - Gulv", "activity": "Gulvbelegg", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A130", "area": "5100 - Trapper", "activity": "Oppstilling og belegg trapper", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A140", "area": "5200 - Verandaer og altaner", "activity": "Oppstilling verandaer/altaner", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A141", "area": "5200 - Verandaer og altaner", "activity": "Belegg verandaer/altaner", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A200", "area": "6100 - Sanitær", "activity": "Sanitær rørarbeid", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A201", "area": "6100 - Sanitær", "activity": "Montering av badekar, dusj osv", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A202", "area": "6100 - Sanitær", "activity": "Flislegging", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A210", "area": "6200 - HVAC", "activity": "Installasjon varmeventilasjon", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A211", "area": "6200 - HVAC", "activity": "Installasjon luftbehandling", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A220", "area": "6300 - Elektro", "activity": "Grønt og rødt el-arbeid", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A230", "area": "6400 - Telekommunikasjon", "activity": "Tel- og dataledninger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A240", "area": "6500 - Brannvarslingsanlegg", "activity": "Brannvarslingsanlegg", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A300", "area": "7000 - Interiør", "activity": "Interiørmontering", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A301", "area": "7000 - Interiør", "activity": "Dørmontering", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A302", "area": "7000 - Interiør", "activity": "Montering kjøkkenstein", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A303", "area": "7000 - Interiør", "activity": "Montering av innredninger", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A310", "area": "7100 - Dekorasjon", "activity": "Dekoreringarbeider", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}, {"id": "A320", "area": "8000 - Spesialarrangementer og utstyr", "activity": "Kjøkkenmontering", "start_date": "", "prerequisites": {"mannskap": "", "materialer": "", "foregaende": "", "plass": "", "informasjon": "", "ytre_faktorer": "", "utstyr": ""}}];
 
         function loadData() {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
-                aktiviteter = JSON.parse(stored);
+                allAktiviteter = JSON.parse(stored);
             } else {
-                aktiviteter = JSON.parse(JSON.stringify(DATA));
+                allAktiviteter = JSON.parse(JSON.stringify(DATA));
             }
-            originalAktiviteter = JSON.parse(JSON.stringify(aktiviteter));
-            renderTable();
-            updateStats();
-            updateFilters();
-            updateLastUpdate();
         }
 
         function saveData() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(aktiviteter));
-            localStorage.setItem(LAST_UPDATE_KEY, new Date().toLocaleString('no-NO'));
-            updateLastUpdate();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(allAktiviteter));
         }
 
-        function updateLastUpdate() {
-            const last = localStorage.getItem(LAST_UPDATE_KEY);
-            document.getElementById('last-updated').textContent = last || 'aldri';
+        function filterByContractor() {
+            const query = document.getElementById('contractor-name').value.toLowerCase().trim();
+
+            if (!query) {
+                document.getElementById('table-container').style.display = 'none';
+                document.getElementById('empty-state').style.display = 'block';
+                return;
+            }
+
+            filteredAktiviteter = allAktiviteter.filter(a =>
+                a.area.toLowerCase().includes(query) ||
+                a.activity.toLowerCase().includes(query)
+            );
+
+            if (filteredAktiviteter.length === 0) {
+                document.getElementById('table-container').style.display = 'none';
+                document.getElementById('empty-state').innerHTML = '<p>Ingen aktiviteter funnet for "' + query + '"</p>';
+                document.getElementById('empty-state').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('table-container').style.display = 'block';
+            document.getElementById('empty-state').style.display = 'none';
+            renderTable();
+            updateStats();
         }
 
         function renderTable() {
             const tbody = document.getElementById('activities-table');
             tbody.innerHTML = '';
 
-            aktiviteter.forEach((act, idx) => {
+            filteredAktiviteter.forEach((act, idx) => {
                 const checked = Object.values(act.prerequisites).filter(v => v === true).length;
                 let rowClass = 'status-incomplete';
                 if (checked === 7) {
@@ -403,6 +424,8 @@
                 } else if (!act.start_date) {
                     rowClass = 'status-nodate';
                 }
+
+                const originalIdx = allAktiviteter.findIndex(a => a.id === act.id);
 
                 const row = document.createElement('tr');
                 row.className = rowClass;
@@ -412,35 +435,35 @@
                     <td class="activity-cell">${act.activity}</td>
                     <td class="date-cell">
                         <input type="date" value="${act.start_date}"
-                               onchange="updateDate(${idx}, this.value)">
+                               onchange="updateDate(${originalIdx}, this.value)">
                     </td>
                     <td class="checkbox-cell">
                         <input type="checkbox" ${act.prerequisites.mannskap ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'mannskap', this.checked)">
+                               onchange="updatePrerequisite(${originalIdx}, 'mannskap', this.checked)">
                     </td>
                     <td class="checkbox-cell">
                         <input type="checkbox" ${act.prerequisites.materialer ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'materialer', this.checked)">
+                               onchange="updatePrerequisite(${originalIdx}, 'materialer', this.checked)">
                     </td>
                     <td class="checkbox-cell">
                         <input type="checkbox" ${act.prerequisites.foregaende ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'foregaende', this.checked)">
+                               onchange="updatePrerequisite(${originalIdx}, 'foregaende', this.checked)">
                     </td>
                     <td class="checkbox-cell">
                         <input type="checkbox" ${act.prerequisites.plass ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'plass', this.checked)">
+                               onchange="updatePrerequisite(${originalIdx}, 'plass', this.checked)">
                     </td>
                     <td class="checkbox-cell">
                         <input type="checkbox" ${act.prerequisites.informasjon ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'informasjon', this.checked)">
+                               onchange="updatePrerequisite(${originalIdx}, 'informasjon', this.checked)">
                     </td>
                     <td class="checkbox-cell">
                         <input type="checkbox" ${act.prerequisites.ytre_faktorer ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'ytre_faktorer', this.checked)">
+                               onchange="updatePrerequisite(${originalIdx}, 'ytre_faktorer', this.checked)">
                     </td>
                     <td class="checkbox-cell">
                         <input type="checkbox" ${act.prerequisites.utstyr ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'utstyr', this.checked)">
+                               onchange="updatePrerequisite(${originalIdx}, 'utstyr', this.checked)">
                     </td>
                     <td class="count-cell">${checked}/7</td>
                 </tr>
@@ -449,91 +472,46 @@
         }
 
         function updateDate(idx, value) {
-            aktiviteter[idx].start_date = value;
+            allAktiviteter[idx].start_date = value;
             saveData();
-            updateStats();
+            filterByContractor();
         }
 
         function updatePrerequisite(idx, prereq, checked) {
-            aktiviteter[idx].prerequisites[prereq] = checked;
+            allAktiviteter[idx].prerequisites[prereq] = checked;
             saveData();
-            renderTable();
-            updateStats();
+            filterByContractor();
         }
 
         function updateStats() {
-            const total = aktiviteter.length;
-            const ready = aktiviteter.filter(a => Object.values(a.prerequisites).filter(v => v).length === 7).length;
+            const total = filteredAktiviteter.length;
+            const ready = filteredAktiviteter.filter(a => Object.values(a.prerequisites).filter(v => v).length === 7).length;
             const pending = total - ready;
-            const noDate = aktiviteter.filter(a => !a.start_date).length;
 
-            document.getElementById('total-activities').textContent = total;
-            document.getElementById('ready-activities').textContent = ready;
-            document.getElementById('pending-activities').textContent = pending;
-            document.getElementById('no-date').textContent = noDate;
+            document.getElementById('my-total').textContent = total;
+            document.getElementById('my-ready').textContent = ready;
+            document.getElementById('my-pending').textContent = pending;
         }
-
-        function updateFilters() {
-            const areaSet = new Set(aktiviteter.map(a => a.area).filter(Boolean));
-            const select = document.getElementById('area-filter');
-            const currentValue = select.value;
-
-            Array.from(areaSet).sort().forEach(area => {
-                if (!select.querySelector(`option[value="${area}"]`)) {
-                    const opt = document.createElement('option');
-                    opt.value = area;
-                    opt.textContent = area;
-                    select.appendChild(opt);
-                }
-            });
-
-            select.value = currentValue;
-        }
-
-        function resetFilters() {
-            document.getElementById('search').value = '';
-            document.getElementById('area-filter').value = '';
-            document.getElementById('status-filter').value = '';
-            renderTable();
-        }
-
-        document.getElementById('search').addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            aktiviteter = originalAktiviteter.filter(a =>
-                a.id.toLowerCase().includes(query) ||
-                a.activity.toLowerCase().includes(query)
-            );
-            renderTable();
-        });
-
-        document.getElementById('area-filter').addEventListener('change', (e) => {
-            const area = e.target.value;
-            const search = document.getElementById('search').value;
-            aktiviteter = originalAktiviteter.filter(a =>
-                (!area || a.area === area) &&
-                (!search || a.id.toLowerCase().includes(search) || a.activity.toLowerCase().includes(search))
-            );
-            renderTable();
-        });
 
         function exportToJSON() {
             const data = {
                 export_date: new Date().toISOString(),
-                total: aktiviteter.length,
-                ready: aktiviteter.filter(a => Object.values(a.prerequisites).filter(v => v).length === 7).length,
-                activities: aktiviteter
+                contractor: document.getElementById('contractor-name').value,
+                total: filteredAktiviteter.length,
+                ready: filteredAktiviteter.filter(a => Object.values(a.prerequisites).filter(v => v).length === 7).length,
+                activities: filteredAktiviteter
             };
             const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `WRK2_Aktiviteter_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `WRK2_MineAktiviteter_${new Date().toISOString().split('T')[0]}.json`;
             a.click();
         }
 
         function exportToCSV() {
             let csv = 'ID,Område,Aktivitet,Startdato,Mannskap,Materialer,Foregaende,Plass,Informasjon,Ytre faktorer,Utstyr,Avklart\n';
-            aktiviteter.forEach(a => {
+            filteredAktiviteter.forEach(a => {
                 const checked = Object.values(a.prerequisites).filter(v => v).length;
                 csv += `"${a.id}","${a.area}","${a.activity}","${a.start_date}",${a.prerequisites.mannskap ? 'JA' : 'NEI'},${a.prerequisites.materialer ? 'JA' : 'NEI'},${a.prerequisites.foregaende ? 'JA' : 'NEI'},${a.prerequisites.plass ? 'JA' : 'NEI'},${a.prerequisites.informasjon ? 'JA' : 'NEI'},${a.prerequisites.ytre_faktorer ? 'JA' : 'NEI'},${a.prerequisites.utstyr ? 'JA' : 'NEI'},"${checked}/7"\n`;
             });
@@ -541,57 +519,16 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `WRK2_Aktiviteter_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `WRK2_MineAktiviteter_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
         }
 
-        function importData() {
-            document.getElementById('import-file').click();
-        }
-
-        document.getElementById('import-file').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    aktiviteter = data.activities || data;
-                    originalAktiviteter = JSON.parse(JSON.stringify(aktiviteter));
-                    saveData();
-                    renderTable();
-                    updateStats();
-                    alert('Data importert!');
-                } catch (err) {
-                    alert('Feil ved import: ' + err.message);
-                }
-            };
-            reader.readAsText(file);
-        });
-
-        function clearAll() {
-            if (confirm('Er du sikker? Dette sletter alle endringer.')) {
-                localStorage.removeItem(STORAGE_KEY);
-                localStorage.removeItem(LAST_UPDATE_KEY);
-                aktiviteter = JSON.parse(JSON.stringify(DATA));
-                originalAktiviteter = JSON.parse(JSON.stringify(aktiviteter));
-                saveData();
-                renderTable();
-                updateStats();
-            }
-        }
-
         function showTab(tab) {
-            const navs = document.querySelectorAll('.nav-tabs a');
-            navs.forEach(n => n.classList.remove('active'));
-            event.target.classList.add('active');
-
             if (tab === 'aktiviteter') {
-                window.location.href = 'aktiviteter.html';
+                // Already on this page
             }
         }
 
-        // Initialiser
         loadData();
     </script>
 </body>

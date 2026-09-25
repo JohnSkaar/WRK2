@@ -5,397 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WRK2 Aktivitetsoversikt</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            line-height: 1.5;
-        }
-
-        .container {
-            max-width: 1800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .nav-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #ddd;
-        }
-
-        .nav-tabs button {
-            padding: 12px 20px;
-            text-decoration: none;
-            color: #666;
-            border: none;
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s;
-            cursor: pointer;
-            background: none;
-            font-size: 15px;
-            font-weight: 500;
-        }
-
-        .nav-tabs button.active {
-            color: #3498db;
-            border-bottom-color: #3498db;
-        }
-
-        .nav-tabs button:hover {
-            color: #2980b9;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        header {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        h1 {
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-
-        .stats {
-            display: flex;
-            gap: 30px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-
-        .stat {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #3498db;
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-
-        button {
-            padding: 10px 20px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        button:hover {
-            background: #2980b9;
-        }
-
-        button.secondary {
-            background: #95a5a6;
-        }
-
-        button.secondary:hover {
-            background: #7f8c8d;
-        }
-
-        .table-wrapper {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            overflow: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-
-        th {
-            background: #ecf0f1;
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #2c3e50;
-            border-bottom: 2px solid #bdc3c7;
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-        }
-
-        td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        .expand-btn {
-            background: none;
-            border: none;
-            color: #3498db;
-            cursor: pointer;
-            padding: 4px 8px;
-            font-size: 16px;
-        }
-
-        .id-cell {
-            font-weight: 600;
-            color: #3498db;
-            min-width: 60px;
-        }
-
-        .metode-cell {
-            min-width: 60px;
-            color: #7f8c8d;
-            font-size: 12px;
-        }
-
-        .area-cell {
-            min-width: 100px;
-            color: #7f8c8d;
-            font-size: 12px;
-        }
-
-        .activity-cell {
-            min-width: 180px;
-            font-weight: 500;
-        }
-
-        .date-cell {
-            min-width: 100px;
-            text-align: center;
-        }
-
-        .checkbox-cell {
-            text-align: center;
-            padding: 8px;
-        }
-
-        input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        input[type="date"] {
-            padding: 4px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            font-size: 13px;
-        }
-
-        .prerequisites-header {
-            background: #fff3cd;
-        }
-
-        .count-cell {
-            font-weight: 600;
-            color: #27ae60;
-            text-align: center;
-            min-width: 50px;
-        }
-
-        .filter-bar {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .filter-bar input,
-        .filter-bar select {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-
-        /* Farger for status */
-        tr.status-ready {
-            background-color: #d4edda;
-        }
-
-        tr.status-ready:hover {
-            background-color: #c3e6cb;
-        }
-
-        tr.status-incomplete {
-            background-color: #fff3cd;
-        }
-
-        tr.status-incomplete:hover {
-            background-color: #ffe69c;
-        }
-
-        tr.status-nodate {
-            background-color: #f8d7da;
-        }
-
-        tr.status-nodate:hover {
-            background-color: #f5c6cb;
-        }
-
-        .detail-row {
-            display: none;
-            background: #f9f9f9;
-        }
-
-        .detail-row.expanded {
-            display: table-row;
-        }
-
-        .detail-content {
-            padding: 20px;
-            font-size: 12px;
-        }
-
-        .detail-content h4 {
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-
-        .detail-item {
-            margin-bottom: 10px;
-        }
-
-        .detail-label {
-            font-weight: 600;
-            color: #555;
-            min-width: 120px;
-            display: inline-block;
-        }
-
-        .footer {
-            margin-top: 20px;
-            text-align: center;
-            color: #7f8c8d;
-            font-size: 12px;
-        }
-
-        /* Klargjøring av aktiviteter (Health Check) */
-        .health-check-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 20px;
-        }
-
-        .health-card {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .health-card.critical {
-            border-left: 4px solid #e74c3c;
-        }
-
-        .health-card.warning {
-            border-left: 4px solid #f39c12;
-        }
-
-        .health-card.healthy {
-            border-left: 4px solid #27ae60;
-            opacity: 0.6;
-        }
-
-        .card-header {
-            font-weight: 600;
-            font-size: 16px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .card-id {
-            color: #3498db;
-            font-size: 14px;
-        }
-
-        .card-activity {
-            margin-bottom: 12px;
-            font-weight: 500;
-        }
-
-        .card-area {
-            font-size: 12px;
-            color: #7f8c8d;
-            margin-bottom: 12px;
-        }
-
-        .missing-list {
-            list-style: none;
-            background: #f9f9f9;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 10px;
-        }
-
-        .missing-list li {
-            padding: 6px 0;
-            font-size: 13px;
-            color: #555;
-            border-bottom: 1px solid #eee;
-        }
-
-        .missing-list li:last-child {
-            border-bottom: none;
-        }
-
-        .missing-item {
-            color: #e74c3c;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-badge.critical {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .status-badge.warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status-badge.healthy {
-            background: #d4edda;
-            color: #155724;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; line-height: 1.5; }
+        .container { max-width: 2400px; margin: 0 auto; padding: 20px; }
+
+        .nav-tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #ddd; flex-wrap: wrap; }
+        .nav-tabs button { padding: 12px 16px; border: none; background: none; color: #666; border-bottom: 3px solid transparent; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        .nav-tabs button.active { color: #3498db; border-bottom-color: #3498db; }
+        .nav-tabs button:hover { color: #2980b9; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        header { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1 { margin-bottom: 10px; color: #2c3e50; font-size: 22px; }
+
+        .controls { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        button { padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        button:hover { background: #2980b9; }
+        button.update-order { background: #27ae60; margin-left: auto; }
+        button.update-order:hover { background: #229954; }
+
+        input[type="text"], input[type="date"], select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
+        input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+        .week-group { margin-bottom: 30px; }
+        .week-header { background: #2c3e50; color: white; padding: 12px 20px; font-weight: 600; cursor: pointer; user-select: none; }
+        .week-header:hover { background: #34495e; }
+
+        .table-wrapper { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #ecf0f1; padding: 8px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #bdc3c7; white-space: nowrap; font-size: 11px; }
+        td { padding: 6px 8px; border-bottom: 1px solid #ecf0f1; vertical-align: top; }
+
+        .expand-btn { background: none; border: none; color: #3498db; cursor: pointer; padding: 4px; font-weight: bold; }
+
+        .risk-symbol { font-size: 16px; }
+        .company-badge { display: inline-block; width: 20px; height: 20px; border-radius: 50%; color: white; text-align: center; line-height: 20px; font-weight: bold; font-size: 10px; }
+
+        .detail-row { background: #f9f9f9; }
+        .at-row { background: #f0f8ff; }
+
+        textarea { width: 100%; padding: 6px; border: 1px solid #ddd; font-family: inherit; font-size: 11px; min-height: 50px; }
+
+        .admin-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .admin-section h2 { margin-bottom: 15px; color: #2c3e50; font-size: 18px; }
+
+        .user-list { list-style: none; }
+        .user-list li { padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+        .company-colors { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .color-item { display: flex; align-items: center; gap: 10px; }
+        .color-box { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #ddd; }
+
+        .at-kanban { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 20px; }
+        .at-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: move; border-left: 4px solid #3498db; }
+        .at-card.dragging { opacity: 0.5; }
+
+        .health-check-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .health-card { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #3498db; }
+        .health-card.critical { border-left-color: #e74c3c; }
+        .health-card.warning { border-left-color: #f39c12; }
+        .health-card.healthy { border-left-color: #27ae60; opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -403,456 +74,568 @@
         <div class="nav-tabs">
             <button class="active" onclick="showTab('klargjoring')">Klargjøring av aktiviteter</button>
             <button onclick="showTab('oversikt')">Totaloversikt</button>
-            <button onclick="window.location.href='aktiviteter.html'" style="margin-left: auto;">Aktiviteter (Entreprenør)</button>
+            <button onclick="showTab('at-koordinering')">AT Koordinering</button>
+            <button onclick="showTab('admin')">Admin</button>
         </div>
 
-        <!-- TAB 1: KLARGJØRING AV AKTIVITETER -->
+        <!-- PAGE 1: KLARGJØRING -->
         <div id="klargjoring" class="tab-content active">
             <header>
                 <h1>Klargjøring av aktiviteter</h1>
-                <p>Sunnhetskontroll - se hvilke aktiviteter som trenger oppfølging</p>
-                <div class="stats">
-                    <div class="stat">
-                        <span class="stat-number" id="ready-health">0</span>
-                        <span>Klar til oppstart</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-number" id="pending-health">0</span>
-                        <span>Trenger oppfølging</span>
-                    </div>
+                <p>Sunnhetskontroll per firma</p>
+                <div class="controls">
+                    <select id="firma-filter" onchange="filterByFirma(this.value)" style="min-width: 200px;">
+                        <option value="">-- Alle firma --</option>
+                    </select>
                 </div>
             </header>
             <div class="health-check-container" id="health-container"></div>
         </div>
 
-        <!-- TAB 2: TOTALOVERSIKT -->
+        <!-- PAGE 2: TOTALOVERSIKT -->
         <div id="oversikt" class="tab-content">
             <header>
-                <h1>Totaloversikt</h1>
-                <p>Produksjonsstyringsverktøy for byggeplass - Excel-struktur med status</p>
-                <div class="stats">
-                    <div class="stat">
-                        <span class="stat-number" id="total-activities">0</span>
-                        <span>Aktiviteter totalt</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-number" id="ready-activities">0</span>
-                        <span>Helt klare (7/7)</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-number" id="pending-activities">0</span>
-                        <span>Ufullstendige</span>
-                    </div>
+                <h1>Totaloversikt - Rullende ukeoversikt</h1>
+                <div class="controls">
+                    <input type="text" id="search" placeholder="Søk etter ID eller aktivitet...">
+                    <button class="update-order" onclick="updateActivityOrder()">Oppdater rekkefølge</button>
                 </div>
             </header>
+            <div id="activities-container"></div>
+        </div>
 
-            <div class="filter-bar">
-                <input type="text" id="search" placeholder="Søk etter ID eller aktivitet..." style="flex: 1; min-width: 200px;">
-                <select id="area-filter">
-                    <option value="">Alle områder</option>
-                </select>
-                <select id="status-filter">
-                    <option value="">Alle statuser</option>
-                    <option value="ready">Klare (7/7)</option>
-                    <option value="incomplete">Ufullstendige</option>
-                </select>
-                <button onclick="resetFilters()" class="secondary">Nullstill filter</button>
+        <!-- PAGE 3: AT KOORDINERING -->
+        <div id="at-koordinering" class="tab-content">
+            <header>
+                <h1>AT Koordinering - Denne uke</h1>
+                <p>Dra og drop arbeidstillatelser for å planlegge</p>
+            </header>
+            <div style="display: grid; grid-template-columns: 300px 1fr; gap: 20px;">
+                <div style="background: white; padding: 20px; border-radius: 8px; height: fit-content;">
+                    <h3>Tilgjengelige ATs</h3>
+                    <div id="at-list" class="at-kanban"></div>
+                </div>
+                <div style="background: white; padding: 20px; border-radius: 8px; position: relative;">
+                    <img id="building-map" src="" style="width: 100%; height: auto; border-radius: 4px;">
+                    <div id="at-placed" style="position: absolute; top: 20px; left: 320px; width: calc(100% - 340px); height: calc(100% - 40px);"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 4: ADMIN -->
+        <div id="admin" class="tab-content">
+            <header>
+                <h1>Administrasjon</h1>
+            </header>
+
+            <div class="admin-section">
+                <h2>Brukertilganger</h2>
+                <div class="controls">
+                    <input type="text" id="new-user-email" placeholder="E-post...">
+                    <input type="text" id="new-user-name" placeholder="Navn...">
+                    <select id="new-user-role">
+                        <option value="viewer">Visning</option>
+                        <option value="editor">Redigering</option>
+                        <option value="admin">Administrator</option>
+                    </select>
+                    <button onclick="addUser()">Legg til bruker</button>
+                </div>
+                <ul class="user-list" id="user-list"></ul>
             </div>
 
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 30px;"></th>
-                            <th>ID</th>
-                            <th>Metode</th>
-                            <th>Område</th>
-                            <th>Aktivitet</th>
-                            <th>Startdato</th>
-                            <th colspan="7" class="prerequisites-header">7 Produksjonsforutsetninger</th>
-                            <th>Avklart</th>
-                        </tr>
-                        <tr class="prerequisites-header">
-                            <th colspan="6"></th>
-                            <th title="Mannskap">Mannskap</th>
-                            <th title="Materialer">Materialer</th>
-                            <th title="Foregaende">Foregaende</th>
-                            <th title="Plass">Plass</th>
-                            <th title="Informasjon">Info</th>
-                            <th title="Ytre faktorer">Ytre</th>
-                            <th title="Utstyr">Utstyr</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody id="activities-table"></tbody>
-                </table>
-            </div>
-
-            <div class="footer">
-                <p>Data lagres automatisk i nettleseren. Klikk på rad for å se detaljer (planmerknad, metodebeskrivelse).</p>
-                <p>Siste oppdatering: <span id="last-updated">aldri</span></p>
+            <div class="admin-section">
+                <h2>Firmafargekoder</h2>
+                <div class="company-colors" id="company-colors"></div>
             </div>
         </div>
     </div>
 
-    <input type="file" id="import-file" style="display: none;" accept=".json">
-
     <script>
-        const STORAGE_KEY = 'wrk2_aktiviteter';
+        // Company color mapping
+        const COMPANY_COLORS = {
+            'Skanska': '#e74c3c',
+            'NCC': '#3498db',
+            'Veidekke': '#f39c12',
+            'Peab': '#27ae60'
+        };
+
+        const RISKS = {
+            'fall': '🚶',
+            'maskin': '⚙️',
+            'konstruksjon': '🏗️',
+            'gjenstand': '📦',
+            'eksplosion': '💥',
+            'elektrisk': '⚡'
+        };
+
+        const RISK_LABELS = {
+            'fall': 'Fall fra høyde',
+            'maskin': 'Konflikt menneske-maskin',
+            'konstruksjon': 'Konstruksjonssvikt',
+            'gjenstand': 'Fallende gjenstand',
+            'eksplosion': 'Eksplosion',
+            'elektrisk': 'Elektrisk spenning'
+        };
+
+        const STORAGE_KEY = 'wrk2_v4';
         let aktiviteter = [];
         let originalAktiviteter = [];
-        let expandedRows = new Set();
+        let expandedActivities = new Set();
+        let users = [];
 
-        // Data fra Excel - with metode_nr, planmerknad, metodebeskrivelse
-        const DATA = [{"id": "A001", "area": "8300 - Utomhus", "activity": "Byggegjerde", "metode_nr": "1.1", "planmerknad": "Start ≤ 06.08.2026; eksakt dato må avklares.", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A008", "area": "8300 - Utomhus", "activity": "Grave ut for prov.strøm", "metode_nr": "2.1", "planmerknad": "Start ≤ 06.08.2026; eksakt dato må avklares.", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A010", "area": "8300 - Utomhus", "activity": "Opprigg kontorrigg", "metode_nr": "1.1", "planmerknad": "Start ≤ 06.08.2026; eksakt dato må avklares.", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A031", "area": "1100 - Fundamentering", "activity": "Armering fundament", "metode_nr": "4.2", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A032", "area": "1100 - Fundamentering", "activity": "Betongarbeider fundament", "metode_nr": "4.3", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A050", "area": "1200 - Loddløst arbeid", "activity": "Montering av søyler", "metode_nr": "6.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A051", "area": "1200 - Loddløst arbeid", "activity": "Montering av bjelker", "metode_nr": "6.2", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A052", "area": "1200 - Loddløst arbeid", "activity": "Montering av dekker", "metode_nr": "6.3", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A060", "area": "2000 - Tagonstruksjon", "activity": "Montering av takstol", "metode_nr": "7.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A070", "area": "3000 - Yttervegger", "activity": "Montering av yttervegger", "metode_nr": "8.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A080", "area": "3100 - Vinduer og dører", "activity": "Montering av vinduer", "metode_nr": "9.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A090", "area": "4100 - Innervegger og skillevegger", "activity": "Oppstillling innervegger", "metode_nr": "10.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A100", "area": "4200 - Tak/himling", "activity": "Montering av takbjelker", "metode_nr": "11.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A110", "area": "4300 - Isolasjon", "activity": "Isolasjonarbeider", "metode_nr": "12.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A120", "area": "5000 - Gulv", "activity": "Gulvoppbygning", "metode_nr": "13.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A130", "area": "5100 - Trapper", "activity": "Oppstilling og belegg trapper", "metode_nr": "14.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A200", "area": "6100 - Sanitær", "activity": "Sanitær rørarbeid", "metode_nr": "16.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A220", "area": "6300 - Elektro", "activity": "Grønt og rødt el-arbeid", "metode_nr": "18.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A300", "area": "7000 - Interiør", "activity": "Interiørmontering", "metode_nr": "21.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}, {"id": "A310", "area": "7100 - Dekorasjon", "activity": "Dekoreringarbeider", "metode_nr": "22.1", "planmerknad": "", "metodebeskrivelse": "OK", "start_date": "", "prerequisites": {"mannskap": false, "materialer": false, "foregaende": false, "plass": false, "informasjon": false, "ytre_faktorer": false, "utstyr": false}}];
+        function generateSampleData() {
+            const areas = ["8300 - Utomhus", "1100 - Fundamentering", "1200 - Loddløst arbeid"];
+            const companies = Object.keys(COMPANY_COLORS);
+            const activities = ["Montering", "Graving", "Armering", "Betongarbeider"];
+            let data = [];
+
+            for (let i = 1; i <= 25; i++) {
+                const daysOffset = Math.floor(Math.random() * 60) - 7;
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() + daysOffset);
+
+                const atCount = Math.floor(Math.random() * 3) + 1;
+                const at_list = [];
+                for (let j = 1; j <= atCount; j++) {
+                    at_list.push({
+                        id: `AT${j}`,
+                        name: `${activities[Math.floor(Math.random() * activities.length)]} ${j}`,
+                        status: daysOffset <= 0 ? "pågår" : "til utførelse",
+                        risk: 'fall',
+                        comment: ""
+                    });
+                }
+
+                data.push({
+                    id: `A${String(i).padStart(3, '0')}`,
+                    area: areas[Math.floor(Math.random() * areas.length)],
+                    activity: `${activities[Math.floor(Math.random() * activities.length)]} ${i}`,
+                    metode_nr: `${Math.floor(Math.random() * 5) + 1}.${Math.floor(Math.random() * 5) + 1}`,
+                    firma: companies[Math.floor(Math.random() * companies.length)],
+                    start_date: startDate.toISOString().split('T')[0],
+                    status: daysOffset <= 0 ? "pågår" : "til utførelse",
+                    comment: "",
+                    at_list: at_list,
+                    risk_level: ["moderat", "middels", "høy"][Math.floor(Math.random() * 3)]
+                });
+            }
+            return data;
+        }
 
         function loadData() {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
                 aktiviteter = JSON.parse(stored);
             } else {
-                aktiviteter = JSON.parse(JSON.stringify(DATA));
+                aktiviteter = generateSampleData();
             }
             originalAktiviteter = JSON.parse(JSON.stringify(aktiviteter));
-            renderTable();
-            updateStats();
-            updateFilters();
+            populateFirmaFilter();
+            renderOversikt();
+            renderHealthCheck();
+            renderATKoordinering();
+            loadUsers();
+            renderCompanyColors();
         }
 
         function saveData() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(aktiviteter));
-            const now = new Date().toLocaleString('no-NO');
-            localStorage.setItem('wrk2_last_update', now);
-            document.getElementById('last-updated').textContent = now;
         }
 
-        function toggleDetail(id) {
-            if (expandedRows.has(id)) {
-                expandedRows.delete(id);
-            } else {
-                expandedRows.add(id);
-            }
-            renderTable();
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('activities-table');
-            tbody.innerHTML = '';
-
-            aktiviteter.forEach((act, idx) => {
-                const checked = Object.values(act.prerequisites).filter(v => v === true).length;
-                let rowClass = 'status-incomplete';
-                if (checked === 7) {
-                    rowClass = 'status-ready';
-                } else if (!act.start_date) {
-                    rowClass = 'status-nodate';
-                }
-                
-                // Hovedrad
-                const row = document.createElement('tr');
-                row.className = rowClass;
-                row.innerHTML = `
-                    <td><button class="expand-btn" onclick="toggleDetail('${act.id}')">${expandedRows.has(act.id) ? '−' : '+'}</button></td>
-                    <td class="id-cell">${act.id}</td>
-                    <td class="metode-cell">${act.metode_nr}</td>
-                    <td class="area-cell">${act.area}</td>
-                    <td class="activity-cell">${act.activity}</td>
-                    <td class="date-cell">
-                        <input type="date" value="${act.start_date}"
-                               onchange="updateDate(${idx}, this.value)">
-                    </td>
-                    <td class="checkbox-cell">
-                        <input type="checkbox" ${act.prerequisites.mannskap ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'mannskap', this.checked)">
-                    </td>
-                    <td class="checkbox-cell">
-                        <input type="checkbox" ${act.prerequisites.materialer ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'materialer', this.checked)">
-                    </td>
-                    <td class="checkbox-cell">
-                        <input type="checkbox" ${act.prerequisites.foregaende ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'foregaende', this.checked)">
-                    </td>
-                    <td class="checkbox-cell">
-                        <input type="checkbox" ${act.prerequisites.plass ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'plass', this.checked)">
-                    </td>
-                    <td class="checkbox-cell">
-                        <input type="checkbox" ${act.prerequisites.informasjon ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'informasjon', this.checked)">
-                    </td>
-                    <td class="checkbox-cell">
-                        <input type="checkbox" ${act.prerequisites.ytre_faktorer ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'ytre_faktorer', this.checked)">
-                    </td>
-                    <td class="checkbox-cell">
-                        <input type="checkbox" ${act.prerequisites.utstyr ? 'checked' : ''}
-                               onchange="updatePrerequisite(${idx}, 'utstyr', this.checked)">
-                    </td>
-                    <td class="count-cell">${checked}/7</td>
-                `;
-                tbody.appendChild(row);
-
-                // Detalj-rad (hvis expanded)
-                if (expandedRows.has(act.id)) {
-                    const detailRow = document.createElement('tr');
-                    detailRow.className = 'detail-row expanded';
-                    detailRow.innerHTML = `
-                        <td colspan="14">
-                            <div class="detail-content">
-                                <div class="detail-item">
-                                    <span class="detail-label">Planmerknad:</span>
-                                    ${act.planmerknad || '(ingen merknad)'}
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Metode:</span>
-                                    ${act.metodebeskrivelse}
-                                </div>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(detailRow);
-                }
-            });
-        }
-
-        function updateDate(idx, value) {
-            aktiviteter[idx].start_date = value;
-            saveData();
-            updateStats();
-            renderTable();
-            renderHealthCheck();
-        }
-
-        function updatePrerequisite(idx, prereq, checked) {
-            aktiviteter[idx].prerequisites[prereq] = checked;
-            saveData();
-            renderTable();
-            updateStats();
-            renderHealthCheck();
-        }
-
-        function updateStats() {
-            const total = aktiviteter.length;
-            const ready = aktiviteter.filter(a => Object.values(a.prerequisites).filter(v => v).length === 7).length;
-            const pending = total - ready;
-
-            document.getElementById('total-activities').textContent = total;
-            document.getElementById('ready-activities').textContent = ready;
-            document.getElementById('pending-activities').textContent = pending;
-        }
-
-        function updateFilters() {
-            const areaSet = new Set(aktiviteter.map(a => a.area).filter(Boolean));
-            const select = document.getElementById('area-filter');
-            Array.from(areaSet).sort().forEach(area => {
-                if (!select.querySelector(`option[value="${area}"]`)) {
+        function populateFirmaFilter() {
+            const firmas = [...new Set(originalAktiviteter.map(a => a.firma))];
+            const select = document.getElementById('firma-filter');
+            firmas.forEach(firma => {
+                if (!select.querySelector(`option[value="${firma}"]`)) {
                     const opt = document.createElement('option');
-                    opt.value = area;
-                    opt.textContent = area;
+                    opt.value = firma;
+                    opt.textContent = firma;
                     select.appendChild(opt);
                 }
             });
         }
 
-        function resetFilters() {
-            document.getElementById('search').value = '';
-            document.getElementById('area-filter').value = '';
-            document.getElementById('status-filter').value = '';
-            aktiviteter = JSON.parse(JSON.stringify(originalAktiviteter));
-            expandedRows.clear();
-            renderTable();
-            renderHealthCheck();
+        function filterByFirma(firma) {
+            renderHealthCheck(firma);
         }
 
-        document.getElementById('search').addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            aktiviteter = originalAktiviteter.filter(a =>
-                a.id.toLowerCase().includes(query) ||
-                a.activity.toLowerCase().includes(query)
-            );
-            expandedRows.clear();
-            renderTable();
-            renderHealthCheck();
-        });
-
-        document.getElementById('area-filter').addEventListener('change', (e) => {
-            const area = e.target.value;
-            const search = document.getElementById('search').value;
-            aktiviteter = originalAktiviteter.filter(a =>
-                (!area || a.area === area) &&
-                (!search || a.id.toLowerCase().includes(search) || a.activity.toLowerCase().includes(search))
-            );
-            expandedRows.clear();
-            renderTable();
-            renderHealthCheck();
-        });
-
-        function exportToJSON() {
-            const data = {
-                export_date: new Date().toISOString(),
-                total: aktiviteter.length,
-                ready: aktiviteter.filter(a => Object.values(a.prerequisites).filter(v => v).length === 7).length,
-                activities: aktiviteter
-            };
-            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `WRK2_Aktiviteter_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
+        function getWeekLabel(dateStr) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const actDate = new Date(dateStr);
+            actDate.setHours(0, 0, 0, 0);
+            const diffDays = Math.ceil((actDate - today) / (1000 * 60 * 60 * 24));
+            if (diffDays < 0) return "DENNE UKEN (Gamle datoer)";
+            if (diffDays <= 7) return "DENNE UKEN";
+            const weeksAhead = Math.ceil(diffDays / 7);
+            return `OM ${weeksAhead} UKER`;
         }
 
-        function exportToCSV() {
-            let csv = 'ID,Metode,Område,Aktivitet,Startdato,Mannskap,Materialer,Foregaende,Plass,Informasjon,Ytre faktorer,Utstyr,Avklart\n';
-            aktiviteter.forEach(a => {
-                const checked = Object.values(a.prerequisites).filter(v => v).length;
-                csv += `"${a.id}","${a.metode_nr}","${a.area}","${a.activity}","${a.start_date}",${a.prerequisites.mannskap ? 'JA' : 'NEI'},${a.prerequisites.materialer ? 'JA' : 'NEI'},${a.prerequisites.foregaende ? 'JA' : 'NEI'},${a.prerequisites.plass ? 'JA' : 'NEI'},${a.prerequisites.informasjon ? 'JA' : 'NEI'},${a.prerequisites.ytre_faktorer ? 'JA' : 'NEI'},${a.prerequisites.utstyr ? 'JA' : 'NEI'},"${checked}/7"\n`;
-            });
-            const blob = new Blob([csv], {type: 'text/csv'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `WRK2_Aktiviteter_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
+        function getRiskSymbol(at) {
+            return RISKS[at.risk] || '⚠️';
         }
 
-        function importData() {
-            document.getElementById('import-file').click();
-        }
+        function renderOversikt() {
+            const container = document.getElementById('activities-container');
+            container.innerHTML = '';
 
-        document.getElementById('import-file').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    aktiviteter = data.activities || data;
-                    originalAktiviteter = JSON.parse(JSON.stringify(aktiviteter));
-                    saveData();
-                    renderTable();
-                    updateStats();
-                    renderHealthCheck();
-                    alert('Data importert!');
-                } catch (err) {
-                    alert('Feil ved import: ' + err.message);
-                }
-            };
-            reader.readAsText(file);
-        });
-
-        function clearAll() {
-            if (confirm('Er du sikker? Dette sletter alle endringer.')) {
-                localStorage.removeItem(STORAGE_KEY);
-                aktiviteter = JSON.parse(JSON.stringify(DATA));
-                originalAktiviteter = JSON.parse(JSON.stringify(aktiviteter));
-                expandedRows.clear();
-                saveData();
-                renderTable();
-                updateStats();
-                renderHealthCheck();
+            let filtered = originalAktiviteter;
+            const search = document.getElementById('search')?.value || '';
+            if (search) {
+                filtered = filtered.filter(a =>
+                    a.id.toLowerCase().includes(search.toLowerCase()) ||
+                    a.activity.toLowerCase().includes(search.toLowerCase())
+                );
             }
+
+            filtered.sort((a, b) => {
+                if (a.status === "pågår" && b.status !== "pågår") return -1;
+                if (a.status !== "pågår" && b.status === "pågår") return 1;
+                return new Date(a.start_date) - new Date(b.start_date);
+            });
+
+            const grouped = {};
+            filtered.forEach(act => {
+                const week = getWeekLabel(act.start_date);
+                if (!grouped[week]) grouped[week] = [];
+                grouped[week].push(act);
+            });
+
+            const weekOrder = ["DENNE UKEN", "DENNE UKEN (Gamle datoer)", "OM 1 UKER", "OM 2 UKER", "OM 3 UKER", "OM 4 UKER", "OM 5 UKER", "OM 6 UKER", "OM 7 UKER", "OM 8 UKER"];
+
+            weekOrder.forEach(week => {
+                if (!grouped[week]) return;
+
+                const weekDiv = document.createElement('div');
+                weekDiv.className = 'week-group';
+
+                const weekHeader = document.createElement('div');
+                weekHeader.className = 'week-header';
+                weekHeader.onclick = () => toggleWeek(week);
+                weekHeader.innerHTML = `<span>${expandedActivities.has(`week_${week}`) ? '−' : '+'}</span> ${week} (${grouped[week].length})`;
+                weekDiv.appendChild(weekHeader);
+
+                const tableWrapper = document.createElement('div');
+                tableWrapper.className = 'table-wrapper';
+                if (!expandedActivities.has(`week_${week}`)) tableWrapper.style.display = 'none';
+
+                const table = document.createElement('table');
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th style="width:30px;"></th>
+                            <th>Område</th>
+                            <th>Status</th>
+                            <th>ID</th>
+                            <th>Metode</th>
+                            <th>AT#</th>
+                            <th>Aktivitet</th>
+                            <th>Startdato</th>
+                            <th>Firma</th>
+                            <th>Metode☑</th>
+                            <th>Risiko</th>
+                            <th>Nivå</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-${week}"></tbody>
+                `;
+
+                const tbody = table.querySelector('tbody');
+                grouped[week].forEach(act => {
+                    const isExpanded = expandedActivities.has(act.id);
+                    const color = COMPANY_COLORS[act.firma] || '#999';
+                    const riskSymbol = getRiskSymbol(act.at_list[0] || {});
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><button class="expand-btn" onclick="toggleActivity('${act.id}')">${isExpanded ? '−' : '+'}</button></td>
+                        <td>${act.area}</td>
+                        <td><select onchange="updateStatus('${act.id}', this.value)" style="width:80px;">
+                            <option value="til utførelse" ${act.status === 'til utførelse' ? 'selected' : ''}>Til utf.</option>
+                            <option value="pågår" ${act.status === 'pågår' ? 'selected' : ''}>Pågår</option>
+                            <option value="utført" ${act.status === 'utført' ? 'selected' : ''}>Utført</option>
+                        </select></td>
+                        <td><strong>${act.id}</strong></td>
+                        <td>${act.metode_nr}</td>
+                        <td>${act.at_list.map(at => at.id).join(', ')}</td>
+                        <td>${act.activity}</td>
+                        <td><input type="date" value="${act.start_date}" onchange="updateDate('${act.id}', this.value)" style="width:100px;"></td>
+                        <td><span class="company-badge" style="background: ${color};">${act.firma[0]}</span></td>
+                        <td style="text-align:center;"><input type="checkbox" onchange="updateMethod('${act.id}', this.checked)"></td>
+                        <td style="font-size:16px;">${riskSymbol}</td>
+                        <td><span style="color:${act.risk_level === 'moderat' ? '#27ae60' : act.risk_level === 'middels' ? '#f39c12' : '#e74c3c'};">●</span> ${act.risk_level}</td>
+                    `;
+                    tbody.appendChild(row);
+
+                    if (isExpanded) {
+                        // Common comment
+                        const commentRow = document.createElement('tr');
+                        commentRow.className = 'detail-row';
+                        commentRow.innerHTML = `
+                            <td colspan="12" style="background: white; padding: 10px;">
+                                <strong>Kommentar:</strong><br>
+                                <textarea onchange="updateComment('${act.id}', this.value)">${act.comment || ''}</textarea>
+                            </td>
+                        `;
+                        tbody.appendChild(commentRow);
+
+                        // AT rows
+                        act.at_list.forEach((at, idx) => {
+                            const atRow = document.createElement('tr');
+                            atRow.className = 'at-row';
+                            atRow.innerHTML = `
+                                <td colspan="2" style="padding-left:30px;"><strong>${at.id}</strong></td>
+                                <td><input type="text" value="${at.name}" onchange="updateATName('${act.id}', ${idx}, this.value)" style="width:120px;"></td>
+                                <td colspan="2"><select onchange="updateATStatus('${act.id}', ${idx}, this.value)" style="width:80px;">
+                                    <option value="til utførelse" ${at.status === 'til utførelse' ? 'selected' : ''}>Til utf.</option>
+                                    <option value="pågår" ${at.status === 'pågår' ? 'selected' : ''}>Pågår</option>
+                                    <option value="utført" ${at.status === 'utført' ? 'selected' : ''}>Utført</option>
+                                </select></td>
+                                <td colspan="2">
+                                    <select onchange="updateATRisk('${act.id}', ${idx}, this.value)" style="width:150px;">
+                                        ${Object.entries(RISKS).map(([k, v]) => `<option value="${k}" ${at.risk === k ? 'selected' : ''}>${v} ${RISK_LABELS[k]}</option>`).join('')}
+                                    </select>
+                                </td>
+                                <td colspan="3"></td>
+                                <td style="font-size:16px;">${RISKS[at.risk]}</td>
+                            `;
+                            tbody.appendChild(atRow);
+
+                            // AT comment
+                            const commentRow = document.createElement('tr');
+                            commentRow.className = 'detail-row';
+                            commentRow.innerHTML = `
+                                <td colspan="12" style="background: white; padding: 10px 10px 10px 60px;">
+                                    <strong>Kommentar ${at.id}:</strong><br>
+                                    <textarea onchange="updateATComment('${act.id}', ${idx}, this.value)">${at.comment}</textarea>
+                                </td>
+                            `;
+                            tbody.appendChild(commentRow);
+                        });
+                    }
+                });
+
+                tableWrapper.appendChild(table);
+                weekDiv.appendChild(tableWrapper);
+                container.appendChild(weekDiv);
+            });
         }
 
-        function showTab(tabName) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.nav-tabs button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            // Show selected tab
-            const tabEl = document.getElementById(tabName);
-            if (tabEl) {
-                tabEl.classList.add('active');
-                event.target.classList.add('active');
+        function toggleWeek(week) {
+            const key = `week_${week}`;
+            if (expandedActivities.has(key)) {
+                expandedActivities.delete(key);
+            } else {
+                expandedActivities.add(key);
             }
+            renderOversikt();
         }
 
-        function renderHealthCheck() {
+        function toggleActivity(id) {
+            if (expandedActivities.has(id)) {
+                expandedActivities.delete(id);
+            } else {
+                expandedActivities.add(id);
+            }
+            renderOversikt();
+        }
+
+        function updateStatus(id, status) {
+            const act = aktiviteter.find(a => a.id === id);
+            if (act) { act.status = status; saveData(); renderHealthCheck(); }
+        }
+
+        function updateDate(id, date) {
+            const act = aktiviteter.find(a => a.id === id);
+            if (act) { act.start_date = date; saveData(); renderOversikt(); }
+        }
+
+        function updateComment(id, text) {
+            const act = aktiviteter.find(a => a.id === id);
+            if (act) { act.comment = text; saveData(); }
+        }
+
+        function updateMethod(id, checked) {
+            const act = aktiviteter.find(a => a.id === id);
+            if (act) { saveData(); }
+        }
+
+        function updateATName(id, idx, name) {
+            const act = aktiviteter.find(a => a.id === id);
+            if (act && act.at_list[idx]) { act.at_list[idx].name = name; saveData(); }
+        }
+
+        function updateATStatus(id, idx, status) {
+            const act = aktiviteter.find(a => a.id === id);
+            if (act && act.at_list[idx]) { act.at_list[idx].status = status; saveData(); }
+        }
+
+        function updateATRisk(id, idx, risk) {
+            const act = aktiviteter.find(a => a.id === id);
+            if (act && act.at_list[idx]) { act.at_list[idx].risk = risk; saveData(); renderOversikt(); }
+        }
+
+        function updateATComment(id, idx, text) {
+            const act = aktiviteter.find(a => a.id === id);
+            if (act && act.at_list[idx]) { act.at_list[idx].comment = text; saveData(); }
+        }
+
+        function updateActivityOrder() {
+            renderOversikt();
+        }
+
+        function renderHealthCheck(firma = '') {
             const container = document.getElementById('health-container');
             container.innerHTML = '';
 
-            // Separate unhealthy and healthy activities
-            const unhealthy = aktiviteter.filter(a => {
-                const checked = Object.values(a.prerequisites).filter(v => v).length;
-                return checked < 7 || !a.start_date;
+            let filtered = firma ? originalAktiviteter.filter(a => a.firma === firma) : originalAktiviteter;
+
+            const unhealthy = filtered.filter(a => {
+                const allRisksSet = a.at_list.every(at => at.risk);
+                return !allRisksSet || !a.start_date;
             });
 
-            const healthy = aktiviteter.filter(a => {
-                const checked = Object.values(a.prerequisites).filter(v => v).length;
-                return checked === 7 && a.start_date;
+            const healthy = filtered.filter(a => {
+                const allRisksSet = a.at_list.every(at => at.risk);
+                return allRisksSet && a.start_date;
             });
 
-            // Show unhealthy first
-            unhealthy.forEach(act => {
-                const checked = Object.values(act.prerequisites).filter(v => v).length;
-                const missing = [];
-
-                if (!act.start_date) missing.push('Startdato');
-                if (!act.prerequisites.mannskap) missing.push('Mannskap');
-                if (!act.prerequisites.materialer) missing.push('Materialer');
-                if (!act.prerequisites.foregaende) missing.push('Foregaende aktivitet');
-                if (!act.prerequisites.plass) missing.push('Plass');
-                if (!act.prerequisites.informasjon) missing.push('Informasjon');
-                if (!act.prerequisites.ytre_faktorer) missing.push('Ytre faktorer');
-                if (!act.prerequisites.utstyr) missing.push('Utstyr');
-
-                const isCritical = missing.length >= 3;
-                const cardClass = isCritical ? 'critical' : 'warning';
-                const badgeClass = isCritical ? 'critical' : 'warning';
-
+            [...unhealthy, ...healthy].forEach(act => {
                 const card = document.createElement('div');
-                card.className = `health-card ${cardClass}`;
+                const isCritical = unhealthy.includes(act);
+                card.className = `health-card ${isCritical ? (unhealthy.length > 3 ? 'critical' : 'warning') : 'healthy'}`;
+                const color = COMPANY_COLORS[act.firma] || '#999';
+
                 card.innerHTML = `
-                    <div class="card-header">
-                        <span class="card-id">${act.id}</span>
-                        <span class="status-badge ${badgeClass}">${isCritical ? 'Kritisk' : 'Advarsel'}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong>${act.id}</strong>
+                        <span class="company-badge" style="background: ${color};">${act.firma[0]}</span>
                     </div>
-                    <div class="card-activity">${act.activity}</div>
-                    <div class="card-area">${act.area}</div>
-                    <div>
-                        <strong style="font-size: 12px; color: #555;">Mangler:</strong>
-                        <ul class="missing-list">
-                            ${missing.map(m => `<li><span class="missing-item">• ${m}</span></li>`).join('')}
-                        </ul>
-                    </div>
-                    <div style="font-size: 12px; color: #7f8c8d;">
-                        Oppfylt: <strong>${checked}/7</strong> forutsetninger
-                    </div>
+                    <div style="margin: 8px 0;"><strong>${act.activity}</strong></div>
+                    <div style="font-size: 11px; color: #666;">${act.firma}</div>
                 `;
                 container.appendChild(card);
             });
-
-            // Show healthy activities (grayed out)
-            healthy.forEach(act => {
-                const card = document.createElement('div');
-                card.className = 'health-card healthy';
-                card.innerHTML = `
-                    <div class="card-header">
-                        <span class="card-id">${act.id}</span>
-                        <span class="status-badge healthy">Klar</span>
-                    </div>
-                    <div class="card-activity">${act.activity}</div>
-                    <div class="card-area">${act.area}</div>
-                    <div style="font-size: 12px; color: #7f8c8d;">
-                        <strong>${act.start_date}</strong> - Alle 7 forutsetninger oppfylt
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-
-            // Update health stats
-            document.getElementById('ready-health').textContent = healthy.length;
-            document.getElementById('pending-health').textContent = unhealthy.length;
         }
 
-        // Initialiser
+        function renderATKoordinering() {
+            const listDiv = document.getElementById('at-list');
+            listDiv.innerHTML = '';
+
+            const thisWeek = aktiviteter.filter(a => {
+                const today = new Date();
+                const actDate = new Date(a.start_date);
+                const diffDays = Math.ceil((actDate - today) / (1000 * 60 * 60 * 24));
+                return diffDays >= -7 && diffDays <= 7;
+            });
+
+            thisWeek.forEach(act => {
+                act.at_list.forEach(at => {
+                    const card = document.createElement('div');
+                    card.className = 'at-card';
+                    const color = COMPANY_COLORS[act.firma] || '#999';
+                    card.style.borderLeftColor = color;
+                    card.innerHTML = `
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <span style="background: ${color}; color: white; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: bold;">${act.firma[0]}</span>
+                            <div>
+                                <div style="font-weight: bold;">${at.id}</div>
+                                <div style="font-size: 11px; color: #666;">${act.id} - ${act.activity}</div>
+                            </div>
+                        </div>
+                    `;
+                    listDiv.appendChild(card);
+                });
+            });
+        }
+
+        function loadUsers() {
+            const stored = localStorage.getItem('wrk2_users');
+            users = stored ? JSON.parse(stored) : [
+                { email: 'admin@example.com', name: 'Administrator', role: 'admin' },
+                { email: 'viewer@example.com', name: 'Viewer', role: 'viewer' }
+            ];
+            renderUsers();
+        }
+
+        function saveUsers() {
+            localStorage.setItem('wrk2_users', JSON.stringify(users));
+        }
+
+        function addUser() {
+            const email = document.getElementById('new-user-email').value;
+            const name = document.getElementById('new-user-name').value;
+            const role = document.getElementById('new-user-role').value;
+
+            if (email && name) {
+                users.push({ email, name, role });
+                saveUsers();
+                document.getElementById('new-user-email').value = '';
+                document.getElementById('new-user-name').value = '';
+                renderUsers();
+            }
+        }
+
+        function renderUsers() {
+            const list = document.getElementById('user-list');
+            list.innerHTML = '';
+            users.forEach((user, idx) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div>
+                        <strong>${user.name}</strong><br>
+                        <small>${user.email}</small><br>
+                        <small style="color: #666;">${user.role}</small>
+                    </div>
+                    <button onclick="removeUser(${idx})" style="background: #e74c3c;">Fjern</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function removeUser(idx) {
+            users.splice(idx, 1);
+            saveUsers();
+            renderUsers();
+        }
+
+        function renderCompanyColors() {
+            const container = document.getElementById('company-colors');
+            container.innerHTML = '';
+            Object.entries(COMPANY_COLORS).forEach(([company, color]) => {
+                const div = document.createElement('div');
+                div.className = 'color-item';
+                div.innerHTML = `
+                    <div class="color-box" style="background: ${color};"></div>
+                    <div>
+                        <strong>${company}</strong><br>
+                        <input type="color" value="${color}" onchange="updateCompanyColor('${company}', this.value)" style="width: 50px; padding: 4px; border: 1px solid #ddd;">
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateCompanyColor(company, color) {
+            COMPANY_COLORS[company] = color;
+            renderOversikt();
+            renderHealthCheck();
+            renderCompanyColors();
+        }
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const search = document.getElementById('search');
+            if (search) search.addEventListener('input', () => renderOversikt());
+        });
+
         loadData();
-        renderHealthCheck();
     </script>
 </body>
 </html>

@@ -31,18 +31,34 @@
             border-bottom: 2px solid #ddd;
         }
 
-        .nav-tabs a {
+        .nav-tabs button {
             padding: 12px 20px;
             text-decoration: none;
             color: #666;
+            border: none;
             border-bottom: 3px solid transparent;
             transition: all 0.2s;
             cursor: pointer;
+            background: none;
+            font-size: 15px;
+            font-weight: 500;
         }
 
-        .nav-tabs a.active {
+        .nav-tabs button.active {
             color: #3498db;
             border-bottom-color: #3498db;
+        }
+
+        .nav-tabs button:hover {
+            color: #2980b9;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
         }
 
         header {
@@ -282,87 +298,200 @@
             color: #7f8c8d;
             font-size: 12px;
         }
+
+        /* Klargjøring av aktiviteter (Health Check) */
+        .health-check-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .health-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .health-card.critical {
+            border-left: 4px solid #e74c3c;
+        }
+
+        .health-card.warning {
+            border-left: 4px solid #f39c12;
+        }
+
+        .health-card.healthy {
+            border-left: 4px solid #27ae60;
+            opacity: 0.6;
+        }
+
+        .card-header {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-id {
+            color: #3498db;
+            font-size: 14px;
+        }
+
+        .card-activity {
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .card-area {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 12px;
+        }
+
+        .missing-list {
+            list-style: none;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .missing-list li {
+            padding: 6px 0;
+            font-size: 13px;
+            color: #555;
+            border-bottom: 1px solid #eee;
+        }
+
+        .missing-list li:last-child {
+            border-bottom: none;
+        }
+
+        .missing-item {
+            color: #e74c3c;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.critical {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-badge.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.healthy {
+            background: #d4edda;
+            color: #155724;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="nav-tabs">
-            <a class="active" onclick="showTab('oversikt')">Oversikt</a>
-            <a onclick="window.location.href='aktiviteter.html'">Aktiviteter (Entreprenør)</a>
+            <button class="active" onclick="showTab('klargjoring')">Klargjøring av aktiviteter</button>
+            <button onclick="showTab('oversikt')">Totaloversikt</button>
+            <button onclick="window.location.href='aktiviteter.html'" style="margin-left: auto;">Aktiviteter (Entreprenør)</button>
         </div>
 
-        <header>
-            <h1>WRK2 Aktivitetsoversikt</h1>
-            <p>Produksjonsstyringsverktøy for byggeplass - fra Excel-arket med 84 aktiviteter</p>
+        <!-- TAB 1: KLARGJØRING AV AKTIVITETER -->
+        <div id="klargjoring" class="tab-content active">
+            <header>
+                <h1>Klargjøring av aktiviteter</h1>
+                <p>Sunnhetskontroll - se hvilke aktiviteter som trenger oppfølging</p>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-number" id="ready-health">0</span>
+                        <span>Klar til oppstart</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="pending-health">0</span>
+                        <span>Trenger oppfølging</span>
+                    </div>
+                </div>
+            </header>
+            <div class="health-check-container" id="health-container"></div>
+        </div>
 
-            <div class="stats">
-                <div class="stat">
-                    <span class="stat-number" id="total-activities">0</span>
-                    <span>Aktiviteter totalt</span>
+        <!-- TAB 2: TOTALOVERSIKT -->
+        <div id="oversikt" class="tab-content">
+            <header>
+                <h1>Totaloversikt</h1>
+                <p>Produksjonsstyringsverktøy for byggeplass - Excel-struktur med status</p>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-number" id="total-activities">0</span>
+                        <span>Aktiviteter totalt</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="ready-activities">0</span>
+                        <span>Helt klare (7/7)</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="pending-activities">0</span>
+                        <span>Ufullstendige</span>
+                    </div>
                 </div>
-                <div class="stat">
-                    <span class="stat-number" id="ready-activities">0</span>
-                    <span>Helt klare (7/7)</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-number" id="pending-activities">0</span>
-                    <span>Ufullstendige</span>
-                </div>
+            </header>
+
+            <div class="filter-bar">
+                <input type="text" id="search" placeholder="Søk etter ID eller aktivitet..." style="flex: 1; min-width: 200px;">
+                <select id="area-filter">
+                    <option value="">Alle områder</option>
+                </select>
+                <select id="status-filter">
+                    <option value="">Alle statuser</option>
+                    <option value="ready">Klare (7/7)</option>
+                    <option value="incomplete">Ufullstendige</option>
+                </select>
+                <button onclick="resetFilters()" class="secondary">Nullstill filter</button>
             </div>
 
-            <div class="controls">
-                <button onclick="exportToJSON()">Lagre JSON</button>
-                <button onclick="exportToCSV()" class="secondary">Eksporter CSV</button>
-                <button onclick="importData()" class="secondary">Importer data</button>
-                <button onclick="clearAll()" class="secondary" style="background: #e74c3c;">Nullstill alt</button>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 30px;"></th>
+                            <th>ID</th>
+                            <th>Metode</th>
+                            <th>Område</th>
+                            <th>Aktivitet</th>
+                            <th>Startdato</th>
+                            <th colspan="7" class="prerequisites-header">7 Produksjonsforutsetninger</th>
+                            <th>Avklart</th>
+                        </tr>
+                        <tr class="prerequisites-header">
+                            <th colspan="6"></th>
+                            <th title="Mannskap">Mannskap</th>
+                            <th title="Materialer">Materialer</th>
+                            <th title="Foregaende">Foregaende</th>
+                            <th title="Plass">Plass</th>
+                            <th title="Informasjon">Info</th>
+                            <th title="Ytre faktorer">Ytre</th>
+                            <th title="Utstyr">Utstyr</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="activities-table"></tbody>
+                </table>
             </div>
-        </header>
 
-        <div class="filter-bar">
-            <input type="text" id="search" placeholder="Søk etter ID eller aktivitet..." style="flex: 1; min-width: 200px;">
-            <select id="area-filter">
-                <option value="">Alle områder</option>
-            </select>
-            <select id="status-filter">
-                <option value="">Alle statuser</option>
-                <option value="ready">Klare (7/7)</option>
-                <option value="incomplete">Ufullstendige</option>
-            </select>
-            <button onclick="resetFilters()" class="secondary">Nullstill filter</button>
-        </div>
-
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 30px;"></th>
-                        <th>ID</th>
-                        <th>Metode</th>
-                        <th>Område</th>
-                        <th>Aktivitet</th>
-                        <th>Startdato</th>
-                        <th colspan="7" class="prerequisites-header">7 Produksjonsforutsetninger</th>
-                        <th>Avklart</th>
-                    </tr>
-                    <tr class="prerequisites-header">
-                        <th colspan="6"></th>
-                        <th title="Mannskap">Mannskap</th>
-                        <th title="Materialer">Materialer</th>
-                        <th title="Foregaende">Foregaende</th>
-                        <th title="Plass">Plass</th>
-                        <th title="Informasjon">Info</th>
-                        <th title="Ytre faktorer">Ytre</th>
-                        <th title="Utstyr">Utstyr</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="activities-table"></tbody>
-            </table>
-        </div>
-
-        <div class="footer">
-            <p>Data lagres automatisk i nettleseren. Klikk på rad for å se detaljer (planmerknad, metodebeskrivelse).</p>
-            <p>Siste oppdatering: <span id="last-updated">aldri</span></p>
+            <div class="footer">
+                <p>Data lagres automatisk i nettleseren. Klikk på rad for å se detaljer (planmerknad, metodebeskrivelse).</p>
+                <p>Siste oppdatering: <span id="last-updated">aldri</span></p>
+            </div>
         </div>
     </div>
 
@@ -492,6 +621,7 @@
             saveData();
             updateStats();
             renderTable();
+            renderHealthCheck();
         }
 
         function updatePrerequisite(idx, prereq, checked) {
@@ -499,6 +629,7 @@
             saveData();
             renderTable();
             updateStats();
+            renderHealthCheck();
         }
 
         function updateStats() {
@@ -531,6 +662,7 @@
             aktiviteter = JSON.parse(JSON.stringify(originalAktiviteter));
             expandedRows.clear();
             renderTable();
+            renderHealthCheck();
         }
 
         document.getElementById('search').addEventListener('input', (e) => {
@@ -541,6 +673,7 @@
             );
             expandedRows.clear();
             renderTable();
+            renderHealthCheck();
         });
 
         document.getElementById('area-filter').addEventListener('change', (e) => {
@@ -552,6 +685,7 @@
             );
             expandedRows.clear();
             renderTable();
+            renderHealthCheck();
         });
 
         function exportToJSON() {
@@ -599,6 +733,7 @@
                     saveData();
                     renderTable();
                     updateStats();
+                    renderHealthCheck();
                     alert('Data importert!');
                 } catch (err) {
                     alert('Feil ved import: ' + err.message);
@@ -616,13 +751,108 @@
                 saveData();
                 renderTable();
                 updateStats();
+                renderHealthCheck();
             }
         }
 
-        function showTab(tab) {}
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tabs button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            const tabEl = document.getElementById(tabName);
+            if (tabEl) {
+                tabEl.classList.add('active');
+                event.target.classList.add('active');
+            }
+        }
+
+        function renderHealthCheck() {
+            const container = document.getElementById('health-container');
+            container.innerHTML = '';
+
+            // Separate unhealthy and healthy activities
+            const unhealthy = aktiviteter.filter(a => {
+                const checked = Object.values(a.prerequisites).filter(v => v).length;
+                return checked < 7 || !a.start_date;
+            });
+
+            const healthy = aktiviteter.filter(a => {
+                const checked = Object.values(a.prerequisites).filter(v => v).length;
+                return checked === 7 && a.start_date;
+            });
+
+            // Show unhealthy first
+            unhealthy.forEach(act => {
+                const checked = Object.values(act.prerequisites).filter(v => v).length;
+                const missing = [];
+
+                if (!act.start_date) missing.push('Startdato');
+                if (!act.prerequisites.mannskap) missing.push('Mannskap');
+                if (!act.prerequisites.materialer) missing.push('Materialer');
+                if (!act.prerequisites.foregaende) missing.push('Foregaende aktivitet');
+                if (!act.prerequisites.plass) missing.push('Plass');
+                if (!act.prerequisites.informasjon) missing.push('Informasjon');
+                if (!act.prerequisites.ytre_faktorer) missing.push('Ytre faktorer');
+                if (!act.prerequisites.utstyr) missing.push('Utstyr');
+
+                const isCritical = missing.length >= 3;
+                const cardClass = isCritical ? 'critical' : 'warning';
+                const badgeClass = isCritical ? 'critical' : 'warning';
+
+                const card = document.createElement('div');
+                card.className = `health-card ${cardClass}`;
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="card-id">${act.id}</span>
+                        <span class="status-badge ${badgeClass}">${isCritical ? 'Kritisk' : 'Advarsel'}</span>
+                    </div>
+                    <div class="card-activity">${act.activity}</div>
+                    <div class="card-area">${act.area}</div>
+                    <div>
+                        <strong style="font-size: 12px; color: #555;">Mangler:</strong>
+                        <ul class="missing-list">
+                            ${missing.map(m => `<li><span class="missing-item">• ${m}</span></li>`).join('')}
+                        </ul>
+                    </div>
+                    <div style="font-size: 12px; color: #7f8c8d;">
+                        Oppfylt: <strong>${checked}/7</strong> forutsetninger
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Show healthy activities (grayed out)
+            healthy.forEach(act => {
+                const card = document.createElement('div');
+                card.className = 'health-card healthy';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="card-id">${act.id}</span>
+                        <span class="status-badge healthy">Klar</span>
+                    </div>
+                    <div class="card-activity">${act.activity}</div>
+                    <div class="card-area">${act.area}</div>
+                    <div style="font-size: 12px; color: #7f8c8d;">
+                        <strong>${act.start_date}</strong> - Alle 7 forutsetninger oppfylt
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Update health stats
+            document.getElementById('ready-health').textContent = healthy.length;
+            document.getElementById('pending-health').textContent = unhealthy.length;
+        }
 
         // Initialiser
         loadData();
+        renderHealthCheck();
     </script>
 </body>
 </html>

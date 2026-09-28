@@ -167,6 +167,7 @@ tr.week-row.arkiv-row td{background:#eceef1;color:#57606a}
 .sk-tip{position:absolute;z-index:20;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.16);padding:8px 10px;font-size:12.5px;max-width:300px;pointer-events:none}
 tr.main-row.flash-main td{animation:flash 1.6s}
 @media(max-width:600px){.sk-axis{width:130px !important}.sk-zone{font-size:11px;padding:0 6px}}
+.person{display:inline-block;min-width:30px;padding:2px 6px;border-radius:4px;background:#eef1f4;color:#24292f;font-weight:600;font-size:12px;font-family:ui-monospace,Menlo,monospace}
 </style>
 </head>
 <body>
@@ -530,7 +531,15 @@ function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch
 function readRaw(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function writeRaw(k, v) { try { localStorage.setItem(k, v); } catch (e) { console.warn('Kunne ikke lagre', e); } }
 
+const PERSONER = ['TF', 'TL', 'HL', 'JS'];
+function giAnsvar(o, key) {
+  if (o.ansvarUtforelse !== undefined && o.ansvarGodkjenning !== undefined) return;
+  const r = rng(key + '-ansvar'), u = Math.floor(r() * PERSONER.length);
+  o.ansvarUtforelse = PERSONER[u];
+  o.ansvarGodkjenning = PERSONER[(u + 1 + Math.floor(r() * (PERSONER.length - 1))) % PERSONER.length];
+}
 function migrate(data) {
+  data.forEach(a => { giAnsvar(a, a.id); a.at.forEach(t => giAnsvar(t, t.nr)); });
   data.forEach(a => a.at.forEach(t => {
     if (!Array.isArray(t.plasseringer)) t.plasseringer = [];
     delete t.plassering;
@@ -652,10 +661,13 @@ function commonCells(o, ed, firmaEd) {
     varighet: `<td class="c">${ed ? `<input type="number" min="1" class="w-num" data-field="varighet" value="${o.varighet}">` : o.varighet}</td>`,
     firma: `<td>${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}</td>`,
     lys: FORUTSETNINGER.map(([k]) => `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}</td>`).join(''),
+    ansvar: ['ansvarUtforelse', 'ansvarGodkjenning'].map(f => `<td class="c">${ed
+      ? `<select data-field="${f}" title="${f === 'ansvarUtforelse' ? 'Ansvarlig for utførelse' : 'Ansvarlig for godkjenning'}"><option value="" ${o[f] ? '' : 'selected'}>–</option>${[...new Set([...PERSONER, o[f]].filter(Boolean))].map(x => `<option value="${esc(x)}" ${x === o[f] ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`
+      : o[f] ? `<span class="person" title="${f === 'ansvarUtforelse' ? 'Ansvarlig for utførelse' : 'Ansvarlig for godkjenning'}">${esc(o[f])}</span>` : '<span class="muted">–</span>'}</td>`).join(''),
     kommentar: `<td>${ed ? `<input type="text" class="w-kom" maxlength="120" data-field="kommentar" value="${esc(o.kommentar)}" placeholder="Kort kommentar">` : `<span title="${esc(o.kommentar)}">${esc(o.kommentar)}</span>`}</td>`
   };
 }
-const NCOLS = 20;
+const NCOLS = 22;
 
 function headerRow() {
   return `<tr>
@@ -663,7 +675,7 @@ function headerRow() {
     <th class="col-akt">Aktivitet</th><th>Område</th><th class="c">Startuke</th><th>Startdato</th><th class="c">Varighet<br><span class="muted">(dager)</span></th>
     <th>Firma</th><th class="c">Metode-<br>beskrivelse</th><th>AT</th>
     ${FORUTSETNINGER.map(([, l]) => `<th class="c fu">${l.replace(' ', '<br>')}</th>`).join('')}
-    <th>Risikonivå</th><th>Dødsrisiko</th><th>Status</th><th>Kommentar</th>
+    <th>Risikonivå</th><th>Dødsrisiko</th><th>Status</th><th class="c">Ansvarlig<br>utførelse</th><th class="c">Ansvarlig<br>godkjenning</th><th>Kommentar</th>
   </tr>`;
 }
 
@@ -695,6 +707,7 @@ function mainRow(a, page) {
     <td>${cRisk(a.risikoniva, ed)}</td>
     <td>${cDod(a.dodsrisiko, ed, fraAT)}</td>
     <td>${cStatus(a.status, ed)}</td>
+    ${c.ansvar}
     ${c.kommentar}
   </tr>`;
 }
@@ -715,7 +728,7 @@ function detailRows(a, page) {
     h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="">
       <td class="col-ctrl"><span class="conn">↳</span></td>
       <td class="col-akt"><span class="muted">Ingen AT registrert på aktiviteten</span></td>
-      <td colspan="5"></td>${metodeCell}<td class="at-nr-cell"><span class="muted">–</span></td><td colspan="11"></td>
+      <td colspan="5"></td>${metodeCell}<td class="at-nr-cell"><span class="muted">–</span></td><td colspan="13"></td>
     </tr>`;
   }
   a.at.forEach((t, i) => {
@@ -731,6 +744,7 @@ function detailRows(a, page) {
       <td>${cRisk(t.risikoniva, ed)}</td>
       <td>${cDod(t.dodsrisiko, ed)}</td>
       <td>${cStatus(t.status, ed)}</td>
+      ${c.ansvar}
       ${c.kommentar}
     </tr>`;
   });
@@ -738,7 +752,7 @@ function detailRows(a, page) {
     h += `<tr class="at-row editing" data-id="${esc(a.id)}" data-at="">
       <td class="col-ctrl"></td>
       <td class="col-akt"><button class="btn" data-action="add-at">+ Legg til AT</button></td>
-      <td colspan="5"></td><td colspan="12"></td>
+      <td colspan="5"></td><td colspan="14"></td>
     </tr>`;
   }
   return h;
@@ -759,7 +773,7 @@ function matches(a, st) {
   if (st.firms && !st.firms.has(a.firma) && !a.at.some(t => st.firms.has(t.firma))) return false;
   const q = st.search.trim().toLowerCase();
   if (!q) return true;
-  return [a.id, a.navn, a.omrade, a.firma, a.kommentar, ...a.at.flatMap(t => [t.nr, t.navn, t.firma])].some(s => String(s).toLowerCase().includes(q));
+  return [a.id, a.navn, a.omrade, a.firma, a.kommentar, a.ansvarUtforelse, a.ansvarGodkjenning, ...a.at.flatMap(t => [t.nr, t.navn, t.firma, t.ansvarUtforelse, t.ansvarGodkjenning])].some(s => String(s).toLowerCase().includes(q));
 }
 
 function renderTable(page) {
@@ -1411,7 +1425,8 @@ document.addEventListener('click', e => {
   if (action === 'add-at') {
     const {a} = targetOf(btn); if (!canEditAct(a)) return;
     a.at.push({nr: nextAtNr(), navn: 'Ny arbeidsoperasjon', omrade: a.omrade, startdato: a.startdato, varighet: a.varighet, firma: a.firma,
-      forutsetninger: {...a.forutsetninger}, risikoniva: 'Middels', dodsrisiko: [], status: 'Til utførelse', kommentar: '', plasseringer: []});
+      forutsetninger: {...a.forutsetninger}, risikoniva: 'Middels', dodsrisiko: [], status: 'Til utførelse', kommentar: '', plasseringer: [],
+      ansvarUtforelse: a.ansvarUtforelse, ansvarGodkjenning: a.ansvarGodkjenning});
     save(); renderTable(page); return;
   }
   if (action === 'del-at') {

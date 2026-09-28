@@ -152,6 +152,8 @@ tr.main-row.archived td{background:#f6f6f6}
 tr.main-row.archived .akt-name{color:#57606a}
 .arkiv-tag{background:#e1e4e8;color:#57606a;font-size:10.5px;padding:1px 6px}
 .archive-btn.on{background:#57606a;color:#fff;border-color:#57606a}
+tr.week-row.arkiv-row td{background:#eceef1;color:#57606a}
+.carry-tag{background:#fff0d6;color:#9a5b00;font-size:10.5px;padding:1px 6px}
 </style>
 </head>
 <body>
@@ -643,7 +645,7 @@ function mainRow(a, page) {
       <button class="icon-btn expand" data-action="expand" title="${exp ? 'Skjul' : 'Vis'} AT-rader">${exp ? '−' : '+'}</button>
       ${editBtn}
     </td>
-    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : ''}</div></td>
+    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : mondayOf(a.startdato) < mondayOf(TODAY) ? ` <span class="badge carry-tag" title="Startet ${fmtNo(a.startdato)} og pågår fortsatt">Videreført fra uke ${isoWeek(a.startdato)}</span>` : ''}</div></td>
     ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
     <td class="c">${cLys('metode.status', a.metode.status, ed)}${a.metode.nr ? `<div class="sub">MB ${esc(a.metode.nr)}</div>` : ''}</td>
     <td>${a.at.length ? a.at.map(t => `<span class="at-chip" data-action="goto-at" data-nr="${esc(t.nr)}" title="Gå til ${esc(t.nr)}">${esc(t.nr)}</span>`).join('<br>') : '<span class="muted">Ingen</span>'}</td>
@@ -727,12 +729,19 @@ function renderTable(page) {
   ab.textContent = st.showArchive ? `📦 Skjul arkiv (${nArkiv})` : `📦 Vis arkiv (${nArkiv})`;
   ab.classList.toggle('on', st.showArchive);
   const groups = new Map();
-  rows.forEach(a => { const k = mondayOf(a.startdato); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(a); });
+  const mon = mondayOf(TODAY);
+  // Utkikksplan: pågående aktiviteter fra tidligere uker vises i inneværende uke, avsluttede samles i arkivet.
+  const groupKey = a => erArkiv(a) ? 'arkiv' : (mondayOf(a.startdato) < mon ? mon : mondayOf(a.startdato));
+  rows.forEach(a => { const k = groupKey(a); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(a); });
+  const order = [...groups.keys()].sort((x, y) => x === 'arkiv' ? 1 : y === 'arkiv' ? -1 : x.localeCompare(y));
   let h = `<table class="plan"><thead>${headerRow()}</thead><tbody>`;
   if (!rows.length) h += `<tr><td colspan="${NCOLS}" class="empty">Ingen aktiviteter passer med filteret.${nArkiv && !st.showArchive ? ` ${nArkiv} ligger i arkivet.` : ''}</td></tr>`;
-  for (const [k, acts] of groups) {
+  for (const k of order) {
+    const acts = groups.get(k);
     const collapsed = st.collapsedWeeks.has(k);
-    h += `<tr class="week-row" data-week="${k}"><td colspan="${NCOLS}"><span class="wk-label">${collapsed ? '＋' : '－'} ${weekLabel(k)} <span class="muted">· ${acts.length} aktivitet${acts.length === 1 ? '' : 'er'}</span></span></td></tr>`;
+    const carried = k === mon ? acts.filter(a => mondayOf(a.startdato) < mon).length : 0;
+    const label = k === 'arkiv' ? '📦 Arkiv · startet før denne uken og ikke aktive nå' : weekLabel(k);
+    h += `<tr class="week-row${k === 'arkiv' ? ' arkiv-row' : ''}" data-week="${k}"><td colspan="${NCOLS}"><span class="wk-label">${collapsed ? '＋' : '－'} ${label} <span class="muted">· ${acts.length} aktivitet${acts.length === 1 ? '' : 'er'}${carried ? `, hvorav ${carried} videreført fra tidligere uker` : ''}</span></span></td></tr>`;
     if (collapsed) continue;
     acts.forEach(a => { h += mainRow(a, page); if (st.expanded.has(a.id)) h += detailRows(a, page); });
   }

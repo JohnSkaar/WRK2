@@ -131,8 +131,9 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
 .list-row .grow{flex:1;min-width:0}
 
 .app-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.user-bar{font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.user-bar select{padding:5px 8px;border-radius:6px;border:1px solid #4a5d70;background:#243647;color:#fff;font-size:13px;max-width:100%}
+.user-bar{font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;max-width:100%;min-width:0}
+.app-header>div{min-width:0;max-width:100%}
+.user-bar select{padding:5px 8px;border-radius:6px;border:1px solid #4a5d70;background:#243647;color:#fff;font-size:13px;max-width:calc(100vw - 32px);min-width:0}
 .user-bar .demo{font-size:11px;opacity:.7}
 .access-info{font-size:13px;background:#eef4ff;border:1px solid #c9dafc;color:#1b3f7a;border-radius:6px;padding:6px 10px;margin-top:10px}
 .lock-ico{display:inline-flex;align-items:center;justify-content:center;opacity:.45;cursor:not-allowed}
@@ -154,6 +155,18 @@ tr.main-row.archived .akt-name{color:#57606a}
 .archive-btn.on{background:#57606a;color:#fff;border-color:#57606a}
 tr.week-row.arkiv-row td{background:#eceef1;color:#57606a}
 .carry-tag{background:#fff0d6;color:#9a5b00;font-size:10.5px;padding:1px 6px}
+.sk-panel{position:relative;padding:0;overflow:hidden}
+.sk-chart{display:flex}
+.sk-axis{position:relative;flex:none;border-right:2px solid #d0d7de;background:#fff}
+.sk-zone{position:absolute;left:0;right:0;display:flex;justify-content:space-between;align-items:center;gap:6px;padding:0 10px;font-size:12.5px;font-weight:600;border-bottom:1px solid #e1e4e8;box-sizing:border-box}
+.sk-zone:nth-child(even){background:#fafbfc}
+.sk-scroll{overflow-x:auto;flex:1;min-width:0}
+.sk-scroll svg{display:block}
+.sk-line{cursor:pointer}
+.sk-line.hover line:first-child{stroke-width:4.5}
+.sk-tip{position:absolute;z-index:20;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.16);padding:8px 10px;font-size:12.5px;max-width:300px;pointer-events:none}
+tr.main-row.flash-main td{animation:flash 1.6s}
+@media(max-width:600px){.sk-axis{width:130px !important}.sk-zone{font-size:11px;padding:0 6px}}
 </style>
 </head>
 <body>
@@ -171,6 +184,7 @@ tr.week-row.arkiv-row td{background:#eceef1;color:#57606a}
 <nav class="tabs">
   <button data-tab="klargjoring">Klargjøring av aktiviteter</button>
   <button data-tab="oversikt">Totaloversikt</button>
+  <button data-tab="skrastrek">Skråstreksdiagram</button>
   <button data-tab="koordinering">AT-koordinering</button>
   <button data-tab="admin">Admin</button>
 </nav>
@@ -210,6 +224,27 @@ tr.week-row.arkiv-row td{background:#eceef1;color:#57606a}
       <div class="legend legend-box"></div>
     </div>
     <div class="table-wrap" id="table-oversikt"></div>
+  </section>
+
+  <section class="page" id="page-skrastrek">
+    <div class="panel">
+      <h2>Skråstreksdiagram <span class="readonly-tag">Kun visning</span></h2>
+      <p class="intro">Sone på y-aksen og uke for uke på x-aksen. Hver strek er én aktivitet (eller AT) og går fra startdato nederst i sonen til sluttdato øverst. Fargen er firmaet, og ID-en står ved enden av streken. Hold over en strek for detaljer, og trykk for å åpne den i Totaloversikt. På AT-nivå vises en AT i alle sonene den er plassert i på sonekartet.</p>
+      <div class="toolbar">
+        <div class="firm-filter" data-page="skrastrek"></div>
+        <button class="btn" data-action="ff-mine" data-page="skrastrek">Bare mitt firma</button>
+        <input type="search" data-search="skrastrek" placeholder="Søk aktivitet, ID, AT-nr, område …">
+        <label>Vis: <select class="week-sel" id="sk-niva"><option value="akt">Aktiviteter</option><option value="at">AT-er</option></select></label>
+        <label>Periode: <select class="week-sel" id="sk-uker"><option value="8">8 uker</option><option value="12">12 uker</option><option value="plan">Hele planen</option></select></label>
+        <button class="btn archive-btn" data-action="toggle-archive" data-page="skrastrek">📦 Vis arkiv</button>
+      </div>
+      <div class="stats" id="stats-skrastrek"></div>
+      <div class="legend" id="sk-legend"></div>
+    </div>
+    <div class="panel sk-panel" id="sk-panel">
+      <div class="sk-chart" id="sk-chart"></div>
+      <div class="sk-tip" id="sk-tip" hidden></div>
+    </div>
   </section>
 
   <section class="page" id="page-koordinering">
@@ -294,16 +329,17 @@ const DOD = {
 
 // Fiktive underentreprenører etter fag i metodebeskrivelsene. Ingen andre totalentreprenører enn Skanska.
 const DEFAULT_FIRMS = [
-  {navn: 'Skanska', farge: '#1f5aa6'},
-  {navn: 'Fjell & Grunn AS', farge: '#8e5a2b'},
-  {navn: 'Boreteknikk AS', farge: '#16a085'},
-  {navn: 'Pelefundamentering AS', farge: '#5d6d7e'},
-  {navn: 'Spennteknikk AS', farge: '#8e44ad'},
-  {navn: 'Byggstrøm Elektro AS', farge: '#d68910'},
-  {navn: 'Kranmontasje AS', farge: '#c0392b'},
-  {navn: 'Stillasmontasje AS', farge: '#d35400'},
-  {navn: 'Rør & VVS AS', farge: '#c2185b'}
+  {navn: 'Skanska', farge: '#2a78d6'},
+  {navn: 'Fjell & Grunn AS', farge: '#eb6834'},
+  {navn: 'Boreteknikk AS', farge: '#1baf7a'},
+  {navn: 'Byggstrøm Elektro AS', farge: '#eda100'},
+  {navn: 'Stillasmontasje AS', farge: '#e87ba4'},
+  {navn: 'Rør & VVS AS', farge: '#008300'},
+  {navn: 'Spennteknikk AS', farge: '#4a3aa7'},
+  {navn: 'Kranmontasje AS', farge: '#e34948'},
+  {navn: 'Pelefundamentering AS', farge: '#6a737d'}
 ];
+const OLD_FIRM_COLORS = ['#1f5aa6', '#8e5a2b', '#16a085', '#5d6d7e', '#8e44ad', '#d68910', '#c0392b', '#d35400', '#c2185b'];
 const FIRMA_METODE = {'1.1': 'Skanska', '1.3': 'Byggstrøm Elektro AS', '1.4': 'Kranmontasje AS', '2.1': 'Fjell & Grunn AS',
   '2.2': 'Boreteknikk AS', '2.3': 'Pelefundamentering AS', '3.1': 'Skanska', '3.2': 'Skanska'};
 const DELOP = {
@@ -536,6 +572,11 @@ function load() {
   DATA = migrate(d);
   FIRMS = readJSON(FIRMS_KEY) || readJSON('wrk2_firms_v5');
   if (!Array.isArray(FIRMS) || !FIRMS.length) FIRMS = DEFAULT_FIRMS.map(f => ({...f}));
+  else if (FIRMS.every(f => OLD_FIRM_COLORS.includes(f.farge) || !DEFAULT_FIRMS.some(d => d.navn === f.navn))) {
+    // Uendrede standardfarger byttes til den validerte paletten, i samme rekkefølge som DEFAULT_FIRMS.
+    const extra = FIRMS.filter(f => !DEFAULT_FIRMS.some(d => d.navn === f.navn));
+    FIRMS = DEFAULT_FIRMS.map(d => ({...d})).concat(extra);
+  }
   USERS = loadUsers();
   currentUserId = readRaw(CURRENT_KEY);
   if (!USERS.some(u => u.id === currentUserId)) currentUserId = USERS.find(u => u.rolle === 'systemadmin').id;
@@ -578,6 +619,7 @@ function renderUserBar() {
 const ui = {
   klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set(), showArchive: false},
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
+  skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
   koord: {week: null, selected: null, drawing: null}
 };
 let currentTab = 'oversikt';
@@ -1058,6 +1100,165 @@ function uploadMap(file) {
   reader.readAsDataURL(file);
 }
 
+// ---------- skråstreksdiagram ----------
+const SK_ZONE_ORDER = ['8300 - Utomhus', '8302 - Kjeller / Kjellerinnkjøring', '8302 - Kjeller / Vest', '8302 - Kjeller / Øst',
+  '8301 - Ovnshall', '8302 - Trådhall', '8302 - Kontrollsenter', '8303 - Driftssenter', '8304 - Lagerhall', 'Pallelager'];
+const SK = {dayW: 14, bandMin: 78, bandEmpty: 34, labelH: 13, left: 210, top: 58, pad: 8};
+let skItems = [];
+
+function skRange(items) {
+  const mon = mondayOf(TODAY), st = ui.skrastrek;
+  let from = mon;
+  if (st.showArchive && items.length) from = mondayOf(items.reduce((m, x) => x.start < m ? x.start : m, mon));
+  let to;
+  if (st.uker === 'plan') {
+    const maxEnd = items.reduce((m, x) => x.end > m ? x.end : m, addDays(mon, 7 * 8 - 1));
+    to = addDays(mondayOf(maxEnd), 6);
+  } else to = addDays(mon, 7 * Number(st.uker) - 1);
+  return [from, to];
+}
+function skCollect() {
+  const st = ui.skrastrek, items = [];
+  DATA.filter(a => matches(a, st) && (st.showArchive || !erArkiv(a))).forEach(a => {
+    if (st.niva === 'akt') {
+      items.push({a, key: a.id, label: a.id, navn: a.navn, firma: a.firma, zone: a.omrade, start: a.startdato, end: endDate(a), status: a.status, dod: [...new Set([...a.dodsrisiko, ...a.at.flatMap(t => t.dodsrisiko)])]});
+    } else {
+      a.at.forEach(t => {
+        if (st.firms && !st.firms.has(t.firma)) return;
+        const zones = [...new Set(t.plasseringer.map(p => p.sone).filter(Boolean))];
+        (zones.length ? zones : [t.omrade]).forEach(z => items.push({a, t, key: t.nr + '|' + z, label: t.nr, navn: t.navn, firma: t.firma, zone: z,
+          start: t.startdato, end: endDate(t), status: t.status, dod: t.dodsrisiko, placed: zones.length > 0}));
+      });
+    }
+  });
+  return items;
+}
+
+function renderSkrastrek() {
+  const st = ui.skrastrek;
+  renderFirmFilter('skrastrek');
+  document.getElementById('sk-niva').value = st.niva;
+  document.getElementById('sk-uker').value = st.uker;
+  const ab = document.querySelector('.archive-btn[data-page="skrastrek"]');
+  const nArkiv = DATA.filter(a => matches(a, st) && erArkiv(a)).length;
+  ab.textContent = st.showArchive ? `📦 Skjul arkiv (${nArkiv})` : `📦 Vis arkiv (${nArkiv})`;
+  ab.classList.toggle('on', st.showArchive);
+
+  const items = skCollect();
+  const [from, to] = skRange(items);
+  const days = daysBetween(from, to) + 1;
+  const W = days * SK.dayW;
+  const xOf = d => daysBetween(from, d) * SK.dayW;
+
+  const zones = [...SK_ZONE_ORDER, ...[...new Set(items.map(x => x.zone))].filter(z => !SK_ZONE_ORDER.includes(z)).sort()];
+  let y = SK.top;
+  const bands = zones.map(z => {
+    const zi = items.filter(x => x.zone === z && x.end >= from && x.start <= to).sort((p, q) => p.start.localeCompare(q.start) || p.label.localeCompare(q.label));
+    // Hver strek går over hele sonehøyden; ID-etikettene stables så de ikke kolliderer.
+    const placed = [];
+    [...zi].sort((p, q) => p.end.localeCompare(q.end)).forEach(it => {
+      const lx = xOf(it.end) + SK.dayW + 4, lw = it.label.length * 6.6 + 6;
+      let k = 0;
+      while (placed.some(o => o.k === k && lx < o.lx + o.lw && o.lx < lx + lw)) k++;
+      placed.push({lx, lw, k});
+      it.labelRow = k;
+    });
+    const rows = placed.reduce((m, o) => Math.max(m, o.k + 1), 1);
+    const h = zi.length ? Math.max(SK.bandMin, rows * SK.labelH + SK.pad * 2 + 20) : SK.bandEmpty;
+    const band = {z, y, h, items: zi};
+    y += h;
+    return band;
+  });
+  const H = y + 10;
+  skItems = bands.flatMap(b => b.items.map(it => ({...it, band: b})));
+
+  const weeks = [];
+  for (let m = mondayOf(from); m <= to; m = addDays(m, 7)) weeks.push(m);
+  const curMon = mondayOf(TODAY);
+  const grid = weeks.map(m => {
+    const x = xOf(m);
+    return `${m === curMon ? `<rect x="${x}" y="${SK.top}" width="${7 * SK.dayW}" height="${H - SK.top - 10}" fill="#1f6feb" fill-opacity=".05"/>` : ''}
+      <line x1="${x}" y1="${SK.top - 6}" x2="${x}" y2="${H - 10}" stroke="#d8dde3"/>
+      <text x="${x + 3.5 * SK.dayW}" y="18" text-anchor="middle" font-size="12" font-weight="600" fill="#24292f">Uke ${isoWeek(m)}</text>
+      <text x="${x + 3.5 * SK.dayW}" y="33" text-anchor="middle" font-size="10.5" fill="#6a737d">${fmtShort(m)}</text>`;
+  }).join('');
+  const bandLines = bands.map((b, i) => `<rect x="0" y="${b.y}" width="${W}" height="${b.h}" fill="${i % 2 ? '#fafbfc' : '#fff'}"/><line x1="0" y1="${b.y + b.h}" x2="${W}" y2="${b.y + b.h}" stroke="#e1e4e8"/>`).join('');
+  const todayX = xOf(TODAY) + SK.dayW / 2;
+  const today = TODAY >= from && TODAY <= to
+    ? `<line x1="${todayX}" y1="${SK.top - 6}" x2="${todayX}" y2="${H - 10}" stroke="#24292f" stroke-width="1.5" stroke-dasharray="4 3"/>
+       <text x="${todayX + 4}" y="${SK.top - 9}" font-size="10.5" font-weight="600" fill="#24292f">I dag ${fmtShort(TODAY)}</text>` : '';
+
+  const palette = new Set(FIRMS.slice(0, 8).map(f => f.navn));
+  const lines = skItems.map((it, i) => {
+    const b = it.band;
+    const x1 = xOf(it.start), x2 = xOf(it.end) + SK.dayW;
+    const y1 = b.y + b.h - SK.pad, y2 = b.y + SK.pad;
+    const ly = y2 + 9 + it.labelRow * SK.labelH;
+    const c = firmColor(it.firma);
+    const done = it.status === 'Utført';
+    const dash = palette.has(it.firma) ? '' : 'stroke-dasharray="6 3"';
+    const lx = Math.min(x2 + 4, W - 4);
+    return `<g class="sk-line" data-i="${i}">
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="2.5" stroke-linecap="round" ${dash} ${done ? 'stroke-opacity=".45"' : ''}/>
+      <line class="sk-hit" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="transparent" stroke-width="16" stroke-linecap="round"/>
+      <text x="${lx}" y="${ly}" font-size="10.5" fill="#24292f" stroke="#fff" stroke-width="3" paint-order="stroke" ${lx < x2 + 4 ? 'text-anchor="end"' : ''} font-family="ui-monospace,Menlo,monospace">${esc(it.label)}</text>
+    </g>`;
+  }).join('');
+
+  const zoneLabels = bands.map(b => `<div class="sk-zone" style="top:${b.y}px;height:${b.h}px"><span>${esc(b.z)}</span><span class="muted">${b.items.length || ''}</span></div>`).join('');
+  document.getElementById('sk-chart').innerHTML = `
+    <div class="sk-axis" style="height:${H}px;width:${SK.left}px">${zoneLabels}</div>
+    <div class="sk-scroll">
+      <svg width="${W + 60}" height="${H}" viewBox="0 0 ${W + 60} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Skråstreksdiagram: soner mot uker">
+        <defs><clipPath id="sk-clip"><rect x="0" y="0" width="${W + 60}" height="${H}"/></clipPath></defs>
+        ${bandLines}${grid}${today}
+        <g clip-path="url(#sk-clip)">${lines}</g>
+      </svg>
+    </div>`;
+
+  const firmsShown = FIRMS.map(f => f.navn).filter(n => skItems.some(x => x.firma === n));
+  document.getElementById('sk-legend').innerHTML = skItems.length
+    ? `<span><b>Firma:</b></span>${firmsShown.map(f => `<span><svg width="22" height="10"><line x1="1" y1="9" x2="21" y2="1" stroke="${firmColor(f)}" stroke-width="2.5" stroke-linecap="round" ${palette.has(f) ? '' : 'stroke-dasharray="6 3"'}/></svg>${esc(f)}</span>`).join('')}
+       <span style="margin-left:10px"><svg width="22" height="10"><line x1="1" y1="9" x2="21" y2="1" stroke="#57606a" stroke-width="2.5" stroke-opacity=".45"/></svg>Utført</span>
+       <span><svg width="14" height="12"><line x1="7" y1="0" x2="7" y2="12" stroke="#24292f" stroke-dasharray="3 2"/></svg>I dag</span>`
+    : '<span class="muted">Ingen aktiviteter passer med filteret.</span>';
+  document.getElementById('stats-skrastrek').innerHTML = `<span><b>${new Set(skItems.map(x => st.niva === 'akt' ? x.a.id : x.t.nr)).size}</b> ${st.niva === 'akt' ? 'aktiviteter' : 'AT-er'} i diagrammet</span>
+    <span><b>${bands.filter(b => b.items.length).length}</b> soner i bruk</span><span>Uke ${isoWeek(from)}–${isoWeek(to)}</span>`;
+}
+
+function skTip(e) {
+  const tip = document.getElementById('sk-tip');
+  const g = e.target.closest('.sk-line');
+  document.querySelectorAll('.sk-line.hover').forEach(x => x !== g && x.classList.remove('hover'));
+  if (!g) { tip.hidden = true; return; }
+  g.classList.add('hover');
+  const it = skItems[Number(g.dataset.i)];
+  const wrap = document.getElementById('sk-panel').getBoundingClientRect();
+  tip.innerHTML = `<div><b>${esc(it.label)}</b> ${esc(it.navn)}</div>
+    ${it.t ? `<div class="sub">${esc(it.a.id)} ${esc(it.a.navn)}</div>` : ''}
+    <div style="margin-top:4px">${firmBadge(it.firma)} <span class="badge ${STATUS_CLS[it.status] || ''}">${esc(it.status)}</span></div>
+    <div class="sub" style="margin-top:4px">${esc(it.zone)}${it.t && it.placed ? ' (plassert på sonekartet)' : ''}</div>
+    <div class="sub">${fmtNo(it.start)} – ${fmtNo(it.end)} · ${daysBetween(it.start, it.end) + 1} dager</div>
+    ${it.dod.length ? `<div style="margin-top:4px">${it.dod.map(k => dodIcon(k, 24)).join(' ')}</div>` : ''}
+    <div class="sub" style="margin-top:4px">Trykk for å åpne i Totaloversikt</div>`;
+  tip.hidden = false;
+  const x = e.clientX - wrap.left + 14, yy = e.clientY - wrap.top + 14;
+  tip.style.left = Math.min(x, wrap.width - tip.offsetWidth - 8) + 'px';
+  tip.style.top = yy + 'px';
+}
+document.addEventListener('pointermove', e => { if (currentTab === 'skrastrek') skTip(e); });
+document.addEventListener('click', e => {
+  const g = currentTab === 'skrastrek' && e.target.closest('.sk-line');
+  if (!g) return;
+  const it = skItems[Number(g.dataset.i)];
+  ui.oversikt.expanded.add(it.a.id);
+  if (erArkiv(it.a)) ui.oversikt.showArchive = true;
+  ui.oversikt.collapsedWeeks.clear();
+  showTab('oversikt');
+  const row = document.querySelector(`#table-oversikt tr.main-row[data-id="${CSS.escape(it.a.id)}"]`);
+  if (row) { row.scrollIntoView({block: 'center'}); row.classList.add('flash-main'); setTimeout(() => row.classList.remove('flash-main'), 1700); }
+});
+
 // ---------- admin ----------
 function renderAdmin() {
   const sys = isSys();
@@ -1110,6 +1311,7 @@ function renderAdmin() {
 function renderCurrent() {
   renderUserBar();
   if (currentTab === 'klargjoring' || currentTab === 'oversikt') renderTable(currentTab);
+  else if (currentTab === 'skrastrek') renderSkrastrek();
   else if (currentTab === 'koordinering') renderKoord();
   else if (currentTab === 'admin') renderAdmin();
 }
@@ -1124,6 +1326,7 @@ function showTab(tab) {
 }
 
 // ---------- hendelser ----------
+function rerenderPage(page) { if (page === 'skrastrek') renderSkrastrek(); else renderTable(page); }
 function pageOf(el) { const p = el.closest('.page'); return p ? p.id.replace('page-', '') : null; }
 function targetOf(el) {
   const tr = el.closest('tr[data-id]');
@@ -1175,8 +1378,8 @@ document.addEventListener('click', e => {
   const page = pageOf(btn);
 
   if (action === 'ff-toggle') { btn.closest('.firm-filter').classList.toggle('open'); return; }
-  if (action === 'ff-mine') { ui[btn.dataset.page].firms = new Set([me().firma]); renderTable(btn.dataset.page); return; }
-  if (action === 'toggle-archive') { const p = btn.dataset.page; ui[p].showArchive = !ui[p].showArchive; renderTable(p); return; }
+  if (action === 'ff-mine') { ui[btn.dataset.page].firms = new Set([me().firma]); rerenderPage(btn.dataset.page); return; }
+  if (action === 'toggle-archive') { const p = btn.dataset.page; ui[p].showArchive = !ui[p].showArchive; rerenderPage(p); return; }
   if (action === 'expand-all') { const p = btn.dataset.page; DATA.forEach(a => ui[p].expanded.add(a.id)); renderTable(p); return; }
   if (action === 'collapse-all') { const p = btn.dataset.page; ui[p].expanded.clear(); renderTable(p); return; }
 
@@ -1287,6 +1490,7 @@ document.addEventListener('change', e => {
     ui.klargjoring.editing.clear(); ui.koord.drawing = null;
     save(); renderCurrent(); return;
   }
+  if (el.id === 'sk-niva' || el.id === 'sk-uker') { ui.skrastrek[el.id === 'sk-niva' ? 'niva' : 'uker'] = el.value; renderSkrastrek(); return; }
   if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; renderKoord(); return; }
   if (el.id === 'map-upload') { if (el.files[0]) uploadMap(el.files[0]); el.value = ''; return; }
   if (el.dataset.firmColor !== undefined) { if (isSys()) { FIRMS[Number(el.dataset.firmColor)].farge = el.value; save(); } renderAdmin(); return; }
@@ -1308,7 +1512,7 @@ document.addEventListener('change', e => {
       el.checked ? cur.add(el.dataset.ff) : cur.delete(el.dataset.ff);
       st.firms = FIRMS.every(f => cur.has(f.navn)) ? null : cur;
     }
-    renderTable(page); return;
+    rerenderPage(page); return;
   }
 
   if (!el.dataset.field) return;
@@ -1332,7 +1536,7 @@ document.addEventListener('change', e => {
 
 document.addEventListener('input', e => {
   const el = e.target;
-  if (el.dataset.search) { ui[el.dataset.search].search = el.value; renderTable(el.dataset.search); }
+  if (el.dataset.search) { ui[el.dataset.search].search = el.value; rerenderPage(el.dataset.search); }
 });
 
 load();

@@ -148,6 +148,10 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
 .sel-bar.drawing{background:#fff8e1;border-color:#e3b341}
 .roles{margin:6px 0 8px 18px;font-size:13px}
 .roles li{margin-bottom:3px}
+tr.main-row.archived td{background:#f6f6f6}
+tr.main-row.archived .akt-name{color:#57606a}
+.arkiv-tag{background:#e1e4e8;color:#57606a;font-size:10.5px;padding:1px 6px}
+.archive-btn.on{background:#57606a;color:#fff;border-color:#57606a}
 </style>
 </head>
 <body>
@@ -180,6 +184,7 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
         <input type="search" data-search="klargjoring" placeholder="Søk aktivitet, ID, AT-nr, område …">
         <button class="btn" data-action="expand-all" data-page="klargjoring">Vis alle AT-rader</button>
         <button class="btn" data-action="collapse-all" data-page="klargjoring">Skjul alle AT-rader</button>
+        <button class="btn archive-btn" data-action="toggle-archive" data-page="klargjoring">📦 Vis arkiv</button>
       </div>
       <div class="stats" id="stats-klargjoring"></div>
       <div class="legend legend-box"></div>
@@ -197,6 +202,7 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
         <input type="search" data-search="oversikt" placeholder="Søk aktivitet, ID, AT-nr, område …">
         <button class="btn" data-action="expand-all" data-page="oversikt">Vis alle AT-rader</button>
         <button class="btn" data-action="collapse-all" data-page="oversikt">Skjul alle AT-rader</button>
+        <button class="btn archive-btn" data-action="toggle-archive" data-page="oversikt">📦 Vis arkiv</button>
       </div>
       <div class="stats" id="stats-oversikt"></div>
       <div class="legend legend-box"></div>
@@ -568,8 +574,8 @@ function renderUserBar() {
 
 // ---------- UI-state ----------
 const ui = {
-  klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set()},
-  oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: ''},
+  klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set(), showArchive: false},
+  oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
   koord: {week: null, selected: null, drawing: null}
 };
 let currentTab = 'oversikt';
@@ -631,12 +637,13 @@ function mainRow(a, page) {
       ? `<button class="icon-btn edit${editing ? ' on' : ''}" data-action="edit" title="${editing ? 'Ferdig med redigering' : 'Rediger aktiviteten'}">${editing ? '✔' : '✏️'}</button>`
       : `<span class="icon-btn lock-ico" title="Bare ${esc(a.firma)} eller systemadministrator kan endre">🔒</span>`;
   }
-  return `<tr class="main-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="">
+  const ark = erArkiv(a);
+  return `<tr class="main-row${editing ? ' editing' : ''}${ark ? ' archived' : ''}" data-id="${esc(a.id)}" data-at="">
     <td class="col-ctrl">
       <button class="icon-btn expand" data-action="expand" title="${exp ? 'Skjul' : 'Vis'} AT-rader">${exp ? '−' : '+'}</button>
       ${editBtn}
     </td>
-    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}</div></td>
+    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : ''}</div></td>
     ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
     <td class="c">${cLys('metode.status', a.metode.status, ed)}${a.metode.nr ? `<div class="sub">MB ${esc(a.metode.nr)}</div>` : ''}</td>
     <td>${a.at.length ? a.at.map(t => `<span class="at-chip" data-action="goto-at" data-nr="${esc(t.nr)}" title="Gå til ${esc(t.nr)}">${esc(t.nr)}</span>`).join('<br>') : '<span class="muted">Ingen</span>'}</td>
@@ -699,6 +706,11 @@ function weekLabel(monday) {
   return `Uke ${isoWeek(monday)} · ${fmtShort(monday)}–${fmtNo(addDays(monday, 6))} <span class="rel${diff === 0 ? ' now' : ''}">${rel}</span>`;
 }
 
+// Arkiv: startet før denne uken og ikke aktiv i inneværende uke (verken aktiviteten eller noen av AT-ene).
+function erArkiv(a) {
+  const mon = mondayOf(TODAY);
+  return a.startdato < mon && endDate(a) < mon && a.at.every(t => endDate(t) < mon);
+}
 function matches(a, st) {
   if (st.firms && !st.firms.has(a.firma) && !a.at.some(t => st.firms.has(t.firma))) return false;
   const q = st.search.trim().toLowerCase();
@@ -708,11 +720,16 @@ function matches(a, st) {
 
 function renderTable(page) {
   const st = ui[page];
-  const rows = DATA.filter(a => matches(a, st)).sort((x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
+  const hits = DATA.filter(a => matches(a, st));
+  const nArkiv = hits.filter(erArkiv).length;
+  const rows = hits.filter(a => st.showArchive || !erArkiv(a)).sort((x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
+  const ab = document.querySelector(`.archive-btn[data-page="${page}"]`);
+  ab.textContent = st.showArchive ? `📦 Skjul arkiv (${nArkiv})` : `📦 Vis arkiv (${nArkiv})`;
+  ab.classList.toggle('on', st.showArchive);
   const groups = new Map();
   rows.forEach(a => { const k = mondayOf(a.startdato); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(a); });
   let h = `<table class="plan"><thead>${headerRow()}</thead><tbody>`;
-  if (!rows.length) h += `<tr><td colspan="${NCOLS}" class="empty">Ingen aktiviteter passer med filteret.</td></tr>`;
+  if (!rows.length) h += `<tr><td colspan="${NCOLS}" class="empty">Ingen aktiviteter passer med filteret.${nArkiv && !st.showArchive ? ` ${nArkiv} ligger i arkivet.` : ''}</td></tr>`;
   for (const [k, acts] of groups) {
     const collapsed = st.collapsedWeeks.has(k);
     h += `<tr class="week-row" data-week="${k}"><td colspan="${NCOLS}"><span class="wk-label">${collapsed ? '＋' : '－'} ${weekLabel(k)} <span class="muted">· ${acts.length} aktivitet${acts.length === 1 ? '' : 'er'}</span></span></td></tr>`;
@@ -1150,6 +1167,7 @@ document.addEventListener('click', e => {
 
   if (action === 'ff-toggle') { btn.closest('.firm-filter').classList.toggle('open'); return; }
   if (action === 'ff-mine') { ui[btn.dataset.page].firms = new Set([me().firma]); renderTable(btn.dataset.page); return; }
+  if (action === 'toggle-archive') { const p = btn.dataset.page; ui[p].showArchive = !ui[p].showArchive; renderTable(p); return; }
   if (action === 'expand-all') { const p = btn.dataset.page; DATA.forEach(a => ui[p].expanded.add(a.id)); renderTable(p); return; }
   if (action === 'collapse-all') { const p = btn.dataset.page; ui[p].expanded.clear(); renderTable(p); return; }
 

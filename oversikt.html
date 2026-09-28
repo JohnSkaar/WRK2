@@ -129,12 +129,38 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
 .form-row input,.form-row select{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px}
 .list-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #eef0f2}
 .list-row .grow{flex:1;min-width:0}
+
+.app-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.user-bar{font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.user-bar select{padding:5px 8px;border-radius:6px;border:1px solid #4a5d70;background:#243647;color:#fff;font-size:13px;max-width:100%}
+.user-bar .demo{font-size:11px;opacity:.7}
+.access-info{font-size:13px;background:#eef4ff;border:1px solid #c9dafc;color:#1b3f7a;border-radius:6px;padding:6px 10px;margin-top:10px}
+.lock-ico{display:inline-flex;align-items:center;justify-content:center;opacity:.45;cursor:not-allowed}
+.at-card.locked{cursor:pointer;background:#fafafa}
+.lock{font-size:15px;align-self:center;opacity:.6;padding:0 2px}
+.map-wrap svg.map-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+.map-wrap.drawing{cursor:crosshair;outline:3px solid #e3b341;outline-offset:-3px}
+.marker sup{font-size:9px;margin-left:1px}
+.marker.current{outline:3px solid #ffd33d;z-index:7}
+.marker.locked{cursor:pointer}
+.draw-pt{position:absolute;width:11px;height:11px;border-radius:50%;border:2px solid #fff;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.5);z-index:8}
+.sel-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;background:#f6f8fa;border:1px solid var(--line);border-radius:6px;margin-bottom:8px;font-size:13px;min-height:44px}
+.sel-bar.drawing{background:#fff8e1;border-color:#e3b341}
+.roles{margin:6px 0 8px 18px;font-size:13px}
+.roles li{margin-bottom:3px}
 </style>
 </head>
 <body>
 <header class="app-header">
-  <h1>WRK2 – Produksjonsplanlegging</h1>
-  <p>84 aktiviteter fra SiteDrive-utdraget · de sju produksjonsforutsetningene · arbeidstillatelser (AT) · Skanskas dødsrisikoer</p>
+  <div>
+    <h1>WRK2 – Produksjonsplanlegging</h1>
+    <p>Aktiviteter fra uke 40 · de sju produksjonsforutsetningene · arbeidstillatelser (AT) · Skanskas dødsrisikoer</p>
+  </div>
+  <div class="user-bar">
+    <label for="user-sel">Innlogget som</label>
+    <select id="user-sel"></select>
+    <span class="demo">(demo-innlogging)</span>
+  </div>
 </header>
 <nav class="tabs">
   <button data-tab="klargjoring">Klargjøring av aktiviteter</button>
@@ -146,9 +172,11 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
   <section class="page" id="page-klargjoring">
     <div class="panel">
       <h2>Klargjøring av aktiviteter</h2>
-      <p class="intro">Samme oppsett som Totaloversikt. Trykk ✏️ foran en aktivitet for å gjøre alle feltene på aktiviteten og AT-radene redigerbare. Trykk ✔ når du er ferdig. Endringer lagres automatisk.</p>
+      <p class="intro">Samme oppsett som Totaloversikt. Trykk ✏️ foran en aktivitet for å gjøre feltene redigerbare, og ✔ når du er ferdig. 🔒 betyr at aktiviteten tilhører et annet firma. Endringer lagres automatisk.</p>
+      <div class="access-info"></div>
       <div class="toolbar">
         <div class="firm-filter" data-page="klargjoring"></div>
+        <button class="btn" data-action="ff-mine" data-page="klargjoring">Bare mitt firma</button>
         <input type="search" data-search="klargjoring" placeholder="Søk aktivitet, ID, AT-nr, område …">
         <button class="btn" data-action="expand-all" data-page="klargjoring">Vis alle AT-rader</button>
         <button class="btn" data-action="collapse-all" data-page="klargjoring">Skjul alle AT-rader</button>
@@ -165,6 +193,7 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
       <p class="intro">Status for alle aktiviteter. Her kan ingenting endres. Endringer gjøres under «Klargjøring av aktiviteter». Trykk + for å vise AT-radene under aktiviteten.</p>
       <div class="toolbar">
         <div class="firm-filter" data-page="oversikt"></div>
+        <button class="btn" data-action="ff-mine" data-page="oversikt">Bare mitt firma</button>
         <input type="search" data-search="oversikt" placeholder="Søk aktivitet, ID, AT-nr, område …">
         <button class="btn" data-action="expand-all" data-page="oversikt">Vis alle AT-rader</button>
         <button class="btn" data-action="collapse-all" data-page="oversikt">Skjul alle AT-rader</button>
@@ -178,7 +207,8 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
   <section class="page" id="page-koordinering">
     <div class="panel">
       <h2>AT-koordinering</h2>
-      <p class="intro">Dra én og én AT fra listen over på sonekartet for å vise hvor arbeidet skal foregå. På PC drar du hele kortet. På mobil drar du i håndtaket ⠿. Du kan flytte en AT som allerede ligger på kartet ved å dra den.</p>
+      <p class="intro">Dra én og én AT fra listen over på sonekartet for å vise hvor arbeidet skal foregå. Samme AT kan dras ut flere ganger for å legge den i flere soner. Trykk på en markør for å tegne et område (i firmafargen) rundt den. På PC drar du hele kortet. På mobil drar du i håndtaket ⠿. 🔒 betyr at AT-en tilhører et annet firma.</p>
+      <div class="access-info"></div>
       <div class="toolbar">
         <label>Periode: <select class="week-sel" id="week-sel"></select></label>
         <label class="btn">Last opp sonebilde <input type="file" accept="image/*" id="map-upload" hidden></label>
@@ -189,6 +219,7 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
     <div class="koord">
       <div class="panel at-list" id="at-list"></div>
       <div class="panel">
+        <div class="sel-bar" id="sel-bar"></div>
         <div class="map-wrap" id="map-wrap"></div>
         <div class="placed-list" id="placed-list"></div>
       </div>
@@ -196,31 +227,19 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
   </section>
 
   <section class="page" id="page-admin">
+    <div class="panel" id="admin-access"></div>
     <div class="admin-grid">
       <div class="panel">
         <h3>Brukere</h3>
-        <div class="form-row">
-          <input type="email" id="u-email" placeholder="E-post">
-          <input type="text" id="u-name" placeholder="Navn">
-          <select id="u-role"><option>Leser</option><option>Planlegger</option><option>Administrator</option></select>
-          <button class="btn primary" data-action="add-user">Legg til</button>
-        </div>
+        <div id="user-form"></div>
         <div id="user-list"></div>
       </div>
       <div class="panel">
         <h3>Firma og fargekoder</h3>
-        <div class="form-row">
-          <input type="text" id="f-name" placeholder="Firmanavn">
-          <input type="color" id="f-color" value="#607d8b">
-          <button class="btn primary" data-action="add-firm">Legg til firma</button>
-        </div>
+        <div id="firm-form"></div>
         <div id="firm-list"></div>
       </div>
-      <div class="panel">
-        <h3>Data</h3>
-        <p class="intro" style="margin-bottom:10px">Data lagres i denne nettleseren. Tilbakestilling henter de 84 aktivitetene fra Excel-utdraget på nytt og sletter alle endringer og AT-plasseringer.</p>
-        <button class="btn danger" data-action="reset-data">Tilbakestill til Excel-data</button>
-      </div>
+      <div class="panel" id="data-panel"></div>
     </div>
   </section>
 </main>
@@ -290,21 +309,37 @@ const DELOP = {
   '3.2': [['Forskaling vegg', ['fall', 'konstruksjon']], ['Armering', ['gjenstand']], ['Støp vegg', ['konstruksjon', 'fall']]]
 };
 
-// Skjematisk sonekart, viewBox 1000 x 600. Utomhus er hele tomten.
+// Sonekart i samme utsnitt som plantegningen (koordinater i piksler, 1893 x 796). Utomhus er resten av tomten.
+const MAP_W = 1893, MAP_H = 796;
+const R = (x1, y1, x2, y2) => [[x1, y1], [x2, y1], [x2, y2], [x1, y2]];
 const ZONES = [
-  {navn: '8302 - Trådhall', l1: '8302', l2: 'Trådhall', x: 330, y: 70, w: 330, h: 90},
-  {navn: 'Kontrollsenter', l1: '', l2: 'Kontrollsenter', x: 130, y: 70, w: 190, h: 90},
-  {navn: 'Driftssenter (OPC)', l1: '', l2: 'Driftssenter (OPC)', x: 670, y: 70, w: 150, h: 90},
-  {navn: '8302 - Kjeller / Vest', l1: '8302 Kjeller', l2: 'Vest', x: 130, y: 170, w: 190, h: 230},
-  {navn: '8301 - Ovnshall', l1: '8301', l2: 'Ovnshall', x: 330, y: 170, w: 330, h: 230},
-  {navn: '8302 - Kjeller / Øst', l1: '8302 Kjeller', l2: 'Øst', x: 670, y: 170, w: 150, h: 230},
-  {navn: '8302 - Kjeller / Kjellerinnkjøring', l1: '8302 Kjeller', l2: 'Kjellerinnkjøring', x: 670, y: 410, w: 150, h: 80},
-  {navn: '8304 - Lagerhall', l1: '8304', l2: 'Lagerhall', x: 835, y: 170, w: 140, h: 180},
-  {navn: 'Pallelager', l1: '', l2: 'Pallelager', x: 835, y: 360, w: 140, h: 130}
+  {navn: '8302 - Kjeller / Kjellerinnkjøring', pts: [[228, 113], [708, 113], [760, 165], [228, 165]], fill: '#e7efe7',
+    labels: [['RAMPE · 8302 KJELLERINNKJØRING', 470, 144, 13]], bg: '#1e8e3e', fg: '#fff'},
+  {navn: '8302 - Kjeller / Vest', pts: R(543, 165, 740, 345), fill: '#e6f0fb', labels: [['8302 KJELLER VEST', 641, 222, 15]], bg: '#1e8e3e', fg: '#fff'},
+  {navn: '8302 - Kjeller / Øst', pts: R(740, 165, 850, 345), fill: '#e6f0fb', labels: [['8302 KJELLER', 795, 245, 12], ['ØST', 795, 266, 12]], bg: '#1e8e3e', fg: '#fff'},
+  {navn: '8303 - Driftssenter', pts: R(850, 165, 1215, 345), fill: '#fdecef', labels: [['8303 DRIFTSSENTER', 1032, 280, 18]], bg: '#16877f', fg: '#fff'},
+  {navn: '8302 - Trådhall', pts: R(550, 345, 1215, 540), fill: '#edf3fc', labels: [['8302 TRÅDHALL', 742, 420, 19], ['8302 TRÅDHALL', 1045, 420, 19]], bg: '#8b1cf0', fg: '#fff'},
+  {navn: '8302 - Kontrollsenter', pts: R(550, 540, 910, 665), fill: '#efefef', labels: [['8302 KONTROLLSENTER', 730, 616, 18]], bg: '#fff176', fg: '#000'},
+  {navn: '8301 - Ovnshall', pts: R(222, 251, 550, 588), fill: '#ffd4d4', labels: [['8301 OVNSHALL', 352, 415, 19]], bg: '#ff1f1f', fg: '#000'},
+  {navn: '8304 - Lagerhall', pts: R(1215, 330, 1780, 630), fill: '#fdfaec', labels: [['8304 LAGERHALL', 1488, 414, 19]], bg: '#f7931e', fg: '#000'},
+  {navn: 'Pallelager', pts: R(1430, 545, 1580, 615), fill: '#fff0d9', labels: [['Pallelager', 1505, 585, 12]], bg: '#fff', fg: '#444'}
 ];
 const UTOMHUS = '8300 - Utomhus';
+const AX_TOP = [['F1', 222], ['F2', 254], ['F3', 286], ['F4', 321], ['F5', 356], ['F6', 403], ['F7', 438], ['F8', 474], ['F9', 509], ['F10', 545],
+  ['W1', 571], ['W2', 603], ['W3', 640], ['W4', 678], ['W5', 715], ['W6', 753], ['W7', 790], ['W8', 828], ['W9', 866], ['W10', 904],
+  ['W11', 941], ['W12', 979], ['W13', 1016], ['W14', 1054], ['W15', 1091], ['W16', 1129], ['W17', 1167], ['W18', 1204], ['W19', 1242]];
+const AX_S = [['S1', 1247], ['S2', 1279], ['S3', 1317], ['S4', 1355], ['S5', 1392], ['S6', 1430], ['S7', 1467], ['S8', 1505],
+  ['S9', 1542], ['S10', 1580], ['S11', 1617], ['S12', 1655], ['S13', 1693], ['S14', 1730], ['S15', 1768]];
+const AX_ROWS = [['RA', 118, 186, 198, 780], ['RB', 157, 186, 198, 780], ['FA', 257, 161, 173, 555], ['FB', 299, 161, 173, 555],
+  ['FC', 342, 161, 173, 555], ['FD', 386, 161, 173, 555], ['FE', 427, 161, 173, 555], ['FF', 468, 161, 173, 555],
+  ['FG', 505, 161, 173, 555], ['FH', 547, 161, 173, 555], ['FI', 590, 161, 173, 555]];
+const AX_ROWS_R = [['B', 340, 1794], ['C', 540, 1794]];
 
-const STORAGE_KEY = 'wrk2_v5', FIRMS_KEY = 'wrk2_firms_v5', USERS_KEY = 'wrk2_users', MAP_KEY = 'wrk2_sonekart';
+// PLAN_FRA: aktiviteter som var ferdige før uke 40 er tatt ut av planen.
+const PLAN_FRA = '2026-09-28';
+const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
+const STORAGE_KEY = 'wrk2_v6', FIRMS_KEY = 'wrk2_firms_v6', USERS_KEY = 'wrk2_users_v6', CURRENT_KEY = 'wrk2_current_user',
+  MAP_KEY = 'wrk2_sonekart', MAP_RATIO_KEY = 'wrk2_sonekart_ratio';
 
 // ---------- hjelpefunksjoner ----------
 function esc(s) {
@@ -411,7 +446,7 @@ function buildData() {
       at.push({
         nr: 'AT-' + String(atCounter).padStart(3, '0'), navn: subNavn, omrade, startdato: aStart, varighet: aVar,
         firma, forutsetninger: genLys(r, st, aStart), risikoniva: risikoFra(dod), dodsrisiko: [...dod],
-        status: st, kommentar: '', plassering: null
+        status: st, kommentar: '', plasseringer: []
       });
     }
     const status = statusFor(start, varighet);
@@ -445,33 +480,97 @@ function buildData() {
 }
 
 // ---------- lagring ----------
-let DATA = [], FIRMS = [], USERS = [];
+let DATA = [], FIRMS = [], USERS = [], currentUserId = null;
+function uid() { return Math.random().toString(36).slice(2, 10); }
+function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+function readRaw(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function writeRaw(k, v) { try { localStorage.setItem(k, v); } catch (e) { console.warn('Kunne ikke lagre', e); } }
+
+function migrate(data) {
+  data.forEach(a => a.at.forEach(t => {
+    if (!Array.isArray(t.plasseringer)) t.plasseringer = [];
+    delete t.plassering;
+  }));
+  return data;
+}
+function ferdigFoerPlan(a) {
+  return a.status === 'Utført' && a.at.every(t => t.status === 'Utført')
+    && endDate(a) < PLAN_FRA && a.at.every(t => endDate(t) < PLAN_FRA);
+}
+function cleanup(data) { return data.filter(a => !ferdigFoerPlan(a)); }
+function freshData() { return cleanup(migrate(buildData())); }
+
+function seedUsers() {
+  return [
+    {id: uid(), name: 'Systemadministrator', email: '', firma: 'Skanska', rolle: 'systemadmin'},
+    {id: uid(), name: 'Demo – Skanska firma-admin', email: '', firma: 'Skanska', rolle: 'firmaadmin'},
+    {id: uid(), name: 'Demo – Fjell & Grunn firma-admin', email: '', firma: 'Fjell & Grunn AS', rolle: 'firmaadmin'},
+    {id: uid(), name: 'Demo – Boreteknikk leser', email: '', firma: 'Boreteknikk AS', rolle: 'leser'}
+  ];
+}
+function loadUsers() {
+  let u = readJSON(USERS_KEY);
+  if (!Array.isArray(u) || !u.length) {
+    const old = readJSON('wrk2_users');
+    u = seedUsers();
+    if (Array.isArray(old)) old.forEach(o => o && o.name && u.push({id: uid(), name: o.name, email: o.email || '', firma: 'Skanska',
+      rolle: o.role === 'Administrator' ? 'systemadmin' : 'leser'}));
+  }
+  if (!u.some(x => x.rolle === 'systemadmin')) u.unshift(seedUsers()[0]);
+  return u;
+}
 function load() {
-  try { DATA = JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch (e) { DATA = null; }
-  if (!Array.isArray(DATA) || !DATA.length) DATA = buildData();
-  try { FIRMS = JSON.parse(localStorage.getItem(FIRMS_KEY)) || null; } catch (e) { FIRMS = null; }
+  let d = readJSON(STORAGE_KEY);
+  if (!Array.isArray(d) || !d.length) {
+    const old = readJSON('wrk2_v5');
+    d = cleanup(migrate(Array.isArray(old) && old.length ? old : buildData()));
+  }
+  DATA = migrate(d);
+  FIRMS = readJSON(FIRMS_KEY) || readJSON('wrk2_firms_v5');
   if (!Array.isArray(FIRMS) || !FIRMS.length) FIRMS = DEFAULT_FIRMS.map(f => ({...f}));
-  try { USERS = JSON.parse(localStorage.getItem(USERS_KEY)) || []; } catch (e) { USERS = []; }
-  if (!Array.isArray(USERS)) USERS = [];
+  USERS = loadUsers();
+  currentUserId = readRaw(CURRENT_KEY);
+  if (!USERS.some(u => u.id === currentUserId)) currentUserId = USERS.find(u => u.rolle === 'systemadmin').id;
+  save();
 }
 function save() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
-    localStorage.setItem(FIRMS_KEY, JSON.stringify(FIRMS));
-    localStorage.setItem(USERS_KEY, JSON.stringify(USERS));
-  } catch (e) { console.warn('Kunne ikke lagre', e); }
+  writeRaw(STORAGE_KEY, JSON.stringify(DATA));
+  writeRaw(FIRMS_KEY, JSON.stringify(FIRMS));
+  writeRaw(USERS_KEY, JSON.stringify(USERS));
+  writeRaw(CURRENT_KEY, currentUserId);
 }
-function loadMap() { try { return localStorage.getItem(MAP_KEY); } catch (e) { return null; } }
+function loadMap() { return readRaw(MAP_KEY); }
 
-const OMRADER = () => [...new Set(EXCEL.map(r => r[1]).concat(DATA.map(a => a.omrade), ['Kontrollsenter', 'Driftssenter (OPC)', 'Pallelager']))];
+const OMRADER = () => [...new Set(EXCEL.map(r => r[1]).concat(DATA.map(a => a.omrade), ZONES.map(z => z.navn)))];
 function firmColor(n) { const f = FIRMS.find(x => x.navn === n); return f && /^#[0-9a-f]{6}$/i.test(f.farge) ? f.farge : '#7f8c8d'; }
 function findAT(nr) { for (const a of DATA) { const t = a.at.find(x => x.nr === nr); if (t) return {a, t}; } return null; }
+
+// ---------- tilgang ----------
+// Demo-innlogging i nettleseren: styrer hva brukergrensesnittet tillater, men er ingen sikker tilgangskontroll.
+function me() { return USERS.find(u => u.id === currentUserId) || USERS[0]; }
+function isSys() { return me().rolle === 'systemadmin'; }
+function canEditFirm(f) { const u = me(); return u.rolle === 'systemadmin' || (u.rolle === 'firmaadmin' && u.firma === f); }
+function canEditAct(a) { return canEditFirm(a.firma); }
+function canEditAT(a, t) { return canEditFirm(a.firma) || canEditFirm(t.firma); }
+function canOpenEdit(a) { return canEditAct(a) || a.at.some(t => canEditAT(a, t)); }
+function canPlaceAT(t) { return canEditFirm(t.firma); }
+function accessText() {
+  const u = me();
+  if (u.rolle === 'systemadmin') return 'Du er systemadministrator og kan se og endre alt.';
+  if (u.rolle === 'firmaadmin') return `Du er firma-admin for ${u.firma}. Du kan endre og plassere aktiviteter og AT-er for ${u.firma}. Alt annet kan du bare lese.`;
+  return `Du har lesetilgang (${u.firma}). Du kan se alt, men ikke endre.`;
+}
+function renderUserBar() {
+  const sel = document.getElementById('user-sel');
+  sel.innerHTML = USERS.map(u => `<option value="${esc(u.id)}" ${u.id === currentUserId ? 'selected' : ''}>${esc(u.name)} – ${esc(u.firma)} (${esc(ROLLER[u.rolle])})</option>`).join('');
+  document.querySelectorAll('.access-info').forEach(e => e.textContent = accessText());
+}
 
 // ---------- UI-state ----------
 const ui = {
   klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set()},
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: ''},
-  koord: {week: null, selected: null}
+  koord: {week: null, selected: null, drawing: null}
 };
 let currentTab = 'oversikt';
 
@@ -495,13 +594,13 @@ function cDod(list, ed, fraAT = []) {
   const all = [...new Set([...list, ...fraAT])];
   return all.length ? `<span class="dod">${all.map(k => dodIcon(k)).join('')}</span>` : '<span class="muted">–</span>';
 }
-function commonCells(o, ed) {
+function commonCells(o, ed, firmaEd) {
   return {
     omrade: `<td>${ed ? selectHtml('omrade', OMRADER(), o.omrade) : esc(o.omrade)}</td>`,
     uke: `<td class="c">${isoWeek(o.startdato)}</td>`,
     dato: `<td>${ed ? `<input type="date" class="w-date" data-field="startdato" value="${esc(o.startdato)}">` : fmtNo(o.startdato)}</td>`,
     varighet: `<td class="c">${ed ? `<input type="number" min="1" class="w-num" data-field="varighet" value="${o.varighet}">` : o.varighet}</td>`,
-    firma: `<td>${ed ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}</td>`,
+    firma: `<td>${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}</td>`,
     lys: FORUTSETNINGER.map(([k]) => `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}</td>`).join(''),
     kommentar: `<td>${ed ? `<input type="text" class="w-kom" maxlength="120" data-field="kommentar" value="${esc(o.kommentar)}" placeholder="Kort kommentar">` : `<span title="${esc(o.kommentar)}">${esc(o.kommentar)}</span>`}</td>`
   };
@@ -518,15 +617,24 @@ function headerRow() {
   </tr>`;
 }
 
+function isEditing(page, a) { return page === 'klargjoring' && ui.klargjoring.editing.has(a.id); }
+
 function mainRow(a, page) {
-  const ed = page === 'klargjoring' && ui.klargjoring.editing.has(a.id);
+  const editing = isEditing(page, a);
+  const ed = editing && canEditAct(a);
   const exp = ui[page].expanded.has(a.id);
-  const c = commonCells(a, ed);
+  const c = commonCells(a, ed, editing && isSys());
   const fraAT = [...new Set(a.at.flatMap(t => t.dodsrisiko))];
-  return `<tr class="main-row${ed ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="">
+  let editBtn = '';
+  if (page === 'klargjoring') {
+    editBtn = canOpenEdit(a)
+      ? `<button class="icon-btn edit${editing ? ' on' : ''}" data-action="edit" title="${editing ? 'Ferdig med redigering' : 'Rediger aktiviteten'}">${editing ? '✔' : '✏️'}</button>`
+      : `<span class="icon-btn lock-ico" title="Bare ${esc(a.firma)} eller systemadministrator kan endre">🔒</span>`;
+  }
+  return `<tr class="main-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="">
     <td class="col-ctrl">
       <button class="icon-btn expand" data-action="expand" title="${exp ? 'Skjul' : 'Vis'} AT-rader">${exp ? '−' : '+'}</button>
-      ${page === 'klargjoring' ? `<button class="icon-btn edit${ed ? ' on' : ''}" data-action="edit" title="${ed ? 'Ferdig med redigering' : 'Rediger aktiviteten'}">${ed ? '✔' : '✏️'}</button>` : ''}
+      ${editBtn}
     </td>
     <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}</div></td>
     ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
@@ -541,28 +649,29 @@ function mainRow(a, page) {
 }
 
 function detailRows(a, page) {
-  const ed = page === 'klargjoring' && ui.klargjoring.editing.has(a.id);
+  const editing = isEditing(page, a);
+  const actEd = editing && canEditAct(a);
   const n = a.at.length;
-  const span = Math.max(1, n) + (ed ? 1 : 0);
+  const span = Math.max(1, n) + (actEd ? 1 : 0);
   const metodeCell = `<td class="metode-box" rowspan="${span}">
     <div class="mb-title">Metodebeskrivelse – historikk<br>(felles for alle AT)</div>
-    ${ed ? `<textarea data-field="metode.historikk" data-scope="act" placeholder="F.eks. Innsendt 11.02, godkjent 12.03">${esc(a.metode.historikk)}</textarea>
+    ${actEd ? `<textarea data-field="metode.historikk" data-scope="act" placeholder="F.eks. Innsendt 11.02, godkjent 12.03">${esc(a.metode.historikk)}</textarea>
       <div class="sub">MB nr: <input type="text" class="w-nr" data-field="metode.nr" data-scope="act" value="${esc(a.metode.nr)}"></div>`
       : `<div class="mb-text">${a.metode.historikk ? esc(a.metode.historikk) : '<span class="muted">Ingen historikk registrert</span>'}</div>`}
   </td>`;
-  const cls = `at-row${ed ? ' editing' : ''}`;
   let h = '';
   if (!n) {
-    h += `<tr class="${cls}" data-id="${esc(a.id)}" data-at="">
+    h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="">
       <td class="col-ctrl"><span class="conn">↳</span></td>
       <td class="col-akt"><span class="muted">Ingen AT registrert på aktiviteten</span></td>
       <td colspan="5"></td>${metodeCell}<td class="at-nr-cell"><span class="muted">–</span></td><td colspan="11"></td>
     </tr>`;
   }
   a.at.forEach((t, i) => {
-    const c = commonCells(t, ed);
-    h += `<tr class="${cls}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(t.nr)}">
-      <td class="col-ctrl">${ed ? `<button class="icon-btn danger" data-action="del-at" title="Slett ${esc(t.nr)}">🗑</button> ` : ''}<span class="conn">↳</span></td>
+    const ed = editing && canEditAT(a, t);
+    const c = commonCells(t, ed, editing && canEditAct(a));
+    h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(t.nr)}">
+      <td class="col-ctrl">${actEd ? `<button class="icon-btn danger" data-action="del-at" title="Slett ${esc(t.nr)}">🗑</button> ` : ''}<span class="conn">↳</span></td>
       <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(t.navn)}">` : esc(t.navn)}<div class="sub">${esc(t.nr)} · ${esc(a.id)} ${esc(a.navn)}</div></td>
       ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
       ${i === 0 ? metodeCell : ''}
@@ -574,8 +683,8 @@ function detailRows(a, page) {
       ${c.kommentar}
     </tr>`;
   });
-  if (ed) {
-    h += `<tr class="${cls}" data-id="${esc(a.id)}" data-at="">
+  if (actEd) {
+    h += `<tr class="at-row editing" data-id="${esc(a.id)}" data-at="">
       <td class="col-ctrl"></td>
       <td class="col-akt"><button class="btn" data-action="add-at">+ Legg til AT</button></td>
       <td colspan="5"></td><td colspan="12"></td>
@@ -640,8 +749,7 @@ function renderFirmFilter(page) {
       <label class="all"><input type="checkbox" data-ff="__all" ${all ? 'checked' : ''}> Velg alle</label>
       ${FIRMS.map(f => `<label><input type="checkbox" data-ff="${esc(f.navn)}" ${all || sel.has(f.navn) ? 'checked' : ''}><span class="swatch" style="background:${firmColor(f.navn)}"></span>${esc(f.navn)} <span class="muted">(${count(f.navn)})</span></label>`).join('')}
     </div>`;
-  const allBox = el.querySelector('[data-ff="__all"]');
-  allBox.indeterminate = !all && sel.size > 0;
+  el.querySelector('[data-ff="__all"]').indeterminate = !all && sel.size > 0;
 }
 
 function renderLegend() {
@@ -662,76 +770,151 @@ function atsInPeriod() {
   DATA.forEach(a => a.at.forEach(t => { if (t.startdato <= to && endDate(t) >= from) list.push({a, t}); }));
   return list.sort((x, y) => x.t.startdato.localeCompare(y.t.startdato) || x.t.nr.localeCompare(y.t.nr));
 }
+function zonesApply() {
+  if (!loadMap()) return true;
+  const r = parseFloat(readRaw(MAP_RATIO_KEY));
+  return Math.abs(r - MAP_W / MAP_H) / (MAP_W / MAP_H) < 0.04;
+}
+function inPoly(x, y, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function polyArea(pts) { let s = 0; pts.forEach(([x, y], i) => { const [x2, y2] = pts[(i + 1) % pts.length]; s += x * y2 - x2 * y; }); return Math.abs(s / 2); }
 function hitZone(p) {
-  if (loadMap()) return '';
-  const x = p.x * 10, y = p.y * 6;
-  const hit = ZONES.filter(z => x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h).sort((a, b) => a.w * a.h - b.w * b.h)[0];
+  if (!zonesApply()) return '';
+  const x = p.x / 100 * MAP_W, y = p.y / 100 * MAP_H;
+  const hit = ZONES.filter(z => inPoly(x, y, z.pts)).sort((a, b) => polyArea(a.pts) - polyArea(b.pts))[0];
   return hit ? hit.navn : UTOMHUS;
 }
 function zoneSvg(counts) {
-  const badge = (x, y, n) => n ? `<g><circle cx="${x}" cy="${y}" r="13" fill="#1f6feb"/><text x="${x}" y="${y + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">${n}</text></g>` : '';
-  return `<svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Skjematisk sonekart WRK2">
-    <rect x="0" y="0" width="1000" height="600" fill="#eef3e6"/>
-    <rect x="3" y="3" width="994" height="594" fill="none" stroke="#7a9a5a" stroke-width="3" stroke-dasharray="10 6"/>
-    <text x="16" y="30" font-size="16" font-weight="700" fill="#4d6b33">8300 Utomhus</text>
-    <rect x="280" y="508" width="720" height="34" fill="#d5d8dc"/>
-    <text x="640" y="530" text-anchor="middle" font-size="12" fill="#666">Anleggsvei</text>
-    <rect x="20" y="420" width="240" height="150" fill="#f7f1e1" stroke="#b59a5a" stroke-dasharray="6 4"/>
-    <text x="140" y="490" text-anchor="middle" font-size="14" fill="#7d6531" font-weight="600">Rigg / brakker</text>
-    <text x="140" y="508" text-anchor="middle" font-size="11" fill="#7d6531">(8300 Utomhus)</text>
-    ${badge(955, 30, counts[UTOMHUS] || 0)}
-    ${ZONES.map(z => {
-      const inactive = !z.l1;
-      return `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="${inactive ? '#f2f2f2' : '#dfe9f7'}" stroke="${inactive ? '#aaa' : '#4a6fa5'}" stroke-width="2"/>
-        ${z.l1 ? `<text x="${z.x + z.w / 2}" y="${z.y + z.h / 2 - 4}" text-anchor="middle" font-size="12" fill="#4a6fa5">${esc(z.l1)}</text>` : ''}
-        <text x="${z.x + z.w / 2}" y="${z.y + z.h / 2 + (z.l1 ? 13 : 5)}" text-anchor="middle" font-size="${z.w > 200 ? 17 : 13}" font-weight="700" fill="${inactive ? '#888' : '#243b5e'}">${esc(z.l2)}</text>
-        ${badge(z.x + z.w - 16, z.y + 16, counts[z.navn] || 0)}`;
-    }).join('')}
-    <g transform="translate(960,560)"><polygon points="0,-22 8,0 -8,0" fill="#333"/><text x="0" y="16" text-anchor="middle" font-size="13" font-weight="700">N</text></g>
-    <text x="16" y="590" font-size="11" fill="#6b7a5b">Skjematisk sonekart laget fra områdene i Excel. Last opp prosjektets sonebilde for riktig plassering.</text>
+  const bubble = (x, y, t) => `<circle cx="${x}" cy="${y}" r="11" fill="#fff" stroke="#999"/><text x="${x}" y="${y + 3.5}" text-anchor="middle" font-size="9" fill="#555">${t}</text>`;
+  const badge = (x, y, n) => n ? `<circle cx="${x}" cy="${y}" r="15" fill="#1f6feb" stroke="#fff" stroke-width="2"/><text x="${x}" y="${y + 5}" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">${n}</text>` : '';
+  const label = (txt, x, y, fs, bg, fg) => {
+    const w = txt.length * fs * 0.64 + 12;
+    return `<rect x="${x - w / 2}" y="${y - fs * 0.85}" width="${w}" height="${fs * 1.3}" fill="${bg}" ${bg === '#fff' ? 'stroke="#999"' : ''}/>
+      <text x="${x}" y="${y + fs * 0.2}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="${fg}" font-family="Arial,Helvetica,sans-serif">${esc(txt)}</text>`;
+  };
+  const box = (txt, sub, x, y) => `<rect x="${x - 60}" y="${y - 21}" width="120" height="42" fill="#000"/>
+    <text x="${x}" y="${y + 2}" text-anchor="middle" font-size="22" fill="#fff" font-family="Arial,Helvetica,sans-serif">${txt}</text>
+    <text x="${x}" y="${y + 16}" text-anchor="middle" font-size="10" fill="#fff" font-family="Arial,Helvetica,sans-serif">${sub}</text>`;
+  const grid = AX_TOP.map(([t, x]) => `<line x1="${x}" y1="84" x2="${x}" y2="704" stroke="#c8c8c8" stroke-dasharray="10 4 2 4"/>${bubble(x, 72, t)}${bubble(x, 716, t)}`).join('')
+    + AX_S.map(([t, x]) => `<line x1="${x}" y1="311" x2="${x}" y2="630" stroke="#c8c8c8" stroke-dasharray="10 4 2 4"/>${bubble(x, 299, t)}`).join('')
+    + AX_ROWS.map(([t, y, bx, x1, x2]) => `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#c8c8c8" stroke-dasharray="10 4 2 4"/>${bubble(bx, y, t)}`).join('')
+    + AX_ROWS_R.map(([t, y, bx]) => `<line x1="1225" y1="${y}" x2="1782" y2="${y}" stroke="#c8c8c8" stroke-dasharray="10 4 2 4"/>${bubble(bx, y, t)}`).join('');
+  const zones = ZONES.map(z => {
+    const xs = z.pts.map(p => p[0]), ys = z.pts.map(p => p[1]);
+    return `<polygon points="${z.pts.map(p => p.join(',')).join(' ')}" fill="${z.fill}" stroke="#8a8a8a" stroke-width="2.5"/>
+      ${z.labels.map(([t, x, y, fs]) => label(t, x, y, fs, z.bg, z.fg)).join('')}
+      ${badge(Math.max(...xs) - 18, Math.min(...ys) + 18, counts[z.navn] || 0)}`;
+  }).join('');
+  return `<svg viewBox="0 0 ${MAP_W} ${MAP_H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sonekart WRK2">
+    <rect x="0" y="0" width="${MAP_W}" height="${MAP_H}" fill="#fbfcf8"/>
+    ${grid}${zones}
+    ${box('NORD', '(NORTH)', 886, 26)}${box('SØR', '(SOUTH)', 914, 767)}${box('VEST', '(WEST)', 83, 412)}${box('ØST', '(EAST)', 1833, 432)}
+    <text x="20" y="785" font-size="13" fill="#6b7a5b" font-family="Arial,Helvetica,sans-serif">8300 UTOMHUS = resten av tomten</text>
+    ${badge(300, 785, counts[UTOMHUS] || 0)}
   </svg>`;
+}
+
+function selOf() {
+  const s = ui.koord.selected; if (!s) return null;
+  const f = findAT(s.nr); if (!f) return null;
+  return {...f, p: s.pid ? f.t.plasseringer.find(p => p.id === s.pid) : null};
+}
+function renderSelBar() {
+  const bar = document.getElementById('sel-bar');
+  const d = ui.koord.drawing;
+  if (d) {
+    bar.innerHTML = `<b>Tegn område for ${esc(d.nr)}:</b> klikk eller trykk på kartet for å sette hjørnepunkter (${d.points.length} satt, minst 3).
+      <button class="btn primary" data-action="draw-done" ${d.points.length < 3 ? 'disabled' : ''}>Ferdig</button>
+      <button class="btn" data-action="draw-undo" ${d.points.length ? '' : 'disabled'}>Angre siste punkt</button>
+      <button class="btn" data-action="draw-cancel">Avbryt</button>`;
+    bar.className = 'sel-bar drawing';
+    return;
+  }
+  const s = selOf();
+  bar.className = 'sel-bar';
+  if (!s) { bar.innerHTML = '<span class="muted">Trykk på en AT-markør på kartet for å tegne område rundt den eller fjerne plasseringen. Du kan dra samme AT til kartet flere ganger for å legge den i flere soner.</span>'; return; }
+  const can = canPlaceAT(s.t);
+  const head = `<span class="at-chip linked">${esc(s.t.nr)}</span> <b>${esc(s.t.navn)}</b> ${firmBadge(s.t.firma)}`;
+  if (!s.p) {
+    bar.innerHTML = `${head} <span class="muted">· ${s.t.plasseringer.length} plassering(er). ${can ? 'Dra kortet til kartet for å legge til en plassering.' : 'Bare ' + esc(s.t.firma) + ' kan plassere denne AT-en.'}</span>
+      <button class="btn" data-action="sel-close">Lukk</button>`;
+    return;
+  }
+  const idx = s.t.plasseringer.indexOf(s.p) + 1;
+  bar.innerHTML = `${head} <span class="muted">· plassering ${idx} av ${s.t.plasseringer.length} · ${esc(s.p.sone || 'ingen sone')}</span>
+    ${can ? `<button class="btn primary" data-action="draw-start">${s.p.omrade ? 'Tegn område på nytt' : '✏️ Tegn område'}</button>
+      ${s.p.omrade ? '<button class="btn" data-action="area-del">Slett område</button>' : ''}
+      <button class="btn danger" data-action="place-del">Fjern plasseringen</button>` : `<span class="muted">Bare ${esc(s.t.firma)} kan endre.</span>`}
+    <button class="btn" data-action="sel-close">Lukk</button>`;
 }
 
 function renderKoord() {
   const weeks = weeksAhead();
   if (!ui.koord.week || (ui.koord.week !== 'alle' && !weeks.includes(ui.koord.week))) ui.koord.week = weeks[0];
-  const sel = document.getElementById('week-sel');
-  sel.innerHTML = `<option value="alle" ${ui.koord.week === 'alle' ? 'selected' : ''}>Alle 8 uker (uke ${isoWeek(weeks[0])}–${isoWeek(weeks[7])})</option>`
+  document.getElementById('week-sel').innerHTML = `<option value="alle" ${ui.koord.week === 'alle' ? 'selected' : ''}>Alle 8 uker (uke ${isoWeek(weeks[0])}–${isoWeek(weeks[7])})</option>`
     + weeks.map((w, i) => `<option value="${w}" ${ui.koord.week === w ? 'selected' : ''}>Uke ${isoWeek(w)} (${fmtShort(w)}–${fmtShort(addDays(w, 6))})${i === 0 ? ' – denne uken' : ''}</option>`).join('');
 
   const list = atsInPeriod();
-  const placed = list.filter(x => x.t.plassering);
   const custom = loadMap();
+  const selNr = ui.koord.selected && ui.koord.selected.nr, selPid = ui.koord.selected && ui.koord.selected.pid;
   document.getElementById('map-reset-btn').style.display = custom ? '' : 'none';
+  const placedN = list.filter(x => x.t.plasseringer.length).length;
   document.getElementById('stats-koord').innerHTML =
-    `<span><b>${list.length}</b> AT i perioden</span><span><b>${placed.length}</b> plassert på kartet</span><span><b>${list.length - placed.length}</b> ikke plassert</span>`;
+    `<span><b>${list.length}</b> AT i perioden</span><span><b>${placedN}</b> plassert</span><span><b>${list.length - placedN}</b> ikke plassert</span>
+     <span><b>${list.filter(x => canPlaceAT(x.t)).length}</b> du kan plassere</span>`;
 
   document.getElementById('at-list').innerHTML = `<h3>AT i valgt periode</h3>` + (list.length ? list.map(({a, t}) => {
-    const p = t.plassering;
-    return `<div class="at-card${p ? ' placed' : ''}${ui.koord.selected === t.nr ? ' selected' : ''}" data-nr="${esc(t.nr)}" style="border-left-color:${firmColor(t.firma)}">
-      <span class="drag-handle" title="Dra til kartet">⠿</span>
+    const can = canPlaceAT(t), n = t.plasseringer.length;
+    const zones = [...new Set(t.plasseringer.map(p => p.sone || 'Plassert på sonebildet'))];
+    return `<div class="at-card${n ? ' placed' : ''}${selNr === t.nr ? ' selected' : ''}${can ? '' : ' locked'}" data-nr="${esc(t.nr)}" style="border-left-color:${firmColor(t.firma)}">
+      ${can ? '<span class="drag-handle" title="Dra til kartet">⠿</span>' : `<span class="lock" title="Bare ${esc(t.firma)} kan plassere denne AT-en">🔒</span>`}
       <div class="at-card-body">
         <div class="at-card-top"><span class="at-chip linked">${esc(t.nr)}</span>${cDod(t.dodsrisiko, false)}<span class="badge ${RISK_CLS[t.risikoniva] || ''}">${esc(t.risikoniva)}</span></div>
         <div class="at-card-name">${esc(t.navn)}</div>
         <div class="sub">${esc(a.id)} ${esc(a.navn)}</div>
         <div class="sub" style="margin-top:3px">${firmBadge(t.firma)} ${fmtShort(t.startdato)}–${fmtShort(endDate(t))} · ${esc(t.omrade)}</div>
-        <div class="placement">${p ? `📍 ${esc(p.sone || 'Plassert på sonebildet')} · <button class="link-btn" data-action="unplace">Fjern fra kartet</button>` : '<span class="muted">Ikke plassert – dra til kartet</span>'}</div>
+        <div class="placement">${n ? `📍 ${zones.map(esc).join(', ')}${n > 1 ? ` <span class="muted">(${n} plasseringer)</span>` : ''}${can ? ` · <button class="link-btn" data-action="unplace-all">Fjern alle</button>` : ''}`
+          : `<span class="muted">${can ? 'Ikke plassert – dra til kartet' : 'Ikke plassert'}</span>`}</div>
       </div>
     </div>`;
   }).join('') : '<p class="muted">Ingen AT i valgt periode.</p>');
 
+  const placements = list.flatMap(({a, t}) => t.plasseringer.map((p, i) => ({a, t, p, i})));
   const counts = {};
-  placed.forEach(({t}) => { if (t.plassering.sone) counts[t.plassering.sone] = (counts[t.plassering.sone] || 0) + 1; });
+  placements.forEach(({t, p}) => { if (p.sone) (counts[p.sone] = counts[p.sone] || new Set()).add(t.nr); });
+  Object.keys(counts).forEach(k => counts[k] = counts[k].size);
+
+  const polys = placements.filter(x => x.p.omrade).map(({t, p}) => {
+    const c = firmColor(t.firma), sel = selNr === t.nr;
+    return `<polygon points="${p.omrade.map(q => q.join(',')).join(' ')}" fill="${c}" fill-opacity="${sel ? .35 : .22}" stroke="${c}" stroke-width="${sel ? 3 : 2}" vector-effect="non-scaling-stroke"/>`;
+  }).join('');
+  const d = ui.koord.drawing;
+  const dColor = d ? firmColor(findAT(d.nr).t.firma) : '';
+  const preview = d && d.points.length ? `<polyline points="${d.points.map(q => q.join(',')).join(' ')}${d.points.length > 2 ? ' ' + d.points[0].join(',') : ''}" fill="${dColor}" fill-opacity=".15" stroke="${dColor}" stroke-width="2" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>` : '';
+  const dots = d ? d.points.map(q => `<div class="draw-pt" style="left:${q[0]}%;top:${q[1]}%;background:${dColor}"></div>`).join('') : '';
+
   const mapWrap = document.getElementById('map-wrap');
+  mapWrap.classList.toggle('drawing', !!d);
   mapWrap.innerHTML = (custom ? `<img src="${esc(custom)}" alt="Sonebilde" draggable="false">` : zoneSvg(counts))
-    + placed.map(({t}) => `<div class="marker${ui.koord.selected === t.nr ? ' selected' : ''}" data-nr="${esc(t.nr)}" style="left:${t.plassering.x}%;top:${t.plassering.y}%;background:${firmColor(t.firma)}" title="${esc(t.nr + ' – ' + t.navn + ' (' + t.firma + ')')}">${esc(t.nr)}</div>`).join('');
+    + `<svg class="map-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">${polys}${preview}</svg>`
+    + placements.map(({t, p, i}) => `<div class="marker${selNr === t.nr ? ' selected' : ''}${selPid === p.id ? ' current' : ''}${canPlaceAT(t) ? '' : ' locked'}" data-nr="${esc(t.nr)}" data-pid="${esc(p.id)}" style="left:${p.x}%;top:${p.y}%;background:${firmColor(t.firma)}" title="${esc(t.nr + ' – ' + t.navn + ' (' + t.firma + ') · ' + (p.sone || ''))}">${esc(t.nr)}${t.plasseringer.length > 1 ? `<sup>${i + 1}</sup>` : ''}</div>`).join('')
+    + dots;
+  renderSelBar();
 
   const byZone = new Map();
-  placed.forEach(x => { const z = x.t.plassering.sone || 'Plassert på sonebildet'; if (!byZone.has(z)) byZone.set(z, []); byZone.get(z).push(x); });
-  document.getElementById('placed-list').innerHTML = placed.length
-    ? `<h3>Plassert i perioden</h3>` + [...byZone].map(([z, xs]) => `<div class="zone-group"><b>${esc(z)}:</b> ${xs.map(({t}) =>
-        `<span class="at-chip" data-action="select-at" data-nr="${esc(t.nr)}" style="border-left:4px solid ${firmColor(t.firma)}">${esc(t.nr)}</span>${t.plassering.sone && t.plassering.sone !== t.omrade ? `<span class="warn" title="Registrert område: ${esc(t.omrade)}">⚠</span>` : ''}`).join(' ')}</div>`).join('')
-      + (placed.some(({t}) => t.plassering.sone && t.plassering.sone !== t.omrade) ? '<p class="sub warn">⚠ = plassert i en annen sone enn området som er registrert på AT-en.</p>' : '')
+  placements.forEach(x => { const z = x.p.sone || 'Plassert på sonebildet'; if (!byZone.has(z)) byZone.set(z, new Map()); byZone.get(z).set(x.t.nr, x); });
+  const mism = placements.some(({t, p}) => p.sone && p.sone !== t.omrade);
+  document.getElementById('placed-list').innerHTML = placements.length
+    ? `<h3>Plassert i perioden</h3>` + [...byZone].map(([z, m]) => `<div class="zone-group"><b>${esc(z)}:</b> ${[...m.values()].map(({t, p}) =>
+        `<span class="at-chip" data-action="select-at" data-nr="${esc(t.nr)}" data-pid="${esc(p.id)}" style="border-left:4px solid ${firmColor(t.firma)}">${esc(t.nr)}</span>${p.sone && p.sone !== t.omrade ? `<span class="warn" title="Registrert område: ${esc(t.omrade)}">⚠</span>` : ''}`).join(' ')}</div>`).join('')
+      + (mism ? '<p class="sub warn">⚠ = plassert i en annen sone enn området som er registrert på AT-en.</p>' : '')
+      + (zonesApply() ? '' : '<p class="sub warn">Det opplastede bildet har et annet utsnitt enn plantegningen, så sonene gjenkjennes ikke automatisk.</p>')
     : '<p class="muted">Ingen AT er plassert på kartet i denne perioden ennå.</p>';
 }
 
@@ -741,32 +924,49 @@ function pct(el, e) {
   return {x: c((e.clientX - r.left) / r.width * 100), y: c((e.clientY - r.top) / r.height * 100)};
 }
 function inside(el, e) { const r = el.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; }
-function place(nr, p) {
-  const f = findAT(nr); if (!f) return;
-  f.t.plassering = {x: p.x, y: p.y, sone: hitZone(p)};
-  ui.koord.selected = nr;
+function clampPct(v) { return Math.max(0, Math.min(100, Math.round(v * 10) / 10)); }
+function addPlacement(nr, pos) {
+  const f = findAT(nr); if (!f || !canPlaceAT(f.t)) return;
+  const p = {id: uid(), x: pos.x, y: pos.y, sone: hitZone(pos), omrade: null};
+  f.t.plasseringer.push(p);
+  ui.koord.selected = {nr, pid: p.id};
+  save(); renderKoord();
+}
+function movePlacement(nr, pid, pos) {
+  const f = findAT(nr); if (!f || !canPlaceAT(f.t)) { renderKoord(); return; }
+  const p = f.t.plasseringer.find(x => x.id === pid); if (!p) return;
+  const dx = pos.x - p.x, dy = pos.y - p.y;
+  if (p.omrade) p.omrade = p.omrade.map(([x, y]) => [clampPct(x + dx), clampPct(y + dy)]);
+  p.x = pos.x; p.y = pos.y; p.sone = hitZone(pos);
+  ui.koord.selected = {nr, pid};
   save(); renderKoord();
 }
 
-let drag = null;
+let drag = null, suppressClick = false;
 document.addEventListener('pointerdown', e => {
   if (currentTab !== 'koordinering' || e.button > 0) return;
+  const mapWrap = document.getElementById('map-wrap');
+  if (ui.koord.drawing) {
+    if (mapWrap.contains(e.target)) { ui.koord.drawing.points.push([pct(mapWrap, e).x, pct(mapWrap, e).y]); renderKoord(); e.preventDefault(); }
+    return;
+  }
   const marker = e.target.closest('.marker');
   if (marker) {
-    drag = {type: 'marker', nr: marker.dataset.nr, el: marker, x0: e.clientX, y0: e.clientY, moved: false};
+    const f = findAT(marker.dataset.nr);
+    drag = {type: 'marker', nr: marker.dataset.nr, pid: marker.dataset.pid, el: marker, x0: e.clientX, y0: e.clientY, moved: false, can: !!f && canPlaceAT(f.t)};
     marker.setPointerCapture(e.pointerId);
     e.preventDefault();
     return;
   }
   const card = e.target.closest('.at-card');
-  if (card && !e.target.closest('button')) {
+  if (card && !e.target.closest('button') && !card.classList.contains('locked')) {
     if (e.pointerType !== 'mouse' && !e.target.closest('.drag-handle')) return;
-    drag = {type: 'card', nr: card.dataset.nr, x0: e.clientX, y0: e.clientY, moved: false, ghost: null};
+    drag = {type: 'card', nr: card.dataset.nr, x0: e.clientX, y0: e.clientY, moved: false, ghost: null, can: true};
     e.preventDefault();
   }
 });
 document.addEventListener('pointermove', e => {
-  if (!drag) return;
+  if (!drag || !drag.can) return;
   if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 5) return;
   drag.moved = true;
   const mapWrap = document.getElementById('map-wrap');
@@ -794,13 +994,14 @@ function endDrag(e, cancelled) {
   const mapWrap = document.getElementById('map-wrap');
   mapWrap.classList.remove('drop-hover');
   if (d.ghost) d.ghost.remove();
+  if (d.moved) suppressClick = true;
   if (cancelled) { renderKoord(); return; }
-  if (d.moved && (d.type === 'marker' || inside(mapWrap, e))) { place(d.nr, pct(mapWrap, e)); return; }
-  if (!d.moved) {
-    ui.koord.selected = ui.koord.selected === d.nr ? null : d.nr;
-    renderKoord();
-    if (d.type === 'marker') { const c = document.querySelector(`.at-card[data-nr="${CSS.escape(d.nr)}"]`); if (c) c.scrollIntoView({block: 'nearest', behavior: 'smooth'}); }
-  }
+  if (d.type === 'card') { if (d.moved && inside(mapWrap, e)) addPlacement(d.nr, pct(mapWrap, e)); return; }
+  if (d.moved) { movePlacement(d.nr, d.pid, pct(mapWrap, e)); return; }
+  ui.koord.selected = {nr: d.nr, pid: d.pid};
+  renderKoord();
+  const c = document.querySelector(`.at-card[data-nr="${CSS.escape(d.nr)}"]`);
+  if (c) c.scrollIntoView({block: 'nearest', behavior: 'smooth'});
 }
 document.addEventListener('pointerup', e => endDrag(e, false));
 document.addEventListener('pointercancel', e => endDrag(e, true));
@@ -810,7 +1011,7 @@ function uploadMap(file) {
   reader.onload = () => {
     const img = new Image();
     img.onload = () => {
-      const scale = Math.min(1, 1800 / img.width);
+      const scale = Math.min(1, 1900 / img.width);
       const cv = document.createElement('canvas');
       cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
       const ctx = cv.getContext('2d');
@@ -818,6 +1019,7 @@ function uploadMap(file) {
       ctx.drawImage(img, 0, 0, cv.width, cv.height);
       try {
         localStorage.setItem(MAP_KEY, cv.toDataURL('image/jpeg', 0.85));
+        localStorage.setItem(MAP_RATIO_KEY, String(img.width / img.height));
       } catch (err) {
         alert('Bildet er for stort til å lagres i nettleseren. Prøv et mindre bilde.');
         return;
@@ -832,21 +1034,55 @@ function uploadMap(file) {
 
 // ---------- admin ----------
 function renderAdmin() {
-  document.getElementById('user-list').innerHTML = USERS.length ? USERS.map((u, i) => `<div class="list-row">
-      <div class="grow"><b>${esc(u.name)}</b><div class="sub">${esc(u.email)} · ${esc(u.role)}</div></div>
-      <button class="btn danger" data-action="del-user" data-i="${i}">Fjern</button></div>`).join('')
-    : '<p class="muted">Ingen brukere lagt til.</p>';
+  const sys = isSys();
+  const firmOpts = sel => FIRMS.map(f => `<option value="${esc(f.navn)}" ${f.navn === sel ? 'selected' : ''}>${esc(f.navn)}</option>`).join('');
+  const roleOpts = sel => Object.entries(ROLLER).map(([k, v]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${v}</option>`).join('');
+  document.getElementById('admin-access').innerHTML = `<h3>Tilgangsnivåer</h3>
+    <ul class="roles">
+      <li><b>Leser</b> – kan se alt i hele løsningen, men ikke endre noe.</li>
+      <li><b>Firma-admin</b> – kan se alt, og kan klargjøre egne aktiviteter og plassere egne AT-er på sonekartet (sitt firma).</li>
+      <li><b>Systemadministrator</b> – kan se og endre alt, også brukere, firma og data.</li>
+    </ul>
+    <p class="intro">${esc(accessText())}${sys ? '' : ' Brukere, firma og data kan bare endres av en systemadministrator.'}</p>`;
+
+  document.getElementById('user-form').innerHTML = sys ? `<div class="form-row">
+      <input type="text" id="u-name" placeholder="Navn">
+      <input type="email" id="u-email" placeholder="E-post">
+      <select id="u-firm">${firmOpts('Skanska')}</select>
+      <select id="u-role">${roleOpts('leser')}</select>
+      <button class="btn primary" data-action="add-user">Legg til bruker</button>
+    </div>` : '';
+  document.getElementById('user-list').innerHTML = USERS.map(u => `<div class="list-row">
+      <div class="grow"><b>${esc(u.name)}</b>${u.id === currentUserId ? ' <span class="badge st-done">innlogget</span>' : ''}<div class="sub">${esc(u.email || 'ingen e-post')}</div></div>
+      ${sys ? `<select data-user-field="firma" data-uid="${esc(u.id)}">${firmOpts(u.firma)}</select>
+        <select data-user-field="rolle" data-uid="${esc(u.id)}">${roleOpts(u.rolle)}</select>
+        <button class="btn danger" data-action="del-user" data-uid="${esc(u.id)}">Fjern</button>`
+      : `${firmBadge(u.firma)} <span class="badge st-plan">${esc(ROLLER[u.rolle])}</span>`}
+    </div>`).join('');
+
+  document.getElementById('firm-form').innerHTML = sys ? `<div class="form-row">
+      <input type="text" id="f-name" placeholder="Firmanavn">
+      <input type="color" id="f-color" value="#607d8b">
+      <button class="btn primary" data-action="add-firm">Legg til firma</button>
+    </div>` : '';
   document.getElementById('firm-list').innerHTML = FIRMS.map((f, i) => {
     const used = DATA.filter(a => a.firma === f.navn || a.at.some(t => t.firma === f.navn)).length;
+    const users = USERS.filter(u => u.firma === f.navn).length;
     return `<div class="list-row">
-      <input type="color" value="${firmColor(f.navn)}" data-firm-color="${i}">
-      <div class="grow">${firmBadge(f.navn)} <span class="sub">${used} aktiviteter</span></div>
-      <button class="btn danger" data-action="del-firm" data-i="${i}" ${used ? 'disabled title="Firmaet er i bruk"' : ''}>Fjern</button></div>`;
+      ${sys ? `<input type="color" value="${firmColor(f.navn)}" data-firm-color="${i}">` : ''}
+      <div class="grow">${firmBadge(f.navn)} <span class="sub">${used} aktiviteter · ${users} brukere</span></div>
+      ${sys ? `<button class="btn danger" data-action="del-firm" data-i="${i}" ${used || users ? 'disabled title="Firmaet er i bruk"' : ''}>Fjern</button>` : ''}</div>`;
   }).join('');
+
+  document.getElementById('data-panel').innerHTML = `<h3>Data</h3>
+    <p class="intro" style="margin-bottom:10px">Data lagres i denne nettleseren. Planen viser ${DATA.length} aktiviteter. Aktiviteter som var ferdige før uke 40 er tatt ut.
+    ${sys ? 'Tilbakestilling henter aktivitetene fra Excel-utdraget på nytt og sletter alle endringer og AT-plasseringer.' : ''}</p>
+    ${sys ? '<button class="btn danger" data-action="reset-data">Tilbakestill til Excel-data</button>' : ''}`;
 }
 
 // ---------- navigasjon ----------
 function renderCurrent() {
+  renderUserBar();
   if (currentTab === 'klargjoring' || currentTab === 'oversikt') renderTable(currentTab);
   else if (currentTab === 'koordinering') renderKoord();
   else if (currentTab === 'admin') renderAdmin();
@@ -854,6 +1090,7 @@ function renderCurrent() {
 function showTab(tab) {
   if (!document.getElementById('page-' + tab)) tab = 'oversikt';
   currentTab = tab;
+  ui.koord.drawing = null;
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + tab));
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);
@@ -867,9 +1104,10 @@ function targetOf(el) {
   if (!tr) return null;
   const a = DATA.find(x => x.id === tr.dataset.id);
   if (!a) return null;
-  if (el.dataset.scope === 'act' || tr.dataset.at === '') return {a, obj: a};
-  return {a, obj: a.at[Number(tr.dataset.at)]};
+  if (el.dataset.scope === 'act' || tr.dataset.at === '') return {a, obj: a, isAct: true};
+  return {a, obj: a.at[Number(tr.dataset.at)], isAct: false};
 }
+function canEditTarget(tg) { return tg.isAct ? canEditAct(tg.a) : canEditAT(tg.a, tg.obj); }
 function setPath(obj, path, v) {
   const parts = path.split('.');
   let o = obj;
@@ -896,11 +1134,22 @@ document.addEventListener('click', e => {
   }
 
   const btn = e.target.closest('[data-action]');
-  if (!btn) return;
+  if (!btn) {
+    const card = e.target.closest('.at-card');
+    if (card && currentTab === 'koordinering' && !ui.koord.drawing) {
+      if (suppressClick) { suppressClick = false; return; }
+      const f = findAT(card.dataset.nr);
+      ui.koord.selected = {nr: card.dataset.nr, pid: f && f.t.plasseringer[0] ? f.t.plasseringer[0].id : null};
+      renderKoord();
+    }
+    suppressClick = false;
+    return;
+  }
   const action = btn.dataset.action;
   const page = pageOf(btn);
 
   if (action === 'ff-toggle') { btn.closest('.firm-filter').classList.toggle('open'); return; }
+  if (action === 'ff-mine') { ui[btn.dataset.page].firms = new Set([me().firma]); renderTable(btn.dataset.page); return; }
   if (action === 'expand-all') { const p = btn.dataset.page; DATA.forEach(a => ui[p].expanded.add(a.id)); renderTable(p); return; }
   if (action === 'collapse-all') { const p = btn.dataset.page; ui[p].expanded.clear(); renderTable(p); return; }
 
@@ -911,6 +1160,7 @@ document.addEventListener('click', e => {
   }
   if (action === 'edit') {
     const {a} = targetOf(btn); const s = ui.klargjoring.editing;
+    if (!canOpenEdit(a)) return;
     if (s.has(a.id)) s.delete(a.id); else { s.add(a.id); ui.klargjoring.expanded.add(a.id); }
     renderTable('klargjoring'); return;
   }
@@ -923,67 +1173,105 @@ document.addEventListener('click', e => {
     return;
   }
   if (action === 'dod') {
-    const {obj} = targetOf(btn); const k = btn.dataset.key;
+    const tg = targetOf(btn); if (!tg || !canEditTarget(tg)) return;
+    const k = btn.dataset.key, obj = tg.obj;
     obj.dodsrisiko = obj.dodsrisiko.includes(k) ? obj.dodsrisiko.filter(x => x !== k) : [...obj.dodsrisiko, k];
     save(); renderTable(page); return;
   }
   if (action === 'add-at') {
-    const {a} = targetOf(btn);
+    const {a} = targetOf(btn); if (!canEditAct(a)) return;
     a.at.push({nr: nextAtNr(), navn: 'Ny arbeidsoperasjon', omrade: a.omrade, startdato: a.startdato, varighet: a.varighet, firma: a.firma,
-      forutsetninger: {...a.forutsetninger}, risikoniva: 'Middels', dodsrisiko: [], status: 'Til utførelse', kommentar: '', plassering: null});
+      forutsetninger: {...a.forutsetninger}, risikoniva: 'Middels', dodsrisiko: [], status: 'Til utførelse', kommentar: '', plasseringer: []});
     save(); renderTable(page); return;
   }
   if (action === 'del-at') {
-    const {a, obj} = targetOf(btn);
+    const {a, obj} = targetOf(btn); if (!canEditAct(a)) return;
     if (!confirm(`Slette ${obj.nr} «${obj.navn}»?`)) return;
     a.at.splice(a.at.indexOf(obj), 1);
     save(); renderTable(page); return;
   }
-  if (action === 'unplace') {
-    const card = btn.closest('.at-card'); const f = findAT(card.dataset.nr);
-    if (f) { f.t.plassering = null; save(); renderKoord(); }
+
+  // AT-koordinering
+  const s = selOf();
+  if (action === 'unplace-all') {
+    const f = findAT(btn.closest('.at-card').dataset.nr);
+    if (f && canPlaceAT(f.t) && confirm(`Fjerne alle ${f.t.plasseringer.length} plasseringer for ${f.t.nr}?`)) { f.t.plasseringer = []; ui.koord.selected = null; save(); renderKoord(); }
     return;
   }
-  if (action === 'select-at') {
-    ui.koord.selected = btn.dataset.nr; renderKoord();
-    const c = document.querySelector(`.at-card[data-nr="${CSS.escape(btn.dataset.nr)}"]`); if (c) c.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+  if (action === 'select-at') { ui.koord.selected = {nr: btn.dataset.nr, pid: btn.dataset.pid}; renderKoord(); return; }
+  if (action === 'sel-close') { ui.koord.selected = null; renderKoord(); return; }
+  if (action === 'place-del') {
+    if (s && s.p && canPlaceAT(s.t)) { s.t.plasseringer = s.t.plasseringer.filter(p => p !== s.p); ui.koord.selected = {nr: s.t.nr, pid: null}; save(); renderKoord(); }
     return;
+  }
+  if (action === 'area-del') { if (s && s.p && canPlaceAT(s.t)) { s.p.omrade = null; save(); renderKoord(); } return; }
+  if (action === 'draw-start') { if (s && s.p && canPlaceAT(s.t)) { ui.koord.drawing = {nr: s.t.nr, pid: s.p.id, points: []}; renderKoord(); } return; }
+  if (action === 'draw-undo') { if (ui.koord.drawing) { ui.koord.drawing.points.pop(); renderKoord(); } return; }
+  if (action === 'draw-cancel') { ui.koord.drawing = null; renderKoord(); return; }
+  if (action === 'draw-done') {
+    const d = ui.koord.drawing; const f = d && findAT(d.nr);
+    const p = f && f.t.plasseringer.find(x => x.id === d.pid);
+    if (p && d.points.length >= 3 && canPlaceAT(f.t)) { p.omrade = d.points.map(q => [q[0], q[1]]); save(); }
+    ui.koord.drawing = null; renderKoord(); return;
   }
   if (action === 'map-reset') {
     if (!confirm('Bruke det skjematiske sonekartet? Plasseringer gjort på det opplastede bildet kan havne feil.')) return;
-    try { localStorage.removeItem(MAP_KEY); } catch (err) {}
+    try { localStorage.removeItem(MAP_KEY); localStorage.removeItem(MAP_RATIO_KEY); } catch (err) {}
     renderKoord(); return;
   }
+
+  // admin (kun systemadministrator)
+  if (!isSys() && ['add-user', 'del-user', 'add-firm', 'del-firm', 'reset-data'].includes(action)) return;
   if (action === 'add-user') {
-    const email = document.getElementById('u-email').value.trim(), name = document.getElementById('u-name').value.trim();
-    if (!email || !name) { alert('Fyll inn e-post og navn.'); return; }
-    USERS.push({email, name, role: document.getElementById('u-role').value});
-    document.getElementById('u-email').value = ''; document.getElementById('u-name').value = '';
-    save(); renderAdmin(); return;
+    const name = document.getElementById('u-name').value.trim(), email = document.getElementById('u-email').value.trim();
+    if (!name) { alert('Skriv inn navn.'); return; }
+    USERS.push({id: uid(), name, email, firma: document.getElementById('u-firm').value, rolle: document.getElementById('u-role').value});
+    save(); renderCurrent(); return;
   }
-  if (action === 'del-user') { USERS.splice(Number(btn.dataset.i), 1); save(); renderAdmin(); return; }
+  if (action === 'del-user') {
+    const u = USERS.find(x => x.id === btn.dataset.uid);
+    if (!u) return;
+    if (u.rolle === 'systemadmin' && USERS.filter(x => x.rolle === 'systemadmin').length === 1) { alert('Det må finnes minst én systemadministrator.'); return; }
+    if (!confirm(`Fjerne brukeren ${u.name}?`)) return;
+    USERS = USERS.filter(x => x !== u);
+    if (currentUserId === u.id) currentUserId = USERS.find(x => x.rolle === 'systemadmin').id;
+    save(); renderCurrent(); return;
+  }
   if (action === 'add-firm') {
     const navn = document.getElementById('f-name').value.trim();
     if (!navn) { alert('Skriv inn firmanavn.'); return; }
     if (FIRMS.some(f => f.navn.toLowerCase() === navn.toLowerCase())) { alert('Firmaet finnes allerede.'); return; }
     FIRMS.push({navn, farge: document.getElementById('f-color').value});
-    document.getElementById('f-name').value = '';
     save(); renderAdmin(); return;
   }
   if (action === 'del-firm') { FIRMS.splice(Number(btn.dataset.i), 1); save(); renderAdmin(); return; }
   if (action === 'reset-data') {
     if (!confirm('Tilbakestille alle aktiviteter og AT-er til Excel-dataene? Alle endringer og plasseringer slettes.')) return;
-    DATA = buildData(); FIRMS = DEFAULT_FIRMS.map(f => ({...f}));
-    ui.klargjoring.editing.clear();
+    DATA = freshData(); FIRMS = DEFAULT_FIRMS.map(f => ({...f}));
+    ui.klargjoring.editing.clear(); ui.koord.selected = null;
     save(); alert('Dataene er tilbakestilt.'); renderAdmin(); return;
   }
 });
 
 document.addEventListener('change', e => {
   const el = e.target;
-  if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; renderKoord(); return; }
+  if (el.id === 'user-sel') {
+    currentUserId = el.value;
+    ui.klargjoring.editing.clear(); ui.koord.drawing = null;
+    save(); renderCurrent(); return;
+  }
+  if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; renderKoord(); return; }
   if (el.id === 'map-upload') { if (el.files[0]) uploadMap(el.files[0]); el.value = ''; return; }
-  if (el.dataset.firmColor !== undefined) { FIRMS[Number(el.dataset.firmColor)].farge = el.value; save(); renderAdmin(); return; }
+  if (el.dataset.firmColor !== undefined) { if (isSys()) { FIRMS[Number(el.dataset.firmColor)].farge = el.value; save(); } renderAdmin(); return; }
+  if (el.dataset.userField) {
+    const u = USERS.find(x => x.id === el.dataset.uid);
+    if (!u || !isSys()) { renderAdmin(); return; }
+    if (el.dataset.userField === 'rolle' && u.rolle === 'systemadmin' && el.value !== 'systemadmin' && USERS.filter(x => x.rolle === 'systemadmin').length === 1) {
+      alert('Det må finnes minst én systemadministrator.'); renderAdmin(); return;
+    }
+    u[el.dataset.userField] = el.value;
+    save(); renderCurrent(); return;
+  }
 
   if (el.dataset.ff !== undefined) {
     const page = el.closest('.firm-filter').dataset.page, st = ui[page];
@@ -1001,6 +1289,7 @@ document.addEventListener('change', e => {
   if (page !== 'klargjoring') return;
   const tg = targetOf(el); if (!tg) return;
   const f = el.dataset.field;
+  if (!canEditTarget(tg) || (f === 'firma' && !(tg.isAct ? isSys() : canEditAct(tg.a)))) { renderTable(page); return; }
   let v = el.value;
   if (f === 'varighet') v = Math.max(1, parseInt(v, 10) || 1);
   if (f === 'startdato' && !v) { renderTable(page); return; }

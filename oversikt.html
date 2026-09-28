@@ -88,10 +88,11 @@ td.at-nr-cell{background:#eef2ff !important}
 .metode-box .mb-title{font-weight:600;font-size:11px;color:#7d5a00;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}
 .metode-box .mb-text{white-space:pre-wrap}
 .metode-box textarea{width:100%;min-height:80px}
-.dod{font-size:16px;letter-spacing:1px}
+.dod{display:inline-flex;gap:3px;align-items:center}
+.dod-icon{display:inline-block;vertical-align:middle;object-fit:contain}
 .dod-toggle{display:flex;gap:2px}
-.dod-toggle button{border:1px solid var(--line);background:#fff;border-radius:4px;padding:1px 3px;cursor:pointer;opacity:.3;font-size:14px}
-.dod-toggle button.on{opacity:1;border-color:var(--red);background:#fff0f0}
+.dod-toggle button{border:1px solid var(--line);background:#fff;border-radius:4px;padding:2px;cursor:pointer;opacity:.3;line-height:0;filter:grayscale(1)}
+.dod-toggle button.on{opacity:1;filter:none;border-color:#f39200;background:#fff4e5}
 .hint{font-size:11px;color:var(--muted)}
 td input,td select,td textarea{font-size:12.5px;padding:3px 4px;border:1px solid #c9d1d9;border-radius:4px;font-family:inherit;background:#fff}
 .w-date{width:130px}.w-num{width:60px}.w-text{width:100%;min-width:150px}.w-kom{width:190px}.w-nr{width:78px}
@@ -242,6 +243,9 @@ const FORUTSETNINGER = [
   ['mannskap', 'Mannskap'], ['materialer', 'Materialer'], ['foregaende', 'Foregående aktivitet'],
   ['plass', 'Plass'], ['informasjon', 'Informasjon'], ['ytre', 'Ytre faktorer'], ['utstyr', 'Utstyr']
 ];
+function dodIcon(k, size = 32) {
+  return `<img class="dod-icon" src="ikoner/dod-${k}.png" width="${size}" height="${Math.round(size * 0.91)}" alt="${esc(DOD[k].label)}" title="${esc(DOD[k].label)}">`;
+}
 const LYS = {
   gronn: {label: 'Grønn – avklart', emoji: '🟢'},
   gul: {label: 'Gul – under avklaring', emoji: '🟡'},
@@ -253,12 +257,12 @@ const STATUS_CLS = {'Til utførelse': 'st-plan', 'Pågår': 'st-go', 'Utført': 
 const RISIKONIVA = ['Høyt', 'Middels', 'Lavt'];
 const RISK_CLS = {'Høyt': 'rk-h', 'Middels': 'rk-m', 'Lavt': 'rk-l'};
 const DOD = {
-  fall: {sym: '🚶', label: 'Fall fra høyde'},
-  maskin: {sym: '⚙️', label: 'Konflikt menneske–maskin'},
-  konstruksjon: {sym: '🏗️', label: 'Konstruksjonssvikt / sammenrasing'},
-  gjenstand: {sym: '📦', label: 'Fallende gjenstand / last'},
-  eksplosjon: {sym: '💥', label: 'Eksplosjon'},
-  elektrisk: {sym: '⚡', label: 'Elektrisk spenning'}
+  fall: {label: 'Fall fra høyde'},
+  maskin: {label: 'Konflikt menneske-maskin'},
+  konstruksjon: {label: 'Konstruksjonssvikt'},
+  gjenstand: {label: 'Fallende gjenstand (løfteoperasjoner)'},
+  eksplosjon: {label: 'Eksplosjon'},
+  elektrisk: {label: 'Elektrisk spenning'}
 };
 
 // Fiktive underentreprenører etter fag i metodebeskrivelsene. Ingen andre totalentreprenører enn Skanska.
@@ -485,11 +489,11 @@ function cRisk(v, ed) { return ed ? selectHtml('risikoniva', RISIKONIVA, v) : `<
 function cStatus(v, ed) { return ed ? selectHtml('status', STATUSER, v) : `<span class="badge ${STATUS_CLS[v] || ''}">${esc(v)}</span>`; }
 function cDod(list, ed, fraAT = []) {
   if (ed) {
-    return `<div class="dod-toggle">${Object.entries(DOD).map(([k, v]) => `<button type="button" data-action="dod" data-key="${k}" class="${list.includes(k) ? 'on' : ''}" title="${esc(v.label)}">${v.sym}</button>`).join('')}</div>`
-      + (fraAT.length ? `<div class="hint">Fra AT: ${fraAT.map(k => DOD[k].sym).join(' ')}</div>` : '');
+    return `<div class="dod-toggle">${Object.entries(DOD).map(([k, v]) => `<button type="button" data-action="dod" data-key="${k}" class="${list.includes(k) ? 'on' : ''}" title="${esc(v.label)}">${dodIcon(k, 28)}</button>`).join('')}</div>`
+      + (fraAT.length ? `<div class="hint">Fra AT: ${fraAT.map(k => dodIcon(k, 22)).join(' ')}</div>` : '');
   }
   const all = [...new Set([...list, ...fraAT])];
-  return all.length ? `<span class="dod">${all.map(k => `<span title="${esc(DOD[k].label)}">${DOD[k].sym}</span>`).join('')}</span>` : '<span class="muted">–</span>';
+  return all.length ? `<span class="dod">${all.map(k => dodIcon(k)).join('')}</span>` : '<span class="muted">–</span>';
 }
 function commonCells(o, ed) {
   return {
@@ -642,7 +646,7 @@ function renderFirmFilter(page) {
 
 function renderLegend() {
   const h = `<span><b>Lys:</b></span>${Object.values(LYS).map(l => `<span>${l.emoji} ${l.label}</span>`).join('')}
-    <span style="margin-left:10px"><b>Dødsrisiko:</b></span>${Object.values(DOD).map(d => `<span>${d.sym} ${d.label}</span>`).join('')}`;
+    <span style="margin-left:10px"><b>Dødsrisiko:</b></span>${Object.keys(DOD).map(k => `<span>${dodIcon(k, 28)} ${DOD[k].label}</span>`).join('')}`;
   document.querySelectorAll('.legend-box').forEach(e => e.innerHTML = h);
 }
 

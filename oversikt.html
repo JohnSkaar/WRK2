@@ -1,641 +1,1023 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WRK2 Aktivitetsoversikt</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; line-height: 1.5; }
-        .container { max-width: 2400px; margin: 0 auto; padding: 20px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WRK2 Produksjonsplanlegging</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--line:#e1e4e8;--text:#24292f;--muted:#6a737d;--accent:#1f6feb;--green:#2da44e;--yellow:#e3b341;--red:#cf222e;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.4}
+.app-header{background:#1b2a3a;color:#fff;padding:12px 16px}
+.app-header h1{font-size:18px;font-weight:600}
+.app-header p{font-size:12px;opacity:.75}
+nav.tabs{display:flex;gap:2px;background:#fff;border-bottom:1px solid var(--line);padding:0 8px;overflow-x:auto;position:sticky;top:0;z-index:50}
+nav.tabs button{background:none;border:none;border-bottom:3px solid transparent;padding:12px 14px;font-size:14px;color:var(--muted);cursor:pointer;white-space:nowrap;font-weight:500}
+nav.tabs button.active{color:var(--accent);border-bottom-color:var(--accent)}
+main{padding:16px}
+.page{display:none}.page.active{display:block}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
+.panel h2{font-size:17px;margin-bottom:4px}
+.panel h3{font-size:15px;margin-bottom:8px}
+.intro{color:var(--muted);font-size:13px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+.toolbar input[type=search]{padding:7px 10px;border:1px solid var(--line);border-radius:6px;min-width:220px;font-size:14px}
+.btn{padding:7px 12px;border:1px solid #d0d7de;background:#fff;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text)}
+.btn:hover{background:#f0f3f6}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.danger{color:var(--red)}
+.muted{color:var(--muted)}
+.stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--muted)}
+.stats b{color:var(--text);font-size:15px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.readonly-tag{display:inline-block;background:#eef1f4;color:#57606a;border-radius:10px;padding:2px 10px;font-size:12px;margin-left:8px;vertical-align:middle}
 
-        .nav-tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid #ddd; flex-wrap: wrap; }
-        .nav-tabs button { padding: 12px 16px; border: none; background: none; color: #666; border-bottom: 3px solid transparent; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
-        .nav-tabs button.active { color: #3498db; border-bottom-color: #3498db; }
-        .nav-tabs button:hover { color: #2980b9; }
+/* firmafilter */
+.firm-filter{position:relative}
+.firm-filter-panel{position:absolute;top:100%;left:0;margin-top:4px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.14);padding:6px;min-width:260px;z-index:60;display:none;max-height:60vh;overflow:auto}
+.firm-filter.open .firm-filter-panel{display:block}
+.firm-filter-panel label{display:flex;align-items:center;gap:8px;padding:6px;border-radius:4px;cursor:pointer;font-size:13px}
+.firm-filter-panel label:hover{background:#f6f8fa}
+.firm-filter-panel label.all{border-bottom:1px solid var(--line);margin-bottom:4px;padding-bottom:8px;font-weight:600}
+.firm-filter-panel input{width:16px;height:16px}
+.swatch{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none}
 
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+/* tabell */
+.table-wrap{overflow:auto;max-height:78vh;background:#fff;border:1px solid var(--line);border-radius:8px}
+table.plan{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:13px}
+table.plan th{background:#f6f8fa;font-weight:600;font-size:12px;color:#444;text-align:left;padding:8px 6px;border-bottom:2px solid var(--line);position:sticky;top:0;z-index:5;white-space:nowrap;vertical-align:bottom}
+table.plan th.c,table.plan td.c{text-align:center}
+table.plan th.fu{background:#eef6ee}
+table.plan td{padding:6px;border-bottom:1px solid #eef0f2;vertical-align:middle;background:#fff;white-space:nowrap}
+.col-ctrl{position:sticky;left:0;z-index:3;width:78px;min-width:78px}
+.col-akt{position:sticky;left:78px;z-index:3;min-width:230px;max-width:290px;white-space:normal !important;box-shadow:2px 0 0 var(--line)}
+table.plan th.col-ctrl,table.plan th.col-akt{z-index:7}
+@media(max-width:600px){main{padding:8px}.col-ctrl{width:64px;min-width:64px}.col-akt{left:64px;min-width:140px;max-width:160px}.toolbar input[type=search]{min-width:0;flex:1}}
+tr.week-row td{background:#e8f0fb;font-weight:600;cursor:pointer;padding:8px}
+tr.week-row .wk-label{position:sticky;left:8px}
+.rel{font-weight:500;font-size:12px;color:#57606a;background:#fff;border-radius:10px;padding:1px 8px;margin-left:6px}
+.rel.now{background:var(--accent);color:#fff}
+tr.main-row.editing td{background:#fff8e1}
+tr.at-row td{background:#f7f9fc;font-size:12.5px;border-bottom:1px solid #e6ebf1}
+tr.at-row.editing td{background:#fffbef}
+tr.at-row td.col-ctrl{border-left:4px solid #3346a8;text-align:right}
+tr.at-row.flash td{animation:flash 1.6s}
+@keyframes flash{0%,40%{background:#dbe4ff}}
+.conn{color:#3346a8;font-weight:700;font-size:15px}
+.sub{font-size:11.5px;color:var(--muted)}
+.akt-name{font-weight:600}
+.icon-btn{width:28px;height:28px;border:1px solid #d0d7de;background:#fff;border-radius:5px;cursor:pointer;font-size:14px;line-height:1;vertical-align:middle}
+.icon-btn:hover{background:#f0f3f6}
+.icon-btn.expand{font-weight:700;font-size:16px}
+.icon-btn.edit.on{background:#2da44e;color:#fff;border-color:#2da44e}
+.icon-btn.danger{color:var(--red)}
+.lys{width:16px;height:16px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.18);vertical-align:middle}
+.lys-gronn{background:var(--green)}.lys-gul{background:var(--yellow)}.lys-rod{background:var(--red)}
+select.lys-sel{color:#fff;font-weight:600;border:none}
+select.lys-sel option{color:#000;background:#fff}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:500;white-space:nowrap}
+.firm-badge{color:#fff}
+.st-plan{background:#e6ecf5;color:#34495e}.st-go{background:#fff0d6;color:#9a5b00}.st-done{background:#dcf5e3;color:#1a7f37}
+.rk-h{background:#ffe0e0;color:#a40e26}.rk-m{background:#fff4cc;color:#7d5a00}.rk-l{background:#dcf5e3;color:#1a7f37}
+.at-chip{display:inline-block;padding:1px 6px;border-radius:4px;background:#eef2ff;color:#3346a8;font-size:11.5px;font-family:ui-monospace,Menlo,monospace;margin:1px;border:1px solid #c7d0f5;cursor:pointer;white-space:nowrap}
+.at-chip:hover{background:#dbe4ff}
+.at-chip.linked{background:#3346a8;color:#fff;border-color:#3346a8;cursor:default}
+td.at-nr-cell{background:#eef2ff !important}
+.metode-box{background:#fffcf0 !important;border-left:1px dashed #d9b650;border-right:1px dashed #d9b650;vertical-align:top !important;min-width:190px;max-width:230px;white-space:normal !important;font-size:12px}
+.metode-box .mb-title{font-weight:600;font-size:11px;color:#7d5a00;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}
+.metode-box .mb-text{white-space:pre-wrap}
+.metode-box textarea{width:100%;min-height:80px}
+.dod{font-size:16px;letter-spacing:1px}
+.dod-toggle{display:flex;gap:2px}
+.dod-toggle button{border:1px solid var(--line);background:#fff;border-radius:4px;padding:1px 3px;cursor:pointer;opacity:.3;font-size:14px}
+.dod-toggle button.on{opacity:1;border-color:var(--red);background:#fff0f0}
+.hint{font-size:11px;color:var(--muted)}
+td input,td select,td textarea{font-size:12.5px;padding:3px 4px;border:1px solid #c9d1d9;border-radius:4px;font-family:inherit;background:#fff}
+.w-date{width:130px}.w-num{width:60px}.w-text{width:100%;min-width:150px}.w-kom{width:190px}.w-nr{width:78px}
+td.empty{text-align:center;color:var(--muted);padding:30px}
+.link-btn{background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;text-decoration:underline;padding:0}
 
-        header { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        h1 { margin-bottom: 10px; color: #2c3e50; font-size: 22px; }
+/* AT-koordinering */
+.koord{display:grid;grid-template-columns:340px 1fr;gap:14px;align-items:start}
+@media(max-width:900px){.koord{grid-template-columns:1fr}}
+.at-list{max-height:78vh;overflow:auto;padding-right:4px}
+.at-card{border:1px solid var(--line);border-left:6px solid #999;border-radius:6px;padding:8px;margin-bottom:8px;background:#fff;cursor:grab;user-select:none;-webkit-user-select:none;display:flex;gap:8px}
+.at-card:active{cursor:grabbing}
+.at-card.placed{background:#f6f8fa}
+.at-card.selected{outline:2px solid var(--accent)}
+.drag-handle{touch-action:none;cursor:grab;font-size:20px;color:#8c959f;padding:0 2px;align-self:center}
+.at-card-body{flex:1;min-width:0}
+.at-card-top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.at-card-name{font-weight:600;margin-top:3px}
+.placement{font-size:12px;margin-top:4px}
+.map-wrap{position:relative;width:100%;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
+.map-wrap.drop-hover{outline:3px dashed var(--accent);outline-offset:-3px}
+.map-wrap img,.map-wrap svg{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+.marker{position:absolute;transform:translate(-50%,-50%);color:#fff;font-size:11px;font-weight:700;font-family:ui-monospace,Menlo,monospace;padding:3px 6px;border-radius:10px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:move;touch-action:none;white-space:nowrap;z-index:4}
+.marker.selected{outline:3px solid #ffd33d;z-index:6}
+.drag-ghost{position:fixed;transform:translate(-50%,-50%);pointer-events:none;z-index:1000;color:#fff;font-size:12px;font-weight:700;font-family:ui-monospace,Menlo,monospace;padding:4px 8px;border-radius:10px;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.4)}
+.placed-list{margin-top:10px;font-size:13px}
+.placed-list .zone-group{margin-bottom:6px}
+.warn{color:#9a5b00}
+select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:14px}
 
-        .controls { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-        button { padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
-        button:hover { background: #2980b9; }
-        button.update-order { background: #27ae60; margin-left: auto; }
-        button.update-order:hover { background: #229954; }
-
-        input[type="text"], input[type="date"], select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
-        input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-
-        .week-group { margin-bottom: 30px; }
-        .week-header { background: #2c3e50; color: white; padding: 12px 20px; font-weight: 600; cursor: pointer; user-select: none; }
-        .week-header:hover { background: #34495e; }
-
-        .table-wrapper { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th { background: #ecf0f1; padding: 8px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #bdc3c7; white-space: nowrap; font-size: 11px; }
-        td { padding: 6px 8px; border-bottom: 1px solid #ecf0f1; vertical-align: top; }
-
-        .expand-btn { background: none; border: none; color: #3498db; cursor: pointer; padding: 4px; font-weight: bold; }
-
-        .risk-symbol { font-size: 16px; }
-        .company-badge { display: inline-block; width: 20px; height: 20px; border-radius: 50%; color: white; text-align: center; line-height: 20px; font-weight: bold; font-size: 10px; }
-
-        .detail-row { background: #f9f9f9; }
-        .at-row { background: #f0f8ff; }
-
-        textarea { width: 100%; padding: 6px; border: 1px solid #ddd; font-family: inherit; font-size: 11px; min-height: 50px; }
-
-        .admin-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .admin-section h2 { margin-bottom: 15px; color: #2c3e50; font-size: 18px; }
-
-        .user-list { list-style: none; }
-        .user-list li { padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-
-        .company-colors { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-        .color-item { display: flex; align-items: center; gap: 10px; }
-        .color-box { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #ddd; }
-
-        .at-kanban { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 20px; }
-        .at-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: move; border-left: 4px solid #3498db; }
-        .at-card.dragging { opacity: 0.5; }
-
-        .health-check-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
-        .health-card { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #3498db; }
-        .health-card.critical { border-left-color: #e74c3c; }
-        .health-card.warning { border-left-color: #f39c12; }
-        .health-card.healthy { border-left-color: #27ae60; opacity: 0.7; }
-    </style>
+/* admin */
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.form-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.form-row input,.form-row select{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px}
+.list-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #eef0f2}
+.list-row .grow{flex:1;min-width:0}
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="nav-tabs">
-            <button class="active" onclick="showTab('klargjoring')">Klargjøring av aktiviteter</button>
-            <button onclick="showTab('oversikt')">Totaloversikt</button>
-            <button onclick="showTab('at-koordinering')">AT Koordinering</button>
-            <button onclick="showTab('admin')">Admin</button>
-        </div>
-
-        <!-- PAGE 1: KLARGJØRING -->
-        <div id="klargjoring" class="tab-content active">
-            <header>
-                <h1>Klargjøring av aktiviteter</h1>
-                <p>Sunnhetskontroll per firma</p>
-                <div class="controls">
-                    <select id="firma-filter" onchange="filterByFirma(this.value)" style="min-width: 200px;">
-                        <option value="">-- Alle firma --</option>
-                    </select>
-                </div>
-            </header>
-            <div class="health-check-container" id="health-container"></div>
-        </div>
-
-        <!-- PAGE 2: TOTALOVERSIKT -->
-        <div id="oversikt" class="tab-content">
-            <header>
-                <h1>Totaloversikt - Rullende ukeoversikt</h1>
-                <div class="controls">
-                    <input type="text" id="search" placeholder="Søk etter ID eller aktivitet...">
-                    <button class="update-order" onclick="updateActivityOrder()">Oppdater rekkefølge</button>
-                </div>
-            </header>
-            <div id="activities-container"></div>
-        </div>
-
-        <!-- PAGE 3: AT KOORDINERING -->
-        <div id="at-koordinering" class="tab-content">
-            <header>
-                <h1>AT Koordinering - Denne uke</h1>
-                <p>Dra og drop arbeidstillatelser for å planlegge</p>
-            </header>
-            <div style="display: grid; grid-template-columns: 300px 1fr; gap: 20px;">
-                <div style="background: white; padding: 20px; border-radius: 8px; height: fit-content;">
-                    <h3>Tilgjengelige ATs</h3>
-                    <div id="at-list" class="at-kanban"></div>
-                </div>
-                <div style="background: white; padding: 20px; border-radius: 8px; position: relative;">
-                    <img id="building-map" src="" style="width: 100%; height: auto; border-radius: 4px;">
-                    <div id="at-placed" style="position: absolute; top: 20px; left: 320px; width: calc(100% - 340px); height: calc(100% - 40px);"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PAGE 4: ADMIN -->
-        <div id="admin" class="tab-content">
-            <header>
-                <h1>Administrasjon</h1>
-            </header>
-
-            <div class="admin-section">
-                <h2>Brukertilganger</h2>
-                <div class="controls">
-                    <input type="text" id="new-user-email" placeholder="E-post...">
-                    <input type="text" id="new-user-name" placeholder="Navn...">
-                    <select id="new-user-role">
-                        <option value="viewer">Visning</option>
-                        <option value="editor">Redigering</option>
-                        <option value="admin">Administrator</option>
-                    </select>
-                    <button onclick="addUser()">Legg til bruker</button>
-                </div>
-                <ul class="user-list" id="user-list"></ul>
-            </div>
-
-            <div class="admin-section">
-                <h2>Firmafargekoder</h2>
-                <div class="company-colors" id="company-colors"></div>
-            </div>
-        </div>
+<header class="app-header">
+  <h1>WRK2 – Produksjonsplanlegging</h1>
+  <p>84 aktiviteter fra SiteDrive-utdraget · de sju produksjonsforutsetningene · arbeidstillatelser (AT) · Skanskas dødsrisikoer</p>
+</header>
+<nav class="tabs">
+  <button data-tab="klargjoring">Klargjøring av aktiviteter</button>
+  <button data-tab="oversikt">Totaloversikt</button>
+  <button data-tab="koordinering">AT-koordinering</button>
+  <button data-tab="admin">Admin</button>
+</nav>
+<main>
+  <section class="page" id="page-klargjoring">
+    <div class="panel">
+      <h2>Klargjøring av aktiviteter</h2>
+      <p class="intro">Samme oppsett som Totaloversikt. Trykk ✏️ foran en aktivitet for å gjøre alle feltene på aktiviteten og AT-radene redigerbare. Trykk ✔ når du er ferdig. Endringer lagres automatisk.</p>
+      <div class="toolbar">
+        <div class="firm-filter" data-page="klargjoring"></div>
+        <input type="search" data-search="klargjoring" placeholder="Søk aktivitet, ID, AT-nr, område …">
+        <button class="btn" data-action="expand-all" data-page="klargjoring">Vis alle AT-rader</button>
+        <button class="btn" data-action="collapse-all" data-page="klargjoring">Skjul alle AT-rader</button>
+      </div>
+      <div class="stats" id="stats-klargjoring"></div>
+      <div class="legend legend-box"></div>
     </div>
+    <div class="table-wrap" id="table-klargjoring"></div>
+  </section>
 
-    <script>
-        // Company color mapping
-        const COMPANY_COLORS = {
-            'Skanska': '#e74c3c',
-            'NCC': '#3498db',
-            'Veidekke': '#f39c12',
-            'Peab': '#27ae60'
-        };
+  <section class="page" id="page-oversikt">
+    <div class="panel">
+      <h2>Totaloversikt <span class="readonly-tag">Kun visning</span></h2>
+      <p class="intro">Status for alle aktiviteter. Her kan ingenting endres. Endringer gjøres under «Klargjøring av aktiviteter». Trykk + for å vise AT-radene under aktiviteten.</p>
+      <div class="toolbar">
+        <div class="firm-filter" data-page="oversikt"></div>
+        <input type="search" data-search="oversikt" placeholder="Søk aktivitet, ID, AT-nr, område …">
+        <button class="btn" data-action="expand-all" data-page="oversikt">Vis alle AT-rader</button>
+        <button class="btn" data-action="collapse-all" data-page="oversikt">Skjul alle AT-rader</button>
+      </div>
+      <div class="stats" id="stats-oversikt"></div>
+      <div class="legend legend-box"></div>
+    </div>
+    <div class="table-wrap" id="table-oversikt"></div>
+  </section>
 
-        const RISKS = {
-            'fall': '🚶',
-            'maskin': '⚙️',
-            'konstruksjon': '🏗️',
-            'gjenstand': '📦',
-            'eksplosion': '💥',
-            'elektrisk': '⚡'
-        };
+  <section class="page" id="page-koordinering">
+    <div class="panel">
+      <h2>AT-koordinering</h2>
+      <p class="intro">Dra én og én AT fra listen over på sonekartet for å vise hvor arbeidet skal foregå. På PC drar du hele kortet. På mobil drar du i håndtaket ⠿. Du kan flytte en AT som allerede ligger på kartet ved å dra den.</p>
+      <div class="toolbar">
+        <label>Periode: <select class="week-sel" id="week-sel"></select></label>
+        <label class="btn">Last opp sonebilde <input type="file" accept="image/*" id="map-upload" hidden></label>
+        <button class="btn" data-action="map-reset" id="map-reset-btn">Bruk skjematisk sonekart</button>
+      </div>
+      <div class="stats" id="stats-koord"></div>
+    </div>
+    <div class="koord">
+      <div class="panel at-list" id="at-list"></div>
+      <div class="panel">
+        <div class="map-wrap" id="map-wrap"></div>
+        <div class="placed-list" id="placed-list"></div>
+      </div>
+    </div>
+  </section>
 
-        const RISK_LABELS = {
-            'fall': 'Fall fra høyde',
-            'maskin': 'Konflikt menneske-maskin',
-            'konstruksjon': 'Konstruksjonssvikt',
-            'gjenstand': 'Fallende gjenstand',
-            'eksplosion': 'Eksplosion',
-            'elektrisk': 'Elektrisk spenning'
-        };
+  <section class="page" id="page-admin">
+    <div class="admin-grid">
+      <div class="panel">
+        <h3>Brukere</h3>
+        <div class="form-row">
+          <input type="email" id="u-email" placeholder="E-post">
+          <input type="text" id="u-name" placeholder="Navn">
+          <select id="u-role"><option>Leser</option><option>Planlegger</option><option>Administrator</option></select>
+          <button class="btn primary" data-action="add-user">Legg til</button>
+        </div>
+        <div id="user-list"></div>
+      </div>
+      <div class="panel">
+        <h3>Firma og fargekoder</h3>
+        <div class="form-row">
+          <input type="text" id="f-name" placeholder="Firmanavn">
+          <input type="color" id="f-color" value="#607d8b">
+          <button class="btn primary" data-action="add-firm">Legg til firma</button>
+        </div>
+        <div id="firm-list"></div>
+      </div>
+      <div class="panel">
+        <h3>Data</h3>
+        <p class="intro" style="margin-bottom:10px">Data lagres i denne nettleseren. Tilbakestilling henter de 84 aktivitetene fra Excel-utdraget på nytt og sletter alle endringer og AT-plasseringer.</p>
+        <button class="btn danger" data-action="reset-data">Tilbakestill til Excel-data</button>
+      </div>
+    </div>
+  </section>
+</main>
 
-        const STORAGE_KEY = 'wrk2_v4';
-        let aktiviteter = [];
-        let originalAktiviteter = [];
-        let expandedActivities = new Set();
-        let users = [];
+<script>
+const EXCEL = [["A001", "8300 - Utomhus", "Byggegjerde", null, "OK", "1.1"], ["A008", "8300 - Utomhus", "Grave ut for prov.strøm", null, "OK", "2.1"], ["A010", "8300 - Utomhus", "Opprigg kontorrigg", null, "OK", "1.1"], ["A014", "8300 - Utomhus", "Opprigg mannskapsrigg", null, "OK", "1.1"], ["A016", "8300 - Utomhus", "Grave trase (del 1…", null, "OK", "2.1"], ["A018", "8300 - Utomhus", "Boring for spillvan…", null, "OK", "2.2"], ["A019", "8300 - Utomhus", "Graving hovedgrøft (S)", null, "OK", "2.1"], ["A020", "8300 - Utomhus", "Prov.strøm, fiber og vann til brakkerigg", null, "OK", "1.1, 1.3"], ["A021", "8300 - Utomhus", "Provstrøm/bygge…", null, "OK", "1.1, 1.3"], ["A022", "8300 - Utomhus", "Støpe kranfundament", null, "OK", "3.1"], ["A002", "8300 - Utomhus", "Montering kran 2", "2026-08-10", "OK", "1.4"], ["A017", "8300 - Utomhus", "Rondell", "2026-08-10", null, null], ["A003", "8300 - Utomhus", "06-C010 Trykkluft ledning i grunn", "2026-08-24", null, null], ["A011", "8300 - Utomhus", "06-C010 Vitnepunkt Trykkluft i bakken", "2026-08-24", null, null], ["A004", "8300 - Utomhus", "Hovedstrøm til kran", "2026-08-31", "OK", "1.3"], ["A005", "8300 - Utomhus", "Montering av kran 1 (hovedkran)", "2026-09-07", "OK", "1.4"], ["A009", "8300 - Utomhus", "Tilbakefylling hovedgrøft (S)", "2026-09-07", "OK", "2.1"], ["A006", "8300 - Utomhus", "Kum for Trykkluft", "2026-09-21", "OK", "2.1"], ["A012", "8300 - Utomhus", "Klargjøring for overvann (Ø)", "2026-09-28", "OK", "2.1"], ["A015", "8300 - Utomhus", "Kople på spillvannsledning", "2026-09-28", "OK", "2.1"], ["A013", "8300 - Utomhus", "Betongarbeid boregrop (Ø)", "2026-10-05", "OK", "3.1"], ["A007", "8300 - Utomhus", "39-C010 Ringjord tverrforbindelse", "2026-10-12", null, null], ["A023", "8301 - Ovnshall", "Magring", null, "OK", "3.1"], ["A028", "8301 - Ovnshall", "Rensk av fjell", null, "OK", "2.1"], ["A032", "8301 - Ovnshall", "boring av fjellbolt", null, "OK", "2.1"], ["A036", "8301 - Ovnshall", "Industrivann etappe 1", null, "OK", "2.1"], ["A040", "8301 - Ovnshall", "Støttemur for tilbakefylling av ovnsgrube", null, "OK", "3.2"], ["A042", "8301 - Ovnshall", "Fundamenter", null, "OK", "3.1"], ["A043", "8301 - Ovnshall", "Opprigg kran 3 (s…", null, "OK", "1.4"], ["A024", "8301 - Ovnshall", "Pelefundamenter (ovnsgrube)", "2026-08-17", "OK", "3.1"], ["A025", "8301 - Ovnshall", "Boring resterende bergbolter", "2026-08-31", "OK", "2.1"], ["A029", "8301 - Ovnshall", "Tilbakefylling ovnsgrube (fundament)", "2026-08-31", "OK", "2.1"], ["A026", "8301 - Ovnshall", "Ovnsgrube bunnplate", "2026-09-07", "OK", "3.1"], ["A030", "8301 - Ovnshall", "3 stk RD pel + 3 stk Gewi stag", "2026-09-14", "OK", "2.3, 3.1"], ["A033", "8301 - Ovnshall", "Boring til gewistag", "2026-09-14", null, null], ["A037", "8301 - Ovnshall", "Trekking gewistag (spennteknikk)", "2026-09-14", "OK", "3.1"], ["A027", "8301 - Ovnshall", "Ovnsgrube Vegger", "2026-09-28", "OK", "3.2"], ["A031", "8301 - Ovnshall", "Fundamentering drossrom og fundament F1 FD F3 FI F5 FI", "2026-09-28", "OK", "3.1"], ["A034", "8301 - Ovnshall", "Oppspenning gewistag (?)", "2026-09-28", "OK", "3.1"], ["A038", "8301 - Ovnshall", "Støp bunnplate ovnsgrube", "2026-09-28", "OK", "3.1"], ["A041", "8301 - Ovnshall", "Trekking gewistag (spennteknikk)", "2026-09-28", "OK", "3.1"], ["A044", "8301 - Ovnshall", "Vitnepunkt før støp ovnsgrube plate og vegger", "2026-09-28", null, null], ["A035", "8301 - Ovnshall", "Tilbakefylding Drossrom", "2026-10-05", "OK", "2.1"], ["A039", "8301 - Ovnshall", "Vegger og dekker drossrom (ink innstøpt stålpl…", "2026-10-12", "OK", "3.2"], ["A045", "8302 - Kjeller / Vest", "Fjellsikringsbolte…", null, "OK", "2.1"], ["A053", "8302 - Kjeller / Vest", "Rens til fjell (grube)", null, "OK", "2.1"], ["A046", "8302 - Kjeller / Vest", "Magring grube", "2026-08-10", "OK", "3.1"], ["A059", "8302 - Kjeller / Vest", "Rens til fjell", "2026-08-10", "OK", "2.1"], ["A062", "8302 - Kjeller / Vest", "Magring fundamenter", "2026-08-17", "OK", "3.1"], ["A047", "8302 - Kjeller / Vest", "Boring fjellbolter i grube", "2026-08-24", "OK", "2.1"], ["A054", "8302 - Kjeller / Vest", "Boring fjellbolter i fundament", "2026-08-31", "OK", "2.1"], ["A048", "8302 - Kjeller / Vest", "Fundamenter Vest (Kun yttervegg)", "2026-09-07", "OK", "3.1"], ["A055", "8302 - Kjeller / Vest", "Drens Yttervegg Vest", "2026-09-14", "OK", "2.1"], ["A060", "8302 - Kjeller / Vest", "Fundament Støpepit", "2026-09-14", "OK", "3.1"], ["A049", "8302 - Kjeller / Vest", "39-C010 Jording trafogrube", "2026-09-21", null, null], ["A056", "8302 - Kjeller / Vest", "Fundamenter vegg og søyle W2-W3/A-FD", "2026-09-21", "OK", "3.1"], ["A063", "8302 - Kjeller / Vest", "Vegg, trafo og yttervegger Del 1", "2026-09-21", "OK", "3.2"], ["A050", "8302 - Kjeller / Vest", "Pelefundamenter (Akse C til WB)", "2026-09-28", "OK", "3.1"], ["A064", "8302 - Kjeller / Vest", "Stillas yttervegg mot ovn", "2026-09-28", null, null], ["A051", "8302 - Kjeller / Vest", "Meisling for bunnledninger", "2026-10-05", "OK", "2.1"], ["A057", "8302 - Kjeller / Vest", "Tilbakefylling støpepit W1-W4 / WB-C", "2026-10-05", "OK", "2.1"], ["A061", "8302 - Kjeller / Vest", "Tilbakefylling W1-W3 / A-WB", "2026-10-05", "OK", "2.1"], ["A052", "8302 - Kjeller / Vest", "Vegger Støpepit", "2026-10-12", "OK", "3.2"], ["A058", "8302 - Kjeller / Vest", "Yttervegger Vest og sør", "2026-10-12", "OK", "3.2"], ["A065", "8302 - Kjeller / Øst", "Fjellsikringsbolte…", null, "OK", "2.1"], ["A066", "8302 - Kjeller / Øst", "Boring fjellbolter", "2026-09-07", "OK", "2.1"], ["A067", "8302 - Kjeller / Øst", "Magring kjeller", "2026-09-07", "OK", "3.1"], ["A068", "8302 - Kjeller / Øst", "Rens til fjell", "2026-09-07", "OK", "2.1"], ["A070", "8302 - Kjeller / Øst", "Fundamenter Yttervegg Øst og Sør", "2026-09-14", "OK", "3.1"], ["A069", "8302 - Kjeller / Øst", "Tilbakefylling og drens (S og Ø)", "2026-09-21", "OK", "2.1"], ["A071", "8302 - Kjeller / Kjellerinnkjøring", "Pilotboring (overv…", null, "OK", "2.2"], ["A072", "8302 - Kjeller / Kjellerinnkjøring", "Oljeholdig overvann", "2026-09-07", null, null], ["A073", "8302 - Kjeller / Kjellerinnkjøring", "Opprømming (pilotboring)", "2026-09-21", "OK", "2.2"], ["A074", "8302 - Kjeller / Kjellerinnkjøring", "Boring for overvann (N)", "2026-09-28", "OK", "2.2"], ["A075", "8302 - Kjeller / Kjellerinnkjøring", "39-C010 Ringjord tverrforbindelse", "2026-10-12", null, null], ["A076", "8302 - Kjeller / Kjellerinnkjøring", "Plannering nedkjøringsrampe (drenering)", "2026-10-12", "OK", "2.1"], ["A077", "8302 - Kjeller / Kjellerinnkjøring", "Trekke 710", "2026-10-12", "OK", "2.2"], ["A078", "8302 - Trådhall", "Rensk til fjell", "2026-08-17", "OK", "2.1"], ["A079", "8302 - Trådhall", "Magring", "2026-09-07", "OK", "3.1"], ["A080", "8302 - Trådhall", "Boring Gewi S1", "2026-09-14", null, null], ["A081", "8302 - Trådhall", "Boring fjellbolter", "2026-09-21", "OK", "2.1"], ["A082", "8302 - Trådhall", "Mager punktfundamentering", "2026-09-21", "OK", "3.1"], ["A083", "8302 - Trådhall", "Punktfundamenter", "2026-09-28", "OK", "3.1"], ["A084", "8304 - Lagerhall", "Sprenging Utomhus Sandfang", "2026-09-28", "OK", "2.1"]];
 
-        function generateSampleData() {
-            const areas = ["8300 - Utomhus", "1100 - Fundamentering", "1200 - Loddløst arbeid"];
-            const companies = Object.keys(COMPANY_COLORS);
-            const activities = ["Montering", "Graving", "Armering", "Betongarbeider"];
-            let data = [];
+const METODER = {
+  '1.1': {navn: 'Rigg og logistikk', rev: '28.08.2026'},
+  '1.3': {navn: 'Elektrotilkobling av byggestrømskap', rev: '20.08.2026'},
+  '1.4': {navn: 'Kran', rev: '02.07.2026'},
+  '2.1': {navn: 'Grunnarbeid', rev: '04.09.2026'},
+  '2.2': {navn: 'Boring til rør', rev: '02.09.2026'},
+  '2.3': {navn: 'Peling', rev: '19.06.2026'},
+  '3.1': {navn: 'Fundament', rev: '26.08.2026'},
+  '3.2': {navn: 'Vegg, søyler og pilaster', rev: '19.06.2026'}
+};
 
-            for (let i = 1; i <= 25; i++) {
-                const daysOffset = Math.floor(Math.random() * 60) - 7;
-                const startDate = new Date();
-                startDate.setDate(startDate.getDate() + daysOffset);
+const FORUTSETNINGER = [
+  ['mannskap', 'Mannskap'], ['materialer', 'Materialer'], ['foregaende', 'Foregående aktivitet'],
+  ['plass', 'Plass'], ['informasjon', 'Informasjon'], ['ytre', 'Ytre faktorer'], ['utstyr', 'Utstyr']
+];
+const LYS = {
+  gronn: {label: 'Grønn – avklart', emoji: '🟢'},
+  gul: {label: 'Gul – under avklaring', emoji: '🟡'},
+  rod: {label: 'Rød – ikke avklart', emoji: '🔴'}
+};
+const LYS_RANK = {gronn: 0, gul: 1, rod: 2};
+const STATUSER = ['Til utførelse', 'Pågår', 'Utført'];
+const STATUS_CLS = {'Til utførelse': 'st-plan', 'Pågår': 'st-go', 'Utført': 'st-done'};
+const RISIKONIVA = ['Høyt', 'Middels', 'Lavt'];
+const RISK_CLS = {'Høyt': 'rk-h', 'Middels': 'rk-m', 'Lavt': 'rk-l'};
+const DOD = {
+  fall: {sym: '🚶', label: 'Fall fra høyde'},
+  maskin: {sym: '⚙️', label: 'Konflikt menneske–maskin'},
+  konstruksjon: {sym: '🏗️', label: 'Konstruksjonssvikt / sammenrasing'},
+  gjenstand: {sym: '📦', label: 'Fallende gjenstand / last'},
+  eksplosjon: {sym: '💥', label: 'Eksplosjon'},
+  elektrisk: {sym: '⚡', label: 'Elektrisk spenning'}
+};
 
-                const atCount = Math.floor(Math.random() * 3) + 1;
-                const at_list = [];
-                for (let j = 1; j <= atCount; j++) {
-                    at_list.push({
-                        id: `AT${j}`,
-                        name: `${activities[Math.floor(Math.random() * activities.length)]} ${j}`,
-                        status: daysOffset <= 0 ? "pågår" : "til utførelse",
-                        risk: 'fall',
-                        comment: ""
-                    });
-                }
+// Fiktive underentreprenører etter fag i metodebeskrivelsene. Ingen andre totalentreprenører enn Skanska.
+const DEFAULT_FIRMS = [
+  {navn: 'Skanska', farge: '#1f5aa6'},
+  {navn: 'Fjell & Grunn AS', farge: '#8e5a2b'},
+  {navn: 'Boreteknikk AS', farge: '#16a085'},
+  {navn: 'Pelefundamentering AS', farge: '#5d6d7e'},
+  {navn: 'Spennteknikk AS', farge: '#8e44ad'},
+  {navn: 'Byggstrøm Elektro AS', farge: '#d68910'},
+  {navn: 'Kranmontasje AS', farge: '#c0392b'},
+  {navn: 'Stillasmontasje AS', farge: '#d35400'},
+  {navn: 'Rør & VVS AS', farge: '#c2185b'}
+];
+const FIRMA_METODE = {'1.1': 'Skanska', '1.3': 'Byggstrøm Elektro AS', '1.4': 'Kranmontasje AS', '2.1': 'Fjell & Grunn AS',
+  '2.2': 'Boreteknikk AS', '2.3': 'Pelefundamentering AS', '3.1': 'Skanska', '3.2': 'Skanska'};
+const DELOP = {
+  '1.1': [['Montering og oppstilling', ['gjenstand', 'fall']], ['Løft og transport', ['gjenstand', 'maskin']]],
+  '1.3': [['Provisorisk el-tilkobling', ['elektrisk']], ['Kabelgrøft', ['maskin']]],
+  '1.4': [['Kranmontasje', ['gjenstand', 'fall']], ['Løfteoperasjoner', ['gjenstand']]],
+  '2.1': [['Maskinell graving', ['maskin']], ['Arbeid i grøft / grube', ['konstruksjon', 'maskin']], ['Fjellboring og bolting', ['maskin', 'gjenstand']]],
+  '2.2': [['Boring', ['maskin']], ['Opprømming og trekking', ['maskin', 'gjenstand']]],
+  '2.3': [['Peleboring', ['maskin', 'gjenstand']], ['Montering pelehoder', ['gjenstand']]],
+  '3.1': [['Forskaling og armering', ['gjenstand']], ['Betongstøp', ['konstruksjon', 'maskin']]],
+  '3.2': [['Forskaling vegg', ['fall', 'konstruksjon']], ['Armering', ['gjenstand']], ['Støp vegg', ['konstruksjon', 'fall']]]
+};
 
-                data.push({
-                    id: `A${String(i).padStart(3, '0')}`,
-                    area: areas[Math.floor(Math.random() * areas.length)],
-                    activity: `${activities[Math.floor(Math.random() * activities.length)]} ${i}`,
-                    metode_nr: `${Math.floor(Math.random() * 5) + 1}.${Math.floor(Math.random() * 5) + 1}`,
-                    firma: companies[Math.floor(Math.random() * companies.length)],
-                    start_date: startDate.toISOString().split('T')[0],
-                    status: daysOffset <= 0 ? "pågår" : "til utførelse",
-                    comment: "",
-                    at_list: at_list,
-                    risk_level: ["moderat", "middels", "høy"][Math.floor(Math.random() * 3)]
-                });
-            }
-            return data;
-        }
+// Skjematisk sonekart, viewBox 1000 x 600. Utomhus er hele tomten.
+const ZONES = [
+  {navn: '8302 - Trådhall', l1: '8302', l2: 'Trådhall', x: 330, y: 70, w: 330, h: 90},
+  {navn: 'Kontrollsenter', l1: '', l2: 'Kontrollsenter', x: 130, y: 70, w: 190, h: 90},
+  {navn: 'Driftssenter (OPC)', l1: '', l2: 'Driftssenter (OPC)', x: 670, y: 70, w: 150, h: 90},
+  {navn: '8302 - Kjeller / Vest', l1: '8302 Kjeller', l2: 'Vest', x: 130, y: 170, w: 190, h: 230},
+  {navn: '8301 - Ovnshall', l1: '8301', l2: 'Ovnshall', x: 330, y: 170, w: 330, h: 230},
+  {navn: '8302 - Kjeller / Øst', l1: '8302 Kjeller', l2: 'Øst', x: 670, y: 170, w: 150, h: 230},
+  {navn: '8302 - Kjeller / Kjellerinnkjøring', l1: '8302 Kjeller', l2: 'Kjellerinnkjøring', x: 670, y: 410, w: 150, h: 80},
+  {navn: '8304 - Lagerhall', l1: '8304', l2: 'Lagerhall', x: 835, y: 170, w: 140, h: 180},
+  {navn: 'Pallelager', l1: '', l2: 'Pallelager', x: 835, y: 360, w: 140, h: 130}
+];
+const UTOMHUS = '8300 - Utomhus';
 
-        function loadData() {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                aktiviteter = JSON.parse(stored);
-            } else {
-                aktiviteter = generateSampleData();
-            }
-            originalAktiviteter = JSON.parse(JSON.stringify(aktiviteter));
-            populateFirmaFilter();
-            renderOversikt();
-            renderHealthCheck();
-            renderATKoordinering();
-            loadUsers();
-            renderCompanyColors();
-        }
+const STORAGE_KEY = 'wrk2_v5', FIRMS_KEY = 'wrk2_firms_v5', USERS_KEY = 'wrk2_users', MAP_KEY = 'wrk2_sonekart';
 
-        function saveData() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(aktiviteter));
-        }
+// ---------- hjelpefunksjoner ----------
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+}
+function parseD(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function addDays(s, n) { const d = parseD(s); d.setDate(d.getDate() + n); return iso(d); }
+function daysBetween(a, b) { return Math.round((parseD(b) - parseD(a)) / 86400000); }
+function fmtNo(s) { if (!s) return ''; const [y, m, d] = s.split('-'); return `${d}.${m}.${y}`; }
+function fmtShort(s) { const [, m, d] = s.split('-'); return `${d}.${m}`; }
+function minIso(a, b) { return a < b ? a : b; }
+function isoWeek(s) {
+  const d = parseD(s);
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const y = t.getUTCFullYear();
+  return Math.ceil(((t - Date.UTC(y, 0, 1)) / 86400000 + 1) / 7);
+}
+function mondayOf(s) { const d = parseD(s); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); return iso(d); }
+function endDate(r) { return addDays(r.startdato, Math.max(1, r.varighet || 1) - 1); }
+const TODAY = iso(new Date());
 
-        function populateFirmaFilter() {
-            const firmas = [...new Set(originalAktiviteter.map(a => a.firma))];
-            const select = document.getElementById('firma-filter');
-            firmas.forEach(firma => {
-                if (!select.querySelector(`option[value="${firma}"]`)) {
-                    const opt = document.createElement('option');
-                    opt.value = firma;
-                    opt.textContent = firma;
-                    select.appendChild(opt);
-                }
-            });
-        }
+function rng(seed) {
+  let h = 1779033703 ^ seed.length;
+  for (let i = 0; i < seed.length; i++) { h = Math.imul(h ^ seed.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+  return () => { h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+}
 
-        function filterByFirma(firma) {
-            renderHealthCheck(firma);
-        }
+// ---------- eksempeldata fra Excel ----------
+function statusFor(start, varighet) {
+  const end = addDays(start, varighet - 1);
+  if (end < TODAY) return 'Utført';
+  if (start <= TODAY) return 'Pågår';
+  return 'Til utførelse';
+}
+function firmaFor(navn, nr) {
+  const n = navn.toLowerCase();
+  if (n.includes('spennteknikk') || n.includes('oppspenning')) return 'Spennteknikk AS';
+  if (n.includes('stillas')) return 'Stillasmontasje AS';
+  if (n.includes('jording') || n.includes('ringjord') || n.includes('strøm')) return nr === '2.1' ? 'Fjell & Grunn AS' : 'Byggstrøm Elektro AS';
+  if (n.includes('trykkluft') || n.includes('oljeholdig') || n.includes('spillvann')) return 'Rør & VVS AS';
+  if (n.includes('vitnepunkt')) return 'Skanska';
+  if (n.includes('gewi') && !nr) return 'Boreteknikk AS';
+  if (n.includes('rondell') || n.includes('sprenging')) return 'Fjell & Grunn AS';
+  return FIRMA_METODE[nr] || 'Skanska';
+}
+function deloperasjoner(navn, nrs) {
+  const n = navn.toLowerCase();
+  if (n.includes('sprenging')) return [['Boring og lading', ['eksplosjon', 'maskin']], ['Sprengning og sikring', ['eksplosjon', 'gjenstand']]];
+  if (n.includes('stillas')) return [['Montering stillas', ['fall', 'gjenstand']]];
+  if (n.includes('jording') || n.includes('ringjord')) return [['Grøft og legging av jordleder', ['maskin']], ['Tilkobling jordanlegg', ['elektrisk']]];
+  if (!nrs.length && (n.includes('trykkluft') || n.includes('overvann'))) return [['Grøft og rørlegging', ['maskin', 'konstruksjon']]];
+  if (n.includes('rondell')) return [['Maskinell graving og planering', ['maskin']]];
+  if (!nrs.length && n.includes('gewi')) return [['Boring for stag', ['maskin', 'gjenstand']]];
+  const subs = [];
+  nrs.forEach(x => (DELOP[x] || []).forEach(s => subs.push(s)));
+  return subs.length ? subs : [['Utførelse', []]];
+}
+function risikoFra(dod) {
+  if (dod.some(k => ['fall', 'konstruksjon', 'eksplosjon', 'elektrisk'].includes(k))) return 'Høyt';
+  return dod.length ? 'Middels' : 'Lavt';
+}
+function genLys(r, status, start) {
+  const o = {}, d = daysBetween(TODAY, start);
+  FORUTSETNINGER.forEach(([k]) => {
+    let v;
+    if (status === 'Utført') v = 'gronn';
+    else if (status === 'Pågår') v = r() < 0.85 ? 'gronn' : 'gul';
+    else {
+      const [g, y] = d <= 7 ? [0.6, 0.3] : d <= 21 ? [0.4, 0.4] : [0.25, 0.4];
+      const x = r(); v = x < g ? 'gronn' : x < g + y ? 'gul' : 'rod';
+    }
+    o[k] = v;
+  });
+  return o;
+}
+function worstOf(list) {
+  const o = {};
+  FORUTSETNINGER.forEach(([k]) => { o[k] = list.reduce((w, x) => LYS_RANK[x[k]] > LYS_RANK[w] ? x[k] : w, 'gronn'); });
+  return o;
+}
+function buildData() {
+  let atCounter = 0;
+  return EXCEL.map(([id, omrade, navn, dato, metodeOK, metodeNr]) => {
+    const r = rng(id);
+    const start = dato || '2026-08-06';
+    const lower = navn.toLowerCase();
+    const isVitne = lower.includes('vitnepunkt');
+    const varighet = isVitne ? 1 : (!dato ? 20 + Math.floor(r() * 26) : 5 + Math.floor(r() * 21));
+    const nrs = metodeNr ? String(metodeNr).split(',').map(s => s.trim()) : [];
+    const firma = firmaFor(navn, nrs[0]);
+    const subs = deloperasjoner(navn, nrs);
+    const nAT = isVitne ? 0 : Math.min(subs.length, 1 + (r() < 0.45 ? 1 : 0) + (r() < 0.15 ? 1 : 0));
+    const at = [];
+    for (let i = 0; i < nAT; i++) {
+      atCounter++;
+      const off = i === 0 ? 0 : Math.min(varighet - 1, Math.floor(r() * Math.max(1, varighet / 2)));
+      const aStart = addDays(start, off);
+      const aVar = Math.max(1, varighet - off - Math.floor(r() * 3));
+      const [subNavn, dod] = subs[i];
+      const st = statusFor(aStart, aVar);
+      at.push({
+        nr: 'AT-' + String(atCounter).padStart(3, '0'), navn: subNavn, omrade, startdato: aStart, varighet: aVar,
+        firma, forutsetninger: genLys(r, st, aStart), risikoniva: risikoFra(dod), dodsrisiko: [...dod],
+        status: st, kommentar: '', plassering: null
+      });
+    }
+    const status = statusFor(start, varighet);
+    const forutsetninger = at.length ? worstOf(at.map(a => a.forutsetninger)) : genLys(r, status, start);
+    const ownDod = at.length ? [] : subs[0][1].slice();
+    const allDod = [...new Set(at.flatMap(a => a.dodsrisiko).concat(ownDod))];
 
-        function getWeekLabel(dateStr) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const actDate = new Date(dateStr);
-            actDate.setHours(0, 0, 0, 0);
-            const diffDays = Math.ceil((actDate - today) / (1000 * 60 * 60 * 24));
-            if (diffDays < 0) return "DENNE UKEN (Gamle datoer)";
-            if (diffDays <= 7) return "DENNE UKEN";
-            const weeksAhead = Math.ceil(diffDays / 7);
-            return `OM ${weeksAhead} UKER`;
-        }
+    let ms, mh;
+    if (nrs.length && metodeOK === 'OK') {
+      const mb = nrs.map(n => `MB ${n} ${METODER[n] ? METODER[n].navn + ' (rev. ' + METODER[n].rev + ')' : ''}`).join('\n');
+      const innsendt = minIso(addDays(start, -21), addDays(TODAY, -8));
+      if (status !== 'Til utførelse' || r() < 0.55) {
+        ms = 'gronn';
+        mh = `${mb}\nInnsendt ${fmtNo(innsendt)}\nGodkjent ${fmtNo(minIso(addDays(start, -10), addDays(TODAY, -1)))}`;
+      } else {
+        ms = 'gul';
+        mh = `${mb}\nInnsendt ${fmtNo(innsendt)}\nTil kontroll – ikke godkjent ennå`;
+      }
+    } else if (isVitne) {
+      ms = 'gronn'; mh = 'Vitnepunkt – egen metodebeskrivelse ikke påkrevd.';
+    } else {
+      ms = 'rod'; mh = 'Ingen metodebeskrivelse koblet i Excel-utdraget.\nMå avklares før oppstart.';
+    }
+    return {
+      id, navn, omrade, startdato: start, varighet, firma,
+      metode: {nr: nrs.join(', '), status: ms, historikk: mh},
+      forutsetninger, risikoniva: risikoFra(allDod), dodsrisiko: ownDod, status,
+      kommentar: dato ? '' : 'Eksakt startdato må avklares', at
+    };
+  });
+}
 
-        function getRiskSymbol(at) {
-            return RISKS[at.risk] || '⚠️';
-        }
+// ---------- lagring ----------
+let DATA = [], FIRMS = [], USERS = [];
+function load() {
+  try { DATA = JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch (e) { DATA = null; }
+  if (!Array.isArray(DATA) || !DATA.length) DATA = buildData();
+  try { FIRMS = JSON.parse(localStorage.getItem(FIRMS_KEY)) || null; } catch (e) { FIRMS = null; }
+  if (!Array.isArray(FIRMS) || !FIRMS.length) FIRMS = DEFAULT_FIRMS.map(f => ({...f}));
+  try { USERS = JSON.parse(localStorage.getItem(USERS_KEY)) || []; } catch (e) { USERS = []; }
+  if (!Array.isArray(USERS)) USERS = [];
+}
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+    localStorage.setItem(FIRMS_KEY, JSON.stringify(FIRMS));
+    localStorage.setItem(USERS_KEY, JSON.stringify(USERS));
+  } catch (e) { console.warn('Kunne ikke lagre', e); }
+}
+function loadMap() { try { return localStorage.getItem(MAP_KEY); } catch (e) { return null; } }
 
-        function renderOversikt() {
-            const container = document.getElementById('activities-container');
-            container.innerHTML = '';
+const OMRADER = () => [...new Set(EXCEL.map(r => r[1]).concat(DATA.map(a => a.omrade), ['Kontrollsenter', 'Driftssenter (OPC)', 'Pallelager']))];
+function firmColor(n) { const f = FIRMS.find(x => x.navn === n); return f && /^#[0-9a-f]{6}$/i.test(f.farge) ? f.farge : '#7f8c8d'; }
+function findAT(nr) { for (const a of DATA) { const t = a.at.find(x => x.nr === nr); if (t) return {a, t}; } return null; }
 
-            let filtered = originalAktiviteter;
-            const search = document.getElementById('search')?.value || '';
-            if (search) {
-                filtered = filtered.filter(a =>
-                    a.id.toLowerCase().includes(search.toLowerCase()) ||
-                    a.activity.toLowerCase().includes(search.toLowerCase())
-                );
-            }
+// ---------- UI-state ----------
+const ui = {
+  klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set()},
+  oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: ''},
+  koord: {week: null, selected: null}
+};
+let currentTab = 'oversikt';
 
-            filtered.sort((a, b) => {
-                if (a.status === "pågår" && b.status !== "pågår") return -1;
-                if (a.status !== "pågår" && b.status === "pågår") return 1;
-                return new Date(a.start_date) - new Date(b.start_date);
-            });
+// ---------- cellebyggere ----------
+function selectHtml(field, options, val, cls = '') {
+  const opts = options.includes(val) ? options : [val, ...options];
+  return `<select data-field="${field}" class="${cls}">${opts.map(o => `<option value="${esc(o)}" ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+}
+function firmBadge(n) { return `<span class="badge firm-badge" style="background:${firmColor(n)}">${esc(n)}</span>`; }
+function cLys(path, val, ed) {
+  if (ed) return `<select class="lys-sel lys-${val}" data-field="${path}" title="${esc(LYS[val].label)}">${Object.keys(LYS).map(k => `<option value="${k}" ${k === val ? 'selected' : ''}>${LYS[k].emoji} ${LYS[k].label.split(' ')[0]}</option>`).join('')}</select>`;
+  return `<span class="lys lys-${val}" title="${esc(LYS[val].label)}"></span>`;
+}
+function cRisk(v, ed) { return ed ? selectHtml('risikoniva', RISIKONIVA, v) : `<span class="badge ${RISK_CLS[v] || ''}">${esc(v)}</span>`; }
+function cStatus(v, ed) { return ed ? selectHtml('status', STATUSER, v) : `<span class="badge ${STATUS_CLS[v] || ''}">${esc(v)}</span>`; }
+function cDod(list, ed, fraAT = []) {
+  if (ed) {
+    return `<div class="dod-toggle">${Object.entries(DOD).map(([k, v]) => `<button type="button" data-action="dod" data-key="${k}" class="${list.includes(k) ? 'on' : ''}" title="${esc(v.label)}">${v.sym}</button>`).join('')}</div>`
+      + (fraAT.length ? `<div class="hint">Fra AT: ${fraAT.map(k => DOD[k].sym).join(' ')}</div>` : '');
+  }
+  const all = [...new Set([...list, ...fraAT])];
+  return all.length ? `<span class="dod">${all.map(k => `<span title="${esc(DOD[k].label)}">${DOD[k].sym}</span>`).join('')}</span>` : '<span class="muted">–</span>';
+}
+function commonCells(o, ed) {
+  return {
+    omrade: `<td>${ed ? selectHtml('omrade', OMRADER(), o.omrade) : esc(o.omrade)}</td>`,
+    uke: `<td class="c">${isoWeek(o.startdato)}</td>`,
+    dato: `<td>${ed ? `<input type="date" class="w-date" data-field="startdato" value="${esc(o.startdato)}">` : fmtNo(o.startdato)}</td>`,
+    varighet: `<td class="c">${ed ? `<input type="number" min="1" class="w-num" data-field="varighet" value="${o.varighet}">` : o.varighet}</td>`,
+    firma: `<td>${ed ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}</td>`,
+    lys: FORUTSETNINGER.map(([k]) => `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}</td>`).join(''),
+    kommentar: `<td>${ed ? `<input type="text" class="w-kom" maxlength="120" data-field="kommentar" value="${esc(o.kommentar)}" placeholder="Kort kommentar">` : `<span title="${esc(o.kommentar)}">${esc(o.kommentar)}</span>`}</td>`
+  };
+}
+const NCOLS = 20;
 
-            const grouped = {};
-            filtered.forEach(act => {
-                const week = getWeekLabel(act.start_date);
-                if (!grouped[week]) grouped[week] = [];
-                grouped[week].push(act);
-            });
+function headerRow() {
+  return `<tr>
+    <th class="col-ctrl"></th>
+    <th class="col-akt">Aktivitet</th><th>Område</th><th class="c">Startuke</th><th>Startdato</th><th class="c">Varighet<br><span class="muted">(dager)</span></th>
+    <th>Firma</th><th class="c">Metode-<br>beskrivelse</th><th>AT</th>
+    ${FORUTSETNINGER.map(([, l]) => `<th class="c fu">${l.replace(' ', '<br>')}</th>`).join('')}
+    <th>Risikonivå</th><th>Dødsrisiko</th><th>Status</th><th>Kommentar</th>
+  </tr>`;
+}
 
-            const weekOrder = ["DENNE UKEN", "DENNE UKEN (Gamle datoer)", "OM 1 UKER", "OM 2 UKER", "OM 3 UKER", "OM 4 UKER", "OM 5 UKER", "OM 6 UKER", "OM 7 UKER", "OM 8 UKER"];
+function mainRow(a, page) {
+  const ed = page === 'klargjoring' && ui.klargjoring.editing.has(a.id);
+  const exp = ui[page].expanded.has(a.id);
+  const c = commonCells(a, ed);
+  const fraAT = [...new Set(a.at.flatMap(t => t.dodsrisiko))];
+  return `<tr class="main-row${ed ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="">
+    <td class="col-ctrl">
+      <button class="icon-btn expand" data-action="expand" title="${exp ? 'Skjul' : 'Vis'} AT-rader">${exp ? '−' : '+'}</button>
+      ${page === 'klargjoring' ? `<button class="icon-btn edit${ed ? ' on' : ''}" data-action="edit" title="${ed ? 'Ferdig med redigering' : 'Rediger aktiviteten'}">${ed ? '✔' : '✏️'}</button>` : ''}
+    </td>
+    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}</div></td>
+    ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
+    <td class="c">${cLys('metode.status', a.metode.status, ed)}${a.metode.nr ? `<div class="sub">MB ${esc(a.metode.nr)}</div>` : ''}</td>
+    <td>${a.at.length ? a.at.map(t => `<span class="at-chip" data-action="goto-at" data-nr="${esc(t.nr)}" title="Gå til ${esc(t.nr)}">${esc(t.nr)}</span>`).join('<br>') : '<span class="muted">Ingen</span>'}</td>
+    ${c.lys}
+    <td>${cRisk(a.risikoniva, ed)}</td>
+    <td>${cDod(a.dodsrisiko, ed, fraAT)}</td>
+    <td>${cStatus(a.status, ed)}</td>
+    ${c.kommentar}
+  </tr>`;
+}
 
-            weekOrder.forEach(week => {
-                if (!grouped[week]) return;
+function detailRows(a, page) {
+  const ed = page === 'klargjoring' && ui.klargjoring.editing.has(a.id);
+  const n = a.at.length;
+  const span = Math.max(1, n) + (ed ? 1 : 0);
+  const metodeCell = `<td class="metode-box" rowspan="${span}">
+    <div class="mb-title">Metodebeskrivelse – historikk<br>(felles for alle AT)</div>
+    ${ed ? `<textarea data-field="metode.historikk" data-scope="act" placeholder="F.eks. Innsendt 11.02, godkjent 12.03">${esc(a.metode.historikk)}</textarea>
+      <div class="sub">MB nr: <input type="text" class="w-nr" data-field="metode.nr" data-scope="act" value="${esc(a.metode.nr)}"></div>`
+      : `<div class="mb-text">${a.metode.historikk ? esc(a.metode.historikk) : '<span class="muted">Ingen historikk registrert</span>'}</div>`}
+  </td>`;
+  const cls = `at-row${ed ? ' editing' : ''}`;
+  let h = '';
+  if (!n) {
+    h += `<tr class="${cls}" data-id="${esc(a.id)}" data-at="">
+      <td class="col-ctrl"><span class="conn">↳</span></td>
+      <td class="col-akt"><span class="muted">Ingen AT registrert på aktiviteten</span></td>
+      <td colspan="5"></td>${metodeCell}<td class="at-nr-cell"><span class="muted">–</span></td><td colspan="11"></td>
+    </tr>`;
+  }
+  a.at.forEach((t, i) => {
+    const c = commonCells(t, ed);
+    h += `<tr class="${cls}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(t.nr)}">
+      <td class="col-ctrl">${ed ? `<button class="icon-btn danger" data-action="del-at" title="Slett ${esc(t.nr)}">🗑</button> ` : ''}<span class="conn">↳</span></td>
+      <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(t.navn)}">` : esc(t.navn)}<div class="sub">${esc(t.nr)} · ${esc(a.id)} ${esc(a.navn)}</div></td>
+      ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
+      ${i === 0 ? metodeCell : ''}
+      <td class="at-nr-cell">${ed ? `<input type="text" class="w-nr" data-field="nr" value="${esc(t.nr)}">` : `<span class="at-chip linked">${esc(t.nr)}</span>`}</td>
+      ${c.lys}
+      <td>${cRisk(t.risikoniva, ed)}</td>
+      <td>${cDod(t.dodsrisiko, ed)}</td>
+      <td>${cStatus(t.status, ed)}</td>
+      ${c.kommentar}
+    </tr>`;
+  });
+  if (ed) {
+    h += `<tr class="${cls}" data-id="${esc(a.id)}" data-at="">
+      <td class="col-ctrl"></td>
+      <td class="col-akt"><button class="btn" data-action="add-at">+ Legg til AT</button></td>
+      <td colspan="5"></td><td colspan="12"></td>
+    </tr>`;
+  }
+  return h;
+}
 
-                const weekDiv = document.createElement('div');
-                weekDiv.className = 'week-group';
+function weekLabel(monday) {
+  const diff = Math.round(daysBetween(mondayOf(TODAY), monday) / 7);
+  const rel = diff === 0 ? 'denne uken' : diff > 0 ? `om ${diff} uke${diff > 1 ? 'r' : ''}` : `${-diff} uke${diff < -1 ? 'r' : ''} siden`;
+  return `Uke ${isoWeek(monday)} · ${fmtShort(monday)}–${fmtNo(addDays(monday, 6))} <span class="rel${diff === 0 ? ' now' : ''}">${rel}</span>`;
+}
 
-                const weekHeader = document.createElement('div');
-                weekHeader.className = 'week-header';
-                weekHeader.onclick = () => toggleWeek(week);
-                weekHeader.innerHTML = `<span>${expandedActivities.has(`week_${week}`) ? '−' : '+'}</span> ${week} (${grouped[week].length})`;
-                weekDiv.appendChild(weekHeader);
+function matches(a, st) {
+  if (st.firms && !st.firms.has(a.firma) && !a.at.some(t => st.firms.has(t.firma))) return false;
+  const q = st.search.trim().toLowerCase();
+  if (!q) return true;
+  return [a.id, a.navn, a.omrade, a.firma, a.kommentar, ...a.at.flatMap(t => [t.nr, t.navn, t.firma])].some(s => String(s).toLowerCase().includes(q));
+}
 
-                const tableWrapper = document.createElement('div');
-                tableWrapper.className = 'table-wrapper';
-                if (!expandedActivities.has(`week_${week}`)) tableWrapper.style.display = 'none';
+function renderTable(page) {
+  const st = ui[page];
+  const rows = DATA.filter(a => matches(a, st)).sort((x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
+  const groups = new Map();
+  rows.forEach(a => { const k = mondayOf(a.startdato); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(a); });
+  let h = `<table class="plan"><thead>${headerRow()}</thead><tbody>`;
+  if (!rows.length) h += `<tr><td colspan="${NCOLS}" class="empty">Ingen aktiviteter passer med filteret.</td></tr>`;
+  for (const [k, acts] of groups) {
+    const collapsed = st.collapsedWeeks.has(k);
+    h += `<tr class="week-row" data-week="${k}"><td colspan="${NCOLS}"><span class="wk-label">${collapsed ? '＋' : '－'} ${weekLabel(k)} <span class="muted">· ${acts.length} aktivitet${acts.length === 1 ? '' : 'er'}</span></span></td></tr>`;
+    if (collapsed) continue;
+    acts.forEach(a => { h += mainRow(a, page); if (st.expanded.has(a.id)) h += detailRows(a, page); });
+  }
+  h += '</tbody></table>';
+  const wrap = document.getElementById('table-' + page);
+  const sx = wrap.scrollLeft, sy = wrap.scrollTop;
+  wrap.innerHTML = h;
+  wrap.scrollLeft = sx; wrap.scrollTop = sy;
+  renderStats(page, rows);
+  renderFirmFilter(page);
+}
 
-                const table = document.createElement('table');
-                table.innerHTML = `
-                    <thead>
-                        <tr>
-                            <th style="width:30px;"></th>
-                            <th>Område</th>
-                            <th>Status</th>
-                            <th>ID</th>
-                            <th>Metode</th>
-                            <th>AT#</th>
-                            <th>Aktivitet</th>
-                            <th>Startdato</th>
-                            <th>Firma</th>
-                            <th>Metode☑</th>
-                            <th>Risiko</th>
-                            <th>Nivå</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-${week}"></tbody>
-                `;
+function renderStats(page, rows) {
+  const ats = rows.flatMap(a => a.at);
+  const cnt = s => rows.filter(a => a.status === s).length;
+  const red = rows.filter(a => a.metode.status === 'rod' || FORUTSETNINGER.some(([k]) => a.forutsetninger[k] === 'rod')).length;
+  document.getElementById('stats-' + page).innerHTML =
+    `<span><b>${rows.length}</b> aktiviteter</span><span><b>${ats.length}</b> AT</span>
+     <span><b>${cnt('Til utførelse')}</b> til utførelse</span><span><b>${cnt('Pågår')}</b> pågår</span><span><b>${cnt('Utført')}</b> utført</span>
+     <span><b style="color:var(--red)">${red}</b> med rødt lys</span>`;
+}
 
-                const tbody = table.querySelector('tbody');
-                grouped[week].forEach(act => {
-                    const isExpanded = expandedActivities.has(act.id);
-                    const color = COMPANY_COLORS[act.firma] || '#999';
-                    const riskSymbol = getRiskSymbol(act.at_list[0] || {});
+function renderFirmFilter(page) {
+  const el = document.querySelector(`.firm-filter[data-page="${page}"]`);
+  const sel = ui[page].firms;
+  const all = !sel;
+  const label = all ? 'Alle firma' : sel.size === 0 ? 'Ingen valgt' : sel.size === 1 ? [...sel][0] : `${sel.size} firma valgt`;
+  const count = n => DATA.filter(a => a.firma === n || a.at.some(t => t.firma === n)).length;
+  el.innerHTML = `<button class="btn" data-action="ff-toggle">Firma: ${esc(label)} ▾</button>
+    <div class="firm-filter-panel">
+      <label class="all"><input type="checkbox" data-ff="__all" ${all ? 'checked' : ''}> Velg alle</label>
+      ${FIRMS.map(f => `<label><input type="checkbox" data-ff="${esc(f.navn)}" ${all || sel.has(f.navn) ? 'checked' : ''}><span class="swatch" style="background:${firmColor(f.navn)}"></span>${esc(f.navn)} <span class="muted">(${count(f.navn)})</span></label>`).join('')}
+    </div>`;
+  const allBox = el.querySelector('[data-ff="__all"]');
+  allBox.indeterminate = !all && sel.size > 0;
+}
 
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td><button class="expand-btn" onclick="toggleActivity('${act.id}')">${isExpanded ? '−' : '+'}</button></td>
-                        <td>${act.area}</td>
-                        <td><select onchange="updateStatus('${act.id}', this.value)" style="width:80px;">
-                            <option value="til utførelse" ${act.status === 'til utførelse' ? 'selected' : ''}>Til utf.</option>
-                            <option value="pågår" ${act.status === 'pågår' ? 'selected' : ''}>Pågår</option>
-                            <option value="utført" ${act.status === 'utført' ? 'selected' : ''}>Utført</option>
-                        </select></td>
-                        <td><strong>${act.id}</strong></td>
-                        <td>${act.metode_nr}</td>
-                        <td>${act.at_list.map(at => at.id).join(', ')}</td>
-                        <td>${act.activity}</td>
-                        <td><input type="date" value="${act.start_date}" onchange="updateDate('${act.id}', this.value)" style="width:100px;"></td>
-                        <td><span class="company-badge" style="background: ${color};">${act.firma[0]}</span></td>
-                        <td style="text-align:center;"><input type="checkbox" onchange="updateMethod('${act.id}', this.checked)"></td>
-                        <td style="font-size:16px;">${riskSymbol}</td>
-                        <td><span style="color:${act.risk_level === 'moderat' ? '#27ae60' : act.risk_level === 'middels' ? '#f39c12' : '#e74c3c'};">●</span> ${act.risk_level}</td>
-                    `;
-                    tbody.appendChild(row);
+function renderLegend() {
+  const h = `<span><b>Lys:</b></span>${Object.values(LYS).map(l => `<span>${l.emoji} ${l.label}</span>`).join('')}
+    <span style="margin-left:10px"><b>Dødsrisiko:</b></span>${Object.values(DOD).map(d => `<span>${d.sym} ${d.label}</span>`).join('')}`;
+  document.querySelectorAll('.legend-box').forEach(e => e.innerHTML = h);
+}
 
-                    if (isExpanded) {
-                        // Common comment
-                        const commentRow = document.createElement('tr');
-                        commentRow.className = 'detail-row';
-                        commentRow.innerHTML = `
-                            <td colspan="12" style="background: white; padding: 10px;">
-                                <strong>Kommentar:</strong><br>
-                                <textarea onchange="updateComment('${act.id}', this.value)">${act.comment || ''}</textarea>
-                            </td>
-                        `;
-                        tbody.appendChild(commentRow);
+// ---------- AT-koordinering ----------
+function weeksAhead() { const m = mondayOf(TODAY); return Array.from({length: 8}, (_, i) => addDays(m, i * 7)); }
+function periodRange() {
+  const w = weeksAhead();
+  return ui.koord.week === 'alle' ? [w[0], addDays(w[7], 6)] : [ui.koord.week, addDays(ui.koord.week, 6)];
+}
+function atsInPeriod() {
+  const [from, to] = periodRange();
+  const list = [];
+  DATA.forEach(a => a.at.forEach(t => { if (t.startdato <= to && endDate(t) >= from) list.push({a, t}); }));
+  return list.sort((x, y) => x.t.startdato.localeCompare(y.t.startdato) || x.t.nr.localeCompare(y.t.nr));
+}
+function hitZone(p) {
+  if (loadMap()) return '';
+  const x = p.x * 10, y = p.y * 6;
+  const hit = ZONES.filter(z => x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h).sort((a, b) => a.w * a.h - b.w * b.h)[0];
+  return hit ? hit.navn : UTOMHUS;
+}
+function zoneSvg(counts) {
+  const badge = (x, y, n) => n ? `<g><circle cx="${x}" cy="${y}" r="13" fill="#1f6feb"/><text x="${x}" y="${y + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">${n}</text></g>` : '';
+  return `<svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Skjematisk sonekart WRK2">
+    <rect x="0" y="0" width="1000" height="600" fill="#eef3e6"/>
+    <rect x="3" y="3" width="994" height="594" fill="none" stroke="#7a9a5a" stroke-width="3" stroke-dasharray="10 6"/>
+    <text x="16" y="30" font-size="16" font-weight="700" fill="#4d6b33">8300 Utomhus</text>
+    <rect x="280" y="508" width="720" height="34" fill="#d5d8dc"/>
+    <text x="640" y="530" text-anchor="middle" font-size="12" fill="#666">Anleggsvei</text>
+    <rect x="20" y="420" width="240" height="150" fill="#f7f1e1" stroke="#b59a5a" stroke-dasharray="6 4"/>
+    <text x="140" y="490" text-anchor="middle" font-size="14" fill="#7d6531" font-weight="600">Rigg / brakker</text>
+    <text x="140" y="508" text-anchor="middle" font-size="11" fill="#7d6531">(8300 Utomhus)</text>
+    ${badge(955, 30, counts[UTOMHUS] || 0)}
+    ${ZONES.map(z => {
+      const inactive = !z.l1;
+      return `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="${inactive ? '#f2f2f2' : '#dfe9f7'}" stroke="${inactive ? '#aaa' : '#4a6fa5'}" stroke-width="2"/>
+        ${z.l1 ? `<text x="${z.x + z.w / 2}" y="${z.y + z.h / 2 - 4}" text-anchor="middle" font-size="12" fill="#4a6fa5">${esc(z.l1)}</text>` : ''}
+        <text x="${z.x + z.w / 2}" y="${z.y + z.h / 2 + (z.l1 ? 13 : 5)}" text-anchor="middle" font-size="${z.w > 200 ? 17 : 13}" font-weight="700" fill="${inactive ? '#888' : '#243b5e'}">${esc(z.l2)}</text>
+        ${badge(z.x + z.w - 16, z.y + 16, counts[z.navn] || 0)}`;
+    }).join('')}
+    <g transform="translate(960,560)"><polygon points="0,-22 8,0 -8,0" fill="#333"/><text x="0" y="16" text-anchor="middle" font-size="13" font-weight="700">N</text></g>
+    <text x="16" y="590" font-size="11" fill="#6b7a5b">Skjematisk sonekart laget fra områdene i Excel. Last opp prosjektets sonebilde for riktig plassering.</text>
+  </svg>`;
+}
 
-                        // AT rows
-                        act.at_list.forEach((at, idx) => {
-                            const atRow = document.createElement('tr');
-                            atRow.className = 'at-row';
-                            atRow.innerHTML = `
-                                <td colspan="2" style="padding-left:30px;"><strong>${at.id}</strong></td>
-                                <td><input type="text" value="${at.name}" onchange="updateATName('${act.id}', ${idx}, this.value)" style="width:120px;"></td>
-                                <td colspan="2"><select onchange="updateATStatus('${act.id}', ${idx}, this.value)" style="width:80px;">
-                                    <option value="til utførelse" ${at.status === 'til utførelse' ? 'selected' : ''}>Til utf.</option>
-                                    <option value="pågår" ${at.status === 'pågår' ? 'selected' : ''}>Pågår</option>
-                                    <option value="utført" ${at.status === 'utført' ? 'selected' : ''}>Utført</option>
-                                </select></td>
-                                <td colspan="2">
-                                    <select onchange="updateATRisk('${act.id}', ${idx}, this.value)" style="width:150px;">
-                                        ${Object.entries(RISKS).map(([k, v]) => `<option value="${k}" ${at.risk === k ? 'selected' : ''}>${v} ${RISK_LABELS[k]}</option>`).join('')}
-                                    </select>
-                                </td>
-                                <td colspan="3"></td>
-                                <td style="font-size:16px;">${RISKS[at.risk]}</td>
-                            `;
-                            tbody.appendChild(atRow);
+function renderKoord() {
+  const weeks = weeksAhead();
+  if (!ui.koord.week || (ui.koord.week !== 'alle' && !weeks.includes(ui.koord.week))) ui.koord.week = weeks[0];
+  const sel = document.getElementById('week-sel');
+  sel.innerHTML = `<option value="alle" ${ui.koord.week === 'alle' ? 'selected' : ''}>Alle 8 uker (uke ${isoWeek(weeks[0])}–${isoWeek(weeks[7])})</option>`
+    + weeks.map((w, i) => `<option value="${w}" ${ui.koord.week === w ? 'selected' : ''}>Uke ${isoWeek(w)} (${fmtShort(w)}–${fmtShort(addDays(w, 6))})${i === 0 ? ' – denne uken' : ''}</option>`).join('');
 
-                            // AT comment
-                            const commentRow = document.createElement('tr');
-                            commentRow.className = 'detail-row';
-                            commentRow.innerHTML = `
-                                <td colspan="12" style="background: white; padding: 10px 10px 10px 60px;">
-                                    <strong>Kommentar ${at.id}:</strong><br>
-                                    <textarea onchange="updateATComment('${act.id}', ${idx}, this.value)">${at.comment}</textarea>
-                                </td>
-                            `;
-                            tbody.appendChild(commentRow);
-                        });
-                    }
-                });
+  const list = atsInPeriod();
+  const placed = list.filter(x => x.t.plassering);
+  const custom = loadMap();
+  document.getElementById('map-reset-btn').style.display = custom ? '' : 'none';
+  document.getElementById('stats-koord').innerHTML =
+    `<span><b>${list.length}</b> AT i perioden</span><span><b>${placed.length}</b> plassert på kartet</span><span><b>${list.length - placed.length}</b> ikke plassert</span>`;
 
-                tableWrapper.appendChild(table);
-                weekDiv.appendChild(tableWrapper);
-                container.appendChild(weekDiv);
-            });
-        }
+  document.getElementById('at-list').innerHTML = `<h3>AT i valgt periode</h3>` + (list.length ? list.map(({a, t}) => {
+    const p = t.plassering;
+    return `<div class="at-card${p ? ' placed' : ''}${ui.koord.selected === t.nr ? ' selected' : ''}" data-nr="${esc(t.nr)}" style="border-left-color:${firmColor(t.firma)}">
+      <span class="drag-handle" title="Dra til kartet">⠿</span>
+      <div class="at-card-body">
+        <div class="at-card-top"><span class="at-chip linked">${esc(t.nr)}</span>${cDod(t.dodsrisiko, false)}<span class="badge ${RISK_CLS[t.risikoniva] || ''}">${esc(t.risikoniva)}</span></div>
+        <div class="at-card-name">${esc(t.navn)}</div>
+        <div class="sub">${esc(a.id)} ${esc(a.navn)}</div>
+        <div class="sub" style="margin-top:3px">${firmBadge(t.firma)} ${fmtShort(t.startdato)}–${fmtShort(endDate(t))} · ${esc(t.omrade)}</div>
+        <div class="placement">${p ? `📍 ${esc(p.sone || 'Plassert på sonebildet')} · <button class="link-btn" data-action="unplace">Fjern fra kartet</button>` : '<span class="muted">Ikke plassert – dra til kartet</span>'}</div>
+      </div>
+    </div>`;
+  }).join('') : '<p class="muted">Ingen AT i valgt periode.</p>');
 
-        function toggleWeek(week) {
-            const key = `week_${week}`;
-            if (expandedActivities.has(key)) {
-                expandedActivities.delete(key);
-            } else {
-                expandedActivities.add(key);
-            }
-            renderOversikt();
-        }
+  const counts = {};
+  placed.forEach(({t}) => { if (t.plassering.sone) counts[t.plassering.sone] = (counts[t.plassering.sone] || 0) + 1; });
+  const mapWrap = document.getElementById('map-wrap');
+  mapWrap.innerHTML = (custom ? `<img src="${esc(custom)}" alt="Sonebilde" draggable="false">` : zoneSvg(counts))
+    + placed.map(({t}) => `<div class="marker${ui.koord.selected === t.nr ? ' selected' : ''}" data-nr="${esc(t.nr)}" style="left:${t.plassering.x}%;top:${t.plassering.y}%;background:${firmColor(t.firma)}" title="${esc(t.nr + ' – ' + t.navn + ' (' + t.firma + ')')}">${esc(t.nr)}</div>`).join('');
 
-        function toggleActivity(id) {
-            if (expandedActivities.has(id)) {
-                expandedActivities.delete(id);
-            } else {
-                expandedActivities.add(id);
-            }
-            renderOversikt();
-        }
+  const byZone = new Map();
+  placed.forEach(x => { const z = x.t.plassering.sone || 'Plassert på sonebildet'; if (!byZone.has(z)) byZone.set(z, []); byZone.get(z).push(x); });
+  document.getElementById('placed-list').innerHTML = placed.length
+    ? `<h3>Plassert i perioden</h3>` + [...byZone].map(([z, xs]) => `<div class="zone-group"><b>${esc(z)}:</b> ${xs.map(({t}) =>
+        `<span class="at-chip" data-action="select-at" data-nr="${esc(t.nr)}" style="border-left:4px solid ${firmColor(t.firma)}">${esc(t.nr)}</span>${t.plassering.sone && t.plassering.sone !== t.omrade ? `<span class="warn" title="Registrert område: ${esc(t.omrade)}">⚠</span>` : ''}`).join(' ')}</div>`).join('')
+      + (placed.some(({t}) => t.plassering.sone && t.plassering.sone !== t.omrade) ? '<p class="sub warn">⚠ = plassert i en annen sone enn området som er registrert på AT-en.</p>' : '')
+    : '<p class="muted">Ingen AT er plassert på kartet i denne perioden ennå.</p>';
+}
 
-        function updateStatus(id, status) {
-            const act = aktiviteter.find(a => a.id === id);
-            if (act) { act.status = status; saveData(); renderHealthCheck(); }
-        }
+function pct(el, e) {
+  const r = el.getBoundingClientRect();
+  const c = v => Math.max(0, Math.min(100, Math.round(v * 10) / 10));
+  return {x: c((e.clientX - r.left) / r.width * 100), y: c((e.clientY - r.top) / r.height * 100)};
+}
+function inside(el, e) { const r = el.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; }
+function place(nr, p) {
+  const f = findAT(nr); if (!f) return;
+  f.t.plassering = {x: p.x, y: p.y, sone: hitZone(p)};
+  ui.koord.selected = nr;
+  save(); renderKoord();
+}
 
-        function updateDate(id, date) {
-            const act = aktiviteter.find(a => a.id === id);
-            if (act) { act.start_date = date; saveData(); renderOversikt(); }
-        }
+let drag = null;
+document.addEventListener('pointerdown', e => {
+  if (currentTab !== 'koordinering' || e.button > 0) return;
+  const marker = e.target.closest('.marker');
+  if (marker) {
+    drag = {type: 'marker', nr: marker.dataset.nr, el: marker, x0: e.clientX, y0: e.clientY, moved: false};
+    marker.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    return;
+  }
+  const card = e.target.closest('.at-card');
+  if (card && !e.target.closest('button')) {
+    if (e.pointerType !== 'mouse' && !e.target.closest('.drag-handle')) return;
+    drag = {type: 'card', nr: card.dataset.nr, x0: e.clientX, y0: e.clientY, moved: false, ghost: null};
+    e.preventDefault();
+  }
+});
+document.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 5) return;
+  drag.moved = true;
+  const mapWrap = document.getElementById('map-wrap');
+  if (drag.type === 'card') {
+    if (!drag.ghost) {
+      const f = findAT(drag.nr);
+      drag.ghost = document.createElement('div');
+      drag.ghost.className = 'drag-ghost';
+      drag.ghost.textContent = drag.nr;
+      drag.ghost.style.background = firmColor(f ? f.t.firma : '');
+      document.body.appendChild(drag.ghost);
+    }
+    drag.ghost.style.left = e.clientX + 'px';
+    drag.ghost.style.top = e.clientY + 'px';
+    mapWrap.classList.toggle('drop-hover', inside(mapWrap, e));
+  } else {
+    const p = pct(mapWrap, e);
+    drag.el.style.left = p.x + '%';
+    drag.el.style.top = p.y + '%';
+  }
+});
+function endDrag(e, cancelled) {
+  if (!drag) return;
+  const d = drag; drag = null;
+  const mapWrap = document.getElementById('map-wrap');
+  mapWrap.classList.remove('drop-hover');
+  if (d.ghost) d.ghost.remove();
+  if (cancelled) { renderKoord(); return; }
+  if (d.moved && (d.type === 'marker' || inside(mapWrap, e))) { place(d.nr, pct(mapWrap, e)); return; }
+  if (!d.moved) {
+    ui.koord.selected = ui.koord.selected === d.nr ? null : d.nr;
+    renderKoord();
+    if (d.type === 'marker') { const c = document.querySelector(`.at-card[data-nr="${CSS.escape(d.nr)}"]`); if (c) c.scrollIntoView({block: 'nearest', behavior: 'smooth'}); }
+  }
+}
+document.addEventListener('pointerup', e => endDrag(e, false));
+document.addEventListener('pointercancel', e => endDrag(e, true));
 
-        function updateComment(id, text) {
-            const act = aktiviteter.find(a => a.id === id);
-            if (act) { act.comment = text; saveData(); }
-        }
+function uploadMap(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 1800 / img.width);
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      try {
+        localStorage.setItem(MAP_KEY, cv.toDataURL('image/jpeg', 0.85));
+      } catch (err) {
+        alert('Bildet er for stort til å lagres i nettleseren. Prøv et mindre bilde.');
+        return;
+      }
+      renderKoord();
+    };
+    img.onerror = () => alert('Kunne ikke lese bildet.');
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
 
-        function updateMethod(id, checked) {
-            const act = aktiviteter.find(a => a.id === id);
-            if (act) { saveData(); }
-        }
+// ---------- admin ----------
+function renderAdmin() {
+  document.getElementById('user-list').innerHTML = USERS.length ? USERS.map((u, i) => `<div class="list-row">
+      <div class="grow"><b>${esc(u.name)}</b><div class="sub">${esc(u.email)} · ${esc(u.role)}</div></div>
+      <button class="btn danger" data-action="del-user" data-i="${i}">Fjern</button></div>`).join('')
+    : '<p class="muted">Ingen brukere lagt til.</p>';
+  document.getElementById('firm-list').innerHTML = FIRMS.map((f, i) => {
+    const used = DATA.filter(a => a.firma === f.navn || a.at.some(t => t.firma === f.navn)).length;
+    return `<div class="list-row">
+      <input type="color" value="${firmColor(f.navn)}" data-firm-color="${i}">
+      <div class="grow">${firmBadge(f.navn)} <span class="sub">${used} aktiviteter</span></div>
+      <button class="btn danger" data-action="del-firm" data-i="${i}" ${used ? 'disabled title="Firmaet er i bruk"' : ''}>Fjern</button></div>`;
+  }).join('');
+}
 
-        function updateATName(id, idx, name) {
-            const act = aktiviteter.find(a => a.id === id);
-            if (act && act.at_list[idx]) { act.at_list[idx].name = name; saveData(); }
-        }
+// ---------- navigasjon ----------
+function renderCurrent() {
+  if (currentTab === 'klargjoring' || currentTab === 'oversikt') renderTable(currentTab);
+  else if (currentTab === 'koordinering') renderKoord();
+  else if (currentTab === 'admin') renderAdmin();
+}
+function showTab(tab) {
+  if (!document.getElementById('page-' + tab)) tab = 'oversikt';
+  currentTab = tab;
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + tab));
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);
+  renderCurrent();
+}
 
-        function updateATStatus(id, idx, status) {
-            const act = aktiviteter.find(a => a.id === id);
-            if (act && act.at_list[idx]) { act.at_list[idx].status = status; saveData(); }
-        }
+// ---------- hendelser ----------
+function pageOf(el) { const p = el.closest('.page'); return p ? p.id.replace('page-', '') : null; }
+function targetOf(el) {
+  const tr = el.closest('tr[data-id]');
+  if (!tr) return null;
+  const a = DATA.find(x => x.id === tr.dataset.id);
+  if (!a) return null;
+  if (el.dataset.scope === 'act' || tr.dataset.at === '') return {a, obj: a};
+  return {a, obj: a.at[Number(tr.dataset.at)]};
+}
+function setPath(obj, path, v) {
+  const parts = path.split('.');
+  let o = obj;
+  for (let i = 0; i < parts.length - 1; i++) o = o[parts[i]];
+  o[parts[parts.length - 1]] = v;
+}
+function nextAtNr() {
+  const max = DATA.flatMap(a => a.at).reduce((m, t) => { const n = parseInt(String(t.nr).replace(/\D/g, ''), 10); return isNaN(n) ? m : Math.max(m, n); }, 0);
+  return 'AT-' + String(max + 1).padStart(3, '0');
+}
 
-        function updateATRisk(id, idx, risk) {
-            const act = aktiviteter.find(a => a.id === id);
-            if (act && act.at_list[idx]) { act.at_list[idx].risk = risk; saveData(); renderOversikt(); }
-        }
+document.addEventListener('click', e => {
+  const tabBtn = e.target.closest('nav.tabs button');
+  if (tabBtn) { showTab(tabBtn.dataset.tab); return; }
 
-        function updateATComment(id, idx, text) {
-            const act = aktiviteter.find(a => a.id === id);
-            if (act && act.at_list[idx]) { act.at_list[idx].comment = text; saveData(); }
-        }
+  if (!e.target.closest('.firm-filter')) document.querySelectorAll('.firm-filter.open').forEach(f => f.classList.remove('open'));
 
-        function updateActivityOrder() {
-            renderOversikt();
-        }
+  const weekRow = e.target.closest('tr.week-row');
+  if (weekRow) {
+    const page = pageOf(weekRow), k = weekRow.dataset.week, s = ui[page].collapsedWeeks;
+    s.has(k) ? s.delete(k) : s.add(k);
+    renderTable(page);
+    return;
+  }
 
-        function renderHealthCheck(firma = '') {
-            const container = document.getElementById('health-container');
-            container.innerHTML = '';
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const page = pageOf(btn);
 
-            let filtered = firma ? originalAktiviteter.filter(a => a.firma === firma) : originalAktiviteter;
+  if (action === 'ff-toggle') { btn.closest('.firm-filter').classList.toggle('open'); return; }
+  if (action === 'expand-all') { const p = btn.dataset.page; DATA.forEach(a => ui[p].expanded.add(a.id)); renderTable(p); return; }
+  if (action === 'collapse-all') { const p = btn.dataset.page; ui[p].expanded.clear(); renderTable(p); return; }
 
-            const unhealthy = filtered.filter(a => {
-                const allRisksSet = a.at_list.every(at => at.risk);
-                return !allRisksSet || !a.start_date;
-            });
+  if (action === 'expand') {
+    const {a} = targetOf(btn); const s = ui[page].expanded;
+    s.has(a.id) ? s.delete(a.id) : s.add(a.id);
+    renderTable(page); return;
+  }
+  if (action === 'edit') {
+    const {a} = targetOf(btn); const s = ui.klargjoring.editing;
+    if (s.has(a.id)) s.delete(a.id); else { s.add(a.id); ui.klargjoring.expanded.add(a.id); }
+    renderTable('klargjoring'); return;
+  }
+  if (action === 'goto-at') {
+    const {a} = targetOf(btn); const nr = btn.dataset.nr;
+    ui[page].expanded.add(a.id);
+    renderTable(page);
+    const row = document.getElementById(`row-${page}-${nr}`);
+    if (row) { row.scrollIntoView({block: 'center', behavior: 'smooth'}); row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1700); }
+    return;
+  }
+  if (action === 'dod') {
+    const {obj} = targetOf(btn); const k = btn.dataset.key;
+    obj.dodsrisiko = obj.dodsrisiko.includes(k) ? obj.dodsrisiko.filter(x => x !== k) : [...obj.dodsrisiko, k];
+    save(); renderTable(page); return;
+  }
+  if (action === 'add-at') {
+    const {a} = targetOf(btn);
+    a.at.push({nr: nextAtNr(), navn: 'Ny arbeidsoperasjon', omrade: a.omrade, startdato: a.startdato, varighet: a.varighet, firma: a.firma,
+      forutsetninger: {...a.forutsetninger}, risikoniva: 'Middels', dodsrisiko: [], status: 'Til utførelse', kommentar: '', plassering: null});
+    save(); renderTable(page); return;
+  }
+  if (action === 'del-at') {
+    const {a, obj} = targetOf(btn);
+    if (!confirm(`Slette ${obj.nr} «${obj.navn}»?`)) return;
+    a.at.splice(a.at.indexOf(obj), 1);
+    save(); renderTable(page); return;
+  }
+  if (action === 'unplace') {
+    const card = btn.closest('.at-card'); const f = findAT(card.dataset.nr);
+    if (f) { f.t.plassering = null; save(); renderKoord(); }
+    return;
+  }
+  if (action === 'select-at') {
+    ui.koord.selected = btn.dataset.nr; renderKoord();
+    const c = document.querySelector(`.at-card[data-nr="${CSS.escape(btn.dataset.nr)}"]`); if (c) c.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+    return;
+  }
+  if (action === 'map-reset') {
+    if (!confirm('Bruke det skjematiske sonekartet? Plasseringer gjort på det opplastede bildet kan havne feil.')) return;
+    try { localStorage.removeItem(MAP_KEY); } catch (err) {}
+    renderKoord(); return;
+  }
+  if (action === 'add-user') {
+    const email = document.getElementById('u-email').value.trim(), name = document.getElementById('u-name').value.trim();
+    if (!email || !name) { alert('Fyll inn e-post og navn.'); return; }
+    USERS.push({email, name, role: document.getElementById('u-role').value});
+    document.getElementById('u-email').value = ''; document.getElementById('u-name').value = '';
+    save(); renderAdmin(); return;
+  }
+  if (action === 'del-user') { USERS.splice(Number(btn.dataset.i), 1); save(); renderAdmin(); return; }
+  if (action === 'add-firm') {
+    const navn = document.getElementById('f-name').value.trim();
+    if (!navn) { alert('Skriv inn firmanavn.'); return; }
+    if (FIRMS.some(f => f.navn.toLowerCase() === navn.toLowerCase())) { alert('Firmaet finnes allerede.'); return; }
+    FIRMS.push({navn, farge: document.getElementById('f-color').value});
+    document.getElementById('f-name').value = '';
+    save(); renderAdmin(); return;
+  }
+  if (action === 'del-firm') { FIRMS.splice(Number(btn.dataset.i), 1); save(); renderAdmin(); return; }
+  if (action === 'reset-data') {
+    if (!confirm('Tilbakestille alle aktiviteter og AT-er til Excel-dataene? Alle endringer og plasseringer slettes.')) return;
+    DATA = buildData(); FIRMS = DEFAULT_FIRMS.map(f => ({...f}));
+    ui.klargjoring.editing.clear();
+    save(); alert('Dataene er tilbakestilt.'); renderAdmin(); return;
+  }
+});
 
-            const healthy = filtered.filter(a => {
-                const allRisksSet = a.at_list.every(at => at.risk);
-                return allRisksSet && a.start_date;
-            });
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; renderKoord(); return; }
+  if (el.id === 'map-upload') { if (el.files[0]) uploadMap(el.files[0]); el.value = ''; return; }
+  if (el.dataset.firmColor !== undefined) { FIRMS[Number(el.dataset.firmColor)].farge = el.value; save(); renderAdmin(); return; }
 
-            [...unhealthy, ...healthy].forEach(act => {
-                const card = document.createElement('div');
-                const isCritical = unhealthy.includes(act);
-                card.className = `health-card ${isCritical ? (unhealthy.length > 3 ? 'critical' : 'warning') : 'healthy'}`;
-                const color = COMPANY_COLORS[act.firma] || '#999';
+  if (el.dataset.ff !== undefined) {
+    const page = el.closest('.firm-filter').dataset.page, st = ui[page];
+    if (el.dataset.ff === '__all') st.firms = el.checked ? null : new Set();
+    else {
+      const cur = st.firms ? new Set(st.firms) : new Set(FIRMS.map(f => f.navn));
+      el.checked ? cur.add(el.dataset.ff) : cur.delete(el.dataset.ff);
+      st.firms = FIRMS.every(f => cur.has(f.navn)) ? null : cur;
+    }
+    renderTable(page); return;
+  }
 
-                card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong>${act.id}</strong>
-                        <span class="company-badge" style="background: ${color};">${act.firma[0]}</span>
-                    </div>
-                    <div style="margin: 8px 0;"><strong>${act.activity}</strong></div>
-                    <div style="font-size: 11px; color: #666;">${act.firma}</div>
-                `;
-                container.appendChild(card);
-            });
-        }
+  if (!el.dataset.field) return;
+  const page = pageOf(el);
+  if (page !== 'klargjoring') return;
+  const tg = targetOf(el); if (!tg) return;
+  const f = el.dataset.field;
+  let v = el.value;
+  if (f === 'varighet') v = Math.max(1, parseInt(v, 10) || 1);
+  if (f === 'startdato' && !v) { renderTable(page); return; }
+  if (f === 'nr') {
+    v = v.trim();
+    if (!v || (DATA.some(a => a.at.some(t => t !== tg.obj && t.nr === v)))) { alert('AT-nummeret må være unikt og kan ikke være tomt.'); renderTable(page); return; }
+  }
+  if (f === 'navn' && !v.trim()) { renderTable(page); return; }
+  setPath(tg.obj, f, v);
+  save();
+  if (el.tagName === 'SELECT' || ['date', 'number'].includes(el.type) || f === 'nr' || f === 'metode.nr') renderTable(page);
+});
 
-        function renderATKoordinering() {
-            const listDiv = document.getElementById('at-list');
-            listDiv.innerHTML = '';
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.search) { ui[el.dataset.search].search = el.value; renderTable(el.dataset.search); }
+});
 
-            const thisWeek = aktiviteter.filter(a => {
-                const today = new Date();
-                const actDate = new Date(a.start_date);
-                const diffDays = Math.ceil((actDate - today) / (1000 * 60 * 60 * 24));
-                return diffDays >= -7 && diffDays <= 7;
-            });
-
-            thisWeek.forEach(act => {
-                act.at_list.forEach(at => {
-                    const card = document.createElement('div');
-                    card.className = 'at-card';
-                    const color = COMPANY_COLORS[act.firma] || '#999';
-                    card.style.borderLeftColor = color;
-                    card.innerHTML = `
-                        <div style="display: flex; gap: 5px; align-items: center;">
-                            <span style="background: ${color}; color: white; padding: 4px 8px; border-radius: 3px; font-size: 11px; font-weight: bold;">${act.firma[0]}</span>
-                            <div>
-                                <div style="font-weight: bold;">${at.id}</div>
-                                <div style="font-size: 11px; color: #666;">${act.id} - ${act.activity}</div>
-                            </div>
-                        </div>
-                    `;
-                    listDiv.appendChild(card);
-                });
-            });
-        }
-
-        function loadUsers() {
-            const stored = localStorage.getItem('wrk2_users');
-            users = stored ? JSON.parse(stored) : [
-                { email: 'admin@example.com', name: 'Administrator', role: 'admin' },
-                { email: 'viewer@example.com', name: 'Viewer', role: 'viewer' }
-            ];
-            renderUsers();
-        }
-
-        function saveUsers() {
-            localStorage.setItem('wrk2_users', JSON.stringify(users));
-        }
-
-        function addUser() {
-            const email = document.getElementById('new-user-email').value;
-            const name = document.getElementById('new-user-name').value;
-            const role = document.getElementById('new-user-role').value;
-
-            if (email && name) {
-                users.push({ email, name, role });
-                saveUsers();
-                document.getElementById('new-user-email').value = '';
-                document.getElementById('new-user-name').value = '';
-                renderUsers();
-            }
-        }
-
-        function renderUsers() {
-            const list = document.getElementById('user-list');
-            list.innerHTML = '';
-            users.forEach((user, idx) => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <div>
-                        <strong>${user.name}</strong><br>
-                        <small>${user.email}</small><br>
-                        <small style="color: #666;">${user.role}</small>
-                    </div>
-                    <button onclick="removeUser(${idx})" style="background: #e74c3c;">Fjern</button>
-                `;
-                list.appendChild(li);
-            });
-        }
-
-        function removeUser(idx) {
-            users.splice(idx, 1);
-            saveUsers();
-            renderUsers();
-        }
-
-        function renderCompanyColors() {
-            const container = document.getElementById('company-colors');
-            container.innerHTML = '';
-            Object.entries(COMPANY_COLORS).forEach(([company, color]) => {
-                const div = document.createElement('div');
-                div.className = 'color-item';
-                div.innerHTML = `
-                    <div class="color-box" style="background: ${color};"></div>
-                    <div>
-                        <strong>${company}</strong><br>
-                        <input type="color" value="${color}" onchange="updateCompanyColor('${company}', this.value)" style="width: 50px; padding: 4px; border: 1px solid #ddd;">
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function updateCompanyColor(company, color) {
-            COMPANY_COLORS[company] = color;
-            renderOversikt();
-            renderHealthCheck();
-            renderCompanyColors();
-        }
-
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const search = document.getElementById('search');
-            if (search) search.addEventListener('input', () => renderOversikt());
-        });
-
-        loadData();
-    </script>
+load();
+renderLegend();
+showTab((location.hash || '#oversikt').slice(1));
+</script>
 </body>
 </html>

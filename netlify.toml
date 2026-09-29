@@ -2,6 +2,13 @@
   command = "echo 'Static site - no build needed'"
   publish = "."
 
+# Kildefiler i repoet skal ikke kunne lastes ned fra nettsiden.
+[[redirects]]
+  from = "/WRK2_Aktivitetsoversikt.xlsx"
+  to = "/404"
+  status = 404
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/oversikt.html"

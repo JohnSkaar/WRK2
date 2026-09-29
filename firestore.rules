@@ -1,0 +1,53 @@
+rules_version = '2';
+// Lim inn i Firebase-konsollen: Firestore Database → Rules → Publish.
+// Bytt BYTT_TIL_DIN_EPOST med e-postadressen den første systemadministratoren logger inn med, med små bokstaver.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function email() { return request.auth.token.email.lower(); }
+    function userPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function member() { return signedIn() && exists(userPath()); }
+    function me() { return get(userPath()).data; }
+    function sys() { return member() && me().rolle == 'systemadmin'; }
+    function validUser(d) {
+      return d.keys().hasOnly(['name', 'email', 'firma', 'rolle'])
+        && d.name is string && d.email is string && d.firma is string
+        && d.rolle in ['systemadmin', 'firmaadmin', 'leser'];
+    }
+    function invitePath() { return /databases/$(database)/documents/invites/$(email()); }
+
+    match /users/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow read: if member();
+      // Første innlogging: profilen kopieres fra invitasjonen, eller oppstart av første systemadministrator.
+      allow create: if signedIn() && request.auth.uid == uid && validUser(request.resource.data)
+        && request.resource.data.email == email()
+        && ((exists(invitePath())
+              && request.resource.data.rolle == get(invitePath()).data.rolle
+              && request.resource.data.firma == get(invitePath()).data.firma)
+            || (email() == 'BYTT_TIL_DIN_EPOST' && request.resource.data.rolle == 'systemadmin'));
+      allow update: if sys() && validUser(request.resource.data);
+      allow delete: if sys() && request.auth.uid != uid;
+    }
+
+    match /invites/{inviteEmail} {
+      allow get, delete: if signedIn() && inviteEmail == email();
+      allow read, write: if sys();
+    }
+
+    match /config/{docId} {
+      allow read: if member();
+      allow write: if sys();
+    }
+
+    match /aktiviteter/{id} {
+      allow read: if member();
+      allow create, delete: if sys();
+      // Firma-admin kan endre aktiviteter som eies av eget firma eller har AT-er fra eget firma, men ikke flytte dem til et annet firma.
+      allow update: if sys() || (member() && me().rolle == 'firmaadmin'
+        && (resource.data.firma == me().firma || me().firma in resource.data.get('atFirmaer', []))
+        && request.resource.data.firma == resource.data.firma
+        && request.resource.data.id == resource.data.id);
+    }
+  }
+}

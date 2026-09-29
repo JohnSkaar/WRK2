@@ -172,19 +172,34 @@ tr.main-row.flash-main td{animation:flash 1.6s}
 .person{display:inline-block;min-width:30px;padding:2px 6px;border-radius:4px;background:#eef1f4;color:#24292f;font-weight:600;font-size:12px;font-family:ui-monospace,Menlo,monospace}
 .module-row{display:flex;gap:10px;align-items:flex-start;padding:8px;border:1px solid var(--line);border-radius:6px;cursor:pointer}
 .module-row input{width:18px;height:18px;margin-top:2px}
+body.locked>header,body.locked>nav,body.locked>main{display:none}
+.login-screen[hidden],.toast[hidden]{display:none}
+.login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#1b2a3a;padding:16px;z-index:200}
+.login-card{background:#fff;border-radius:10px;padding:24px;width:100%;max-width:400px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.login-card h1{font-size:19px;margin-bottom:4px}
+.login-card label{display:block;font-size:13px;font-weight:600;margin-bottom:10px}
+.login-card input{display:block;width:100%;margin-top:4px;padding:9px 10px;border:1px solid #d0d7de;border-radius:6px;font-size:15px}
+.login-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.login-msg{min-height:18px;color:#a40e26;font-size:13px;margin:6px 0}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#24292f;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:300;max-width:90vw;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.btn.small{padding:4px 10px;font-size:12px;background:transparent;color:#fff;border-color:#4a5d70}
 </style>
 </head>
 <body>
+<div id="login-screen" class="login-screen" hidden>
+  <div class="login-card">
+    <h1>WRK2 – Produksjonsplanlegging</h1>
+    <p class="sub" style="margin-bottom:14px">Utkikksplan for byggeplassen. Logg inn for å fortsette.</p>
+    <div id="login-body"><p class="muted">Laster …</p></div>
+  </div>
+</div>
+<div id="toast" class="toast" hidden></div>
 <header class="app-header">
   <div>
     <h1>WRK2 – Produksjonsplanlegging</h1>
     <p>Aktiviteter fra uke 40 · de sju produksjonsforutsetningene · arbeidstillatelser (AT) · Skanskas dødsrisikoer</p>
   </div>
-  <div class="user-bar">
-    <label for="user-sel">Innlogget som</label>
-    <select id="user-sel"></select>
-    <span class="demo">(demo-innlogging)</span>
-  </div>
+  <div class="user-bar" id="user-bar"></div>
 </header>
 <nav class="tabs">
   <button data-tab="klargjoring">Klargjøring av aktiviteter</button>
@@ -390,6 +405,8 @@ const AX_ROWS_R = [['B', 340, 1794], ['C', 540, 1794]];
 // PLAN_FRA: aktiviteter som var ferdige før uke 40 er tatt ut av planen.
 const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
+// Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
+const CLOUD = location.protocol !== 'file:';
 const SETTINGS_KEY = 'wrk2_settings';
 const STORAGE_KEY = 'wrk2_v6', FIRMS_KEY = 'wrk2_firms_v6', USERS_KEY = 'wrk2_users_v6', CURRENT_KEY = 'wrk2_current_user',
   MAP_KEY = 'wrk2_sonekart', MAP_RATIO_KEY = 'wrk2_sonekart_ratio';
@@ -561,6 +578,14 @@ function loadUsers() {
   if (!u.some(x => x.rolle === 'systemadmin')) u.unshift(seedUsers()[0]);
   return u;
 }
+function normalizeFirms(list) {
+  if (!Array.isArray(list) || !list.length) return DEFAULT_FIRMS.map(f => ({...f}));
+  if (list.every(f => OLD_FIRM_COLORS.includes(f.farge) || !DEFAULT_FIRMS.some(d => d.navn === f.navn))) {
+    // Uendrede standardfarger byttes til den validerte paletten, i samme rekkefølge som DEFAULT_FIRMS.
+    return DEFAULT_FIRMS.map(d => ({...d})).concat(list.filter(f => !DEFAULT_FIRMS.some(d => d.navn === f.navn)));
+  }
+  return list;
+}
 function load() {
   let d = readJSON(STORAGE_KEY);
   if (!Array.isArray(d) || !d.length) {
@@ -568,13 +593,7 @@ function load() {
     d = cleanup(migrate(Array.isArray(old) && old.length ? old : buildData()));
   }
   DATA = migrate(d);
-  FIRMS = readJSON(FIRMS_KEY) || readJSON('wrk2_firms_v5');
-  if (!Array.isArray(FIRMS) || !FIRMS.length) FIRMS = DEFAULT_FIRMS.map(f => ({...f}));
-  else if (FIRMS.every(f => OLD_FIRM_COLORS.includes(f.farge) || !DEFAULT_FIRMS.some(d => d.navn === f.navn))) {
-    // Uendrede standardfarger byttes til den validerte paletten, i samme rekkefølge som DEFAULT_FIRMS.
-    const extra = FIRMS.filter(f => !DEFAULT_FIRMS.some(d => d.navn === f.navn));
-    FIRMS = DEFAULT_FIRMS.map(d => ({...d})).concat(extra);
-  }
+  FIRMS = normalizeFirms(readJSON(FIRMS_KEY) || readJSON('wrk2_firms_v5'));
   USERS = loadUsers();
   SETTINGS = {skrastrek: false, fuIkkeVurdert: false, ...(readJSON(SETTINGS_KEY) || {})};
   if (!SETTINGS.fuIkkeVurdert) {
@@ -587,6 +606,7 @@ function load() {
   save();
 }
 function save() {
+  if (CLOUD) { if (window.cloudSync) window.cloudSync(); return; }
   writeRaw(STORAGE_KEY, JSON.stringify(DATA));
   writeRaw(FIRMS_KEY, JSON.stringify(FIRMS));
   writeRaw(USERS_KEY, JSON.stringify(USERS));
@@ -615,8 +635,13 @@ function accessText() {
   return `Du har lesetilgang (${u.firma}). Du kan se alt, men ikke endre.`;
 }
 function renderUserBar() {
-  const sel = document.getElementById('user-sel');
-  sel.innerHTML = USERS.map(u => `<option value="${esc(u.id)}" ${u.id === currentUserId ? 'selected' : ''}>${esc(u.name)} – ${esc(u.firma)} (${esc(ROLLER[u.rolle])})</option>`).join('');
+  const bar = document.getElementById('user-bar');
+  if (CLOUD) {
+    const u = me();
+    bar.innerHTML = `<span>Innlogget som <b>${esc(u.name)}</b> · ${esc(u.firma)} · ${esc(ROLLER[u.rolle])}</span><button class="btn small" data-action="logout">Logg ut</button>`;
+  } else {
+    bar.innerHTML = `<label for="user-sel">Innlogget som</label><select id="user-sel">${USERS.map(u => `<option value="${esc(u.id)}" ${u.id === currentUserId ? 'selected' : ''}>${esc(u.name)} – ${esc(u.firma)} (${esc(ROLLER[u.rolle])})</option>`).join('')}</select><span class="demo">(demo, lokal fil)</span>`;
+  }
   document.querySelectorAll('.access-info').forEach(e => e.textContent = accessText());
 }
 
@@ -1284,7 +1309,7 @@ function renderAdmin() {
     </ul>
     <p class="intro">${esc(accessText())}${sys ? '' : ' Brukere, firma og data kan bare endres av en systemadministrator.'}</p>`;
 
-  document.getElementById('user-form').innerHTML = sys ? `<div class="form-row">
+  document.getElementById('user-form').innerHTML = sys ? `${CLOUD ? '<p class="intro" style="margin-bottom:8px">Legg til en bruker med e-post, firma og rolle. Personen går deretter til wrk2.netlify.app, velger «Opprett konto» med samme e-postadresse og bekrefter e-posten.</p>' : ''}<div class="form-row">
       <input type="text" id="u-name" placeholder="Navn">
       <input type="email" id="u-email" placeholder="E-post">
       <select id="u-firm">${firmOpts('Skanska')}</select>
@@ -1292,7 +1317,7 @@ function renderAdmin() {
       <button class="btn primary" data-action="add-user">Legg til bruker</button>
     </div>` : '';
   document.getElementById('user-list').innerHTML = USERS.map(u => `<div class="list-row">
-      <div class="grow"><b>${esc(u.name)}</b>${u.id === currentUserId ? ' <span class="badge st-done">innlogget</span>' : ''}<div class="sub">${esc(u.email || 'ingen e-post')}</div></div>
+      <div class="grow"><b>${esc(u.name)}</b>${u.id === currentUserId ? ' <span class="badge st-done">innlogget</span>' : ''}${u.pending ? ' <span class="badge st-go" title="Må opprette konto med denne e-postadressen">invitert</span>' : ''}<div class="sub">${esc(u.email || 'ingen e-post')}</div></div>
       ${sys ? `<select data-user-field="firma" data-uid="${esc(u.id)}">${firmOpts(u.firma)}</select>
         <select data-user-field="rolle" data-uid="${esc(u.id)}">${roleOpts(u.rolle)}</select>
         <button class="btn danger" data-action="del-user" data-uid="${esc(u.id)}">Fjern</button>`
@@ -1318,7 +1343,7 @@ function renderAdmin() {
     <label class="module-row"><input type="checkbox" id="mod-skrastrek" ${SETTINGS.skrastrek ? 'checked' : ''} ${sys ? '' : 'disabled'}>
       <span><b>Skråstreksdiagram</b><br><span class="sub">Soner mot uker, med hver aktivitet eller AT som en skråstrek.</span></span></label>`;
   document.getElementById('data-panel').innerHTML = `<h3>Data</h3>
-    <p class="intro" style="margin-bottom:10px">Data lagres i denne nettleseren. Planen viser ${DATA.length} aktiviteter. Aktiviteter som var ferdige før uke 40 er tatt ut.
+    <p class="intro" style="margin-bottom:10px">${CLOUD ? 'Data lagres i databasen og deles med alle innloggede brukere. Sonebilde du laster opp, lagres foreløpig bare i din nettleser.' : 'Data lagres i denne nettleseren.'} Planen viser ${DATA.length} aktiviteter. Aktiviteter som var ferdige før uke 40 er tatt ut.
     ${sys ? 'Tilbakestilling henter aktivitetene fra Excel-utdraget på nytt og sletter alle endringer og AT-plasseringer.' : ''}</p>
     ${sys ? '<button class="btn danger" data-action="reset-data">Tilbakestill til Excel-data</button>' : ''}`;
 }
@@ -1394,6 +1419,7 @@ document.addEventListener('click', e => {
   const action = btn.dataset.action;
   const page = pageOf(btn);
 
+  if (action === 'logout') { if (window.cloudSignOut) window.cloudSignOut(); return; }
   if (action === 'ff-toggle') { btn.closest('.firm-filter').classList.toggle('open'); return; }
   if (action === 'ff-mine') { ui[btn.dataset.page].firms = new Set([me().firma]); rerenderPage(btn.dataset.page); return; }
   if (action === 'toggle-archive') { const p = btn.dataset.page; ui[p].showArchive = !ui[p].showArchive; rerenderPage(p); return; }
@@ -1471,16 +1497,22 @@ document.addEventListener('click', e => {
   // admin (kun systemadministrator)
   if (!isSys() && ['add-user', 'del-user', 'add-firm', 'del-firm', 'reset-data'].includes(action)) return;
   if (action === 'add-user') {
-    const name = document.getElementById('u-name').value.trim(), email = document.getElementById('u-email').value.trim();
+    const name = document.getElementById('u-name').value.trim(), email = document.getElementById('u-email').value.trim().toLowerCase();
     if (!name) { alert('Skriv inn navn.'); return; }
-    USERS.push({id: uid(), name, email, firma: document.getElementById('u-firm').value, rolle: document.getElementById('u-role').value});
+    const firma = document.getElementById('u-firm').value, rolle = document.getElementById('u-role').value;
+    if (CLOUD) {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Skriv inn en gyldig e-postadresse. Den brukes til innlogging.'); return; }
+      if (USERS.some(u => (u.email || '').toLowerCase() === email)) { alert('Denne e-postadressen er allerede lagt til.'); return; }
+      USERS.push({id: 'invite:' + email, pending: true, name, email, firma, rolle});
+    } else USERS.push({id: uid(), name, email, firma, rolle});
     save(); renderCurrent(); return;
   }
   if (action === 'del-user') {
     const u = USERS.find(x => x.id === btn.dataset.uid);
     if (!u) return;
     if (u.rolle === 'systemadmin' && USERS.filter(x => x.rolle === 'systemadmin').length === 1) { alert('Det må finnes minst én systemadministrator.'); return; }
-    if (!confirm(`Fjerne brukeren ${u.name}?`)) return;
+    if (CLOUD && u.id === currentUserId) { alert('Du kan ikke fjerne deg selv.'); return; }
+    if (!confirm(u.pending ? `Trekke tilbake invitasjonen til ${u.email}?` : `Fjerne tilgangen for ${u.name}?`)) return;
     USERS = USERS.filter(x => x !== u);
     if (currentUserId === u.id) currentUserId = USERS.find(x => x.rolle === 'systemadmin').id;
     save(); renderCurrent(); return;
@@ -1494,7 +1526,7 @@ document.addEventListener('click', e => {
   }
   if (action === 'del-firm') { FIRMS.splice(Number(btn.dataset.i), 1); save(); renderAdmin(); return; }
   if (action === 'reset-data') {
-    if (!confirm('Tilbakestille alle aktiviteter og AT-er til Excel-dataene? Alle endringer og plasseringer slettes.')) return;
+    if (!confirm(`Tilbakestille alle aktiviteter og AT-er til Excel-dataene?${CLOUD ? ' Dette gjelder for ALLE brukere.' : ''} Alle endringer og plasseringer slettes.`)) return;
     DATA = freshData(); FIRMS = DEFAULT_FIRMS.map(f => ({...f}));
     ui.klargjoring.editing.clear(); ui.koord.selected = null;
     save(); alert('Dataene er tilbakestilt.'); renderAdmin(); return;
@@ -1558,9 +1590,26 @@ document.addEventListener('input', e => {
   if (el.dataset.search) { ui[el.dataset.search].search = el.value; rerenderPage(el.dataset.search); }
 });
 
-load();
-renderLegend();
-showTab((location.hash || '#oversikt').slice(1));
+function startApp() {
+  renderLegend();
+  showTab((location.hash || '#oversikt').slice(1));
+}
+function showToast(t) {
+  const el = document.getElementById('toast');
+  el.textContent = t; el.hidden = false;
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => { el.hidden = true; }, 6000);
+}
+// Endringer fra andre brukere tegnes ikke mens du skriver eller drar noe.
+function scheduleRender() {
+  const a = document.activeElement;
+  const busy = drag || (a && a.closest('main') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'checkbox');
+  if (busy) { clearTimeout(scheduleRender.t); scheduleRender.t = setTimeout(scheduleRender, 400); return; }
+  renderCurrent();
+}
+if (CLOUD) document.body.classList.add('locked');
+else { load(); startApp(); }
 </script>
+<script type="module">if (CLOUD) import('./cloud.js').catch(e => { document.getElementById('login-body').innerHTML = '<p class="login-msg">Kunne ikke laste innloggingen. Sjekk nettforbindelsen og last siden på nytt.</p>'; console.error(e); });</script>
 </body>
 </html>

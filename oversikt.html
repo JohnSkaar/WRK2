@@ -227,6 +227,12 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .firm-rename{display:flex;flex-wrap:wrap;gap:6px}
 .firm-rename input{padding:6px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;min-width:180px}
 .mb-fag{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#57606a;margin:10px 2px 4px}
+.kjede{display:flex;flex-wrap:wrap;align-items:center;gap:3px;margin-top:3px;font-size:11px;color:#24292f;white-space:normal}
+.kjede-mb{font-family:ui-monospace,Menlo,monospace;color:#3346a8;margin-right:2px}
+.kjede-ledd{border:1px solid;border-left-width:4px;border-radius:4px;padding:0 5px;background:#fff}
+.kjede-pil{color:#8c959f}
+td.firma-cell{white-space:normal;min-width:130px}
+.mb-edit label{display:flex;flex-direction:column;gap:2px;flex:1;min-width:150px}
 </style>
 </head>
 <body>
@@ -643,7 +649,7 @@ function normalizeAll() {
     delete t.plassering;
     giAnsvar(t, t.nr);
   });
-  METHODS.forEach(m => { if (m.firma === undefined) m.firma = FIRMA_METODE[m.nr] || ''; });
+  METHODS.forEach(m => { if (m.firma === undefined) m.firma = FIRMA_METODE[m.nr] || ''; if (!Array.isArray(m.ue)) m.ue = []; });
   relink();
 }
 function relink() {
@@ -656,6 +662,16 @@ function relink() {
   DATA.forEach(a => a.at.sort((x, y) => byNr(x.nr, y.nr)));
 }
 const actById = id => DATA.find(a => a.id === id);
+// Kontraktskjede: entreprenør › UE › UE-ens UE/innleide, satt på metodebeskrivelsen.
+function methodChain(m) { return m ? [m.firma, ...(m.ue || [])].filter(Boolean) : []; }
+function chainsFor(nrs) {
+  const seen = new Set(), out = [];
+  nrs.forEach(nr => { const m = METHODS.find(x => x.nr === nr), ch = methodChain(m); if (ch.length > 1 && !seen.has(ch.join('›'))) { seen.add(ch.join('›')); out.push({nr, ch}); } });
+  return out;
+}
+function chainHtml(nrs, withNr = true) {
+  return chainsFor(nrs).map(({nr, ch}) => `<div class="kjede" title="Kontraktskjede for MB ${esc(nr)}">${withNr ? `<span class="kjede-mb">MB ${esc(nr)}</span> ` : ''}${ch.map((f, i) => `<span class="kjede-ledd" style="border-color:${firmColor(f)}">${i ? '' : '<b>'}${esc(f)}${i ? '' : '</b>'}</span>`).join('<span class="kjede-pil">›</span>')}</div>`).join('');
+}
 function actMbNrs(a) { return [...new Set([...mbNrs(a), ...a.at.map(t => t.metode).filter(Boolean)])].sort(byNr); }
 function ferdigFoerPlan(a) {
   return a.status === 'Utført' && a.at.every(t => t.status === 'Utført')
@@ -787,13 +803,13 @@ function cDod(list, ed, fraAT = []) {
   const all = [...new Set([...list, ...fraAT])];
   return all.length ? `<span class="dod">${all.map(k => dodIcon(k)).join('')}</span>` : '<span class="muted">–</span>';
 }
-function commonCells(o, ed, firmaEd) {
+function commonCells(o, ed, firmaEd, kjede = '') {
   return {
     omrade: `<td>${ed ? selectHtml('omrade', OMRADER(), o.omrade) : esc(o.omrade)}</td>`,
     uke: `<td class="c">${isoWeek(o.startdato)}</td>`,
     dato: `<td>${ed ? `<input type="date" class="w-date" data-field="startdato" value="${esc(o.startdato)}">` : fmtNo(o.startdato)}</td>`,
     varighet: `<td class="c">${ed ? `<input type="number" min="1" class="w-num" data-field="varighet" value="${o.varighet}">` : o.varighet}</td>`,
-    firma: `<td>${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}</td>`,
+    firma: `<td class="firma-cell">${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}${kjede}</td>`,
     lys: FORUTSETNINGER.map(([k]) => `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}</td>`).join(''),
     ansvar: ['ansvarUtforelse', 'ansvarGodkjenning'].map(f => `<td class="c">${ed
       ? `<select data-field="${f}" title="${f === 'ansvarUtforelse' ? 'Ansvarlig for utførelse' : 'Ansvarlig for godkjenning'}"><option value="" ${o[f] ? '' : 'selected'}>–</option>${[...new Set([...PERSONER, o[f]].filter(Boolean))].map(x => `<option value="${esc(x)}" ${x === o[f] ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`
@@ -819,7 +835,7 @@ function mainRow(a, page) {
   const editing = isEditing(page, a);
   const ed = editing && canEditAct(a);
   const exp = ui[page].expanded.has(a.id);
-  const c = commonCells(a, ed, editing && isSys());
+  const c = commonCells(a, ed, editing && isSys(), chainHtml(actMbNrs(a)));
   const fraAT = [...new Set(a.at.flatMap(t => t.dodsrisiko))];
   let editBtn = '';
   if (page === 'klargjoring') {
@@ -867,7 +883,7 @@ function detailRows(a, page) {
   }
   a.at.forEach((t, i) => {
     const ed = editing && canEditAT(a, t);
-    const c = commonCells(t, ed, editing && canEditAct(a));
+    const c = commonCells(t, ed, editing && canEditAct(a), t.metode ? chainHtml([t.metode], false) : '');
     h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(a.id)}-${esc(t.nr)}">
       <td class="col-ctrl">${actEd ? `<button class="icon-btn danger" data-action="del-at" title="Slett ${esc(t.nr)}">🗑</button> ` : ''}<span class="conn">↳</span></td>
       <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(t.navn)}">` : esc(t.navn)}<div class="sub">${esc(t.nr)}${t.metode ? ` · MB ${esc(t.metode)}` : ''}${t.aktiviteter.length > 1 ? ` · også på ${esc(t.aktiviteter.filter(x => x !== a.id).join(', '))}` : ''}</div></td>
@@ -904,7 +920,7 @@ function erArkiv(a) {
   return a.startdato < mon && endDate(a) < mon && a.at.every(t => endDate(t) < mon);
 }
 function matches(a, st) {
-  if (st.firms && !st.firms.has(a.firma) && !a.at.some(t => st.firms.has(t.firma))) return false;
+  if (st.firms && !st.firms.has(a.firma) && !a.at.some(t => st.firms.has(t.firma)) && !chainsFor(actMbNrs(a)).some(c => c.ch.some(f => st.firms.has(f)))) return false;
   const q = st.search.trim().toLowerCase();
   if (!q) return true;
   return [a.id, a.navn, a.omrade, a.firma, a.kommentar, a.ansvarUtforelse, a.ansvarGodkjenning, ...a.at.flatMap(t => [t.nr, t.navn, t.firma, t.ansvarUtforelse, t.ansvarGodkjenning])].some(s => String(s).toLowerCase().includes(q));
@@ -960,7 +976,7 @@ function renderFirmFilter(page) {
   const sel = ui[page].firms;
   const all = !sel;
   const label = all ? 'Alle firma' : sel.size === 0 ? 'Ingen valgt' : sel.size === 1 ? [...sel][0] : `${sel.size} firma valgt`;
-  const count = n => DATA.filter(a => a.firma === n || a.at.some(t => t.firma === n)).length;
+  const count = n => DATA.filter(a => a.firma === n || a.at.some(t => t.firma === n) || chainsFor(actMbNrs(a)).some(c => c.ch.includes(n))).length;
   el.innerHTML = `<button class="btn" data-action="ff-toggle">Firma: ${esc(label)} ▾</button>
     <div class="firm-filter-panel">
       <label class="all"><input type="checkbox" data-ff="__all" ${all ? 'checked' : ''}> Velg alle</label>
@@ -1484,9 +1500,11 @@ function renderMetoder() {
           <input type="text" id="mbe-navn" value="${esc(m.navn)}" placeholder="Navn">
           <input type="text" id="mbe-rev" value="${esc(m.rev || '')}" placeholder="Revisjon">
           <input type="text" id="mbe-fag" value="${esc(m.fag || '')}" placeholder="Fag, f.eks. Betong">
+          ${[0, 1].map(i => `<label class="sub">${i ? 'UE-ens UE / innleid' : 'Underentreprenør (UE)'}
+            <select id="mbe-ue${i}"><option value="">Ingen</option>${FIRMS.map(f => `<option value="${esc(f.navn)}" ${(m.ue || [])[i] === f.navn ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')}</select></label>`).join('')}
           <select id="mbe-firma"><option value="">Uten entreprenør</option>${FIRMS.map(f => `<option value="${esc(f.navn)}" ${f.navn === m.firma ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')}</select>
           <button class="btn primary" data-action="mb-save">Lagre</button><button class="btn" data-action="mb-cancel">Avbryt</button></div>`
-      : `<div class="mb-head"><div><b>MB ${esc(m.nr)}</b> ${esc(m.navn)}${m.rev ? ` <span class="sub">rev. ${esc(m.rev)}</span>` : ''}</div>
+      : `<div class="mb-head"><div><b>MB ${esc(m.nr)}</b> ${esc(m.navn)}${m.rev ? ` <span class="sub">rev. ${esc(m.rev)}</span>` : ''}${(m.ue || []).length ? chainHtml([m.nr], false) : ''}</div>
           <div class="mb-head-r"><span class="badge st-plan" title="AT-er">${ats.length} AT</span>${sys && !m.ukjent ? `<button class="mb-x" data-action="mb-edit" title="Endre tekst og entreprenør">✏️</button><button class="mb-x" data-action="mb-del" title="Slett metodebeskrivelsen">🗑</button>` : ''}</div></div>`;
     return `<div class="mb-card${m.ukjent ? ' ukjent' : ''}" data-nr="${esc(m.nr)}">
       ${head}
@@ -1532,6 +1550,7 @@ function renderMetoder() {
       <div class="at-card-body">
         <div><b>${esc(a.id)}</b> ${esc(a.navn)}</div>
         <div class="sub">${esc(a.omrade)} · uke ${isoWeek(a.startdato)} · ${firmBadge(a.firma)}</div>
+        ${chainHtml(nrs)}
         <div class="mb-tags">${a.at.map(t => `<span class="mb-tag at">${esc(t.nr)}</span>`).join('')}${nrs.map(n => `<span class="mb-tag">MB ${esc(n)}</span>`).join('')}${a.at.length ? '' : '<span class="mb-tag none">Ingen AT</span>'}</div>
       </div>
     </div>`;
@@ -1890,7 +1909,7 @@ document.addEventListener('click', e => {
   if (action === 'del-firm') {
     const f = FIRMS[Number(btn.dataset.i)]; if (!f) return;
     if (FIRMS.length === 1) { alert('Det må finnes minst ett firma.'); return; }
-    const inUse = DATA.some(a => a.firma === f.navn) || ATS.some(t => t.firma === f.navn) || USERS.some(u => u.firma === f.navn) || METHODS.some(m => m.firma === f.navn);
+    const inUse = DATA.some(a => a.firma === f.navn) || ATS.some(t => t.firma === f.navn) || USERS.some(u => u.firma === f.navn) || METHODS.some(m => m.firma === f.navn || (m.ue || []).includes(f.navn));
     if (inUse) { ui.admin.firmDel = f.navn; renderAdmin(); return; }
     if (!confirm(`Fjerne ${f.navn}?`)) return;
     FIRMS.splice(Number(btn.dataset.i), 1); save(); renderAdmin(); return;
@@ -1906,7 +1925,7 @@ document.addEventListener('click', e => {
       f.navn = navn;
       DATA.forEach(a => { if (a.firma === old) a.firma = navn; });
       ATS.forEach(t => { if (t.firma === old) t.firma = navn; });
-      METHODS.forEach(m => { if (m.firma === old) m.firma = navn; });
+      METHODS.forEach(m => { if (m.firma === old) m.firma = navn; m.ue = (m.ue || []).map(x => x === old ? navn : x); });
       USERS.forEach(u => { if (u.firma === old) u.firma = navn; });
       ['klargjoring', 'oversikt', 'skrastrek'].forEach(pg => { const set = ui[pg].firms; if (set && set.delete(old)) set.add(navn); });
       if (ui.metoder.closed.delete(old)) ui.metoder.closed.add(navn);
@@ -1920,7 +1939,7 @@ document.addEventListener('click', e => {
     if (!f || !to || !confirm(`Flytte alt fra ${f.navn} til ${to} og fjerne ${f.navn}?`)) return;
     DATA.forEach(a => { if (a.firma === f.navn) a.firma = to; });
     ATS.forEach(t => { if (t.firma === f.navn) t.firma = to; });
-    METHODS.forEach(m => { if (m.firma === f.navn) m.firma = to; });
+    METHODS.forEach(m => { if (m.firma === f.navn) m.firma = to; m.ue = [...new Set((m.ue || []).map(x => x === f.navn ? to : x))].filter(x => x !== m.firma); });
     USERS.forEach(u => { if (u.firma === f.navn) u.firma = to; });
     FIRMS = FIRMS.filter(x => x !== f);
     ui.admin.firmDel = null;
@@ -1949,7 +1968,8 @@ document.addEventListener('click', e => {
     const nr = document.getElementById('mbe-nr').value.trim(), navn = document.getElementById('mbe-navn').value.trim();
     if (!m || !nr || !navn) { alert('Nummer og navn må fylles inn.'); return; }
     if (nr !== old && METHODS.some(x => x.nr === nr)) { alert(`MB ${nr} finnes allerede.`); return; }
-    m.nr = nr; m.navn = navn; m.rev = document.getElementById('mbe-rev').value.trim(); m.fag = document.getElementById('mbe-fag').value.trim(); m.firma = document.getElementById('mbe-firma').value;
+    m.nr = nr; m.navn = navn; m.rev = document.getElementById('mbe-rev').value.trim(); m.fag = document.getElementById('mbe-fag').value.trim();
+    m.ue = [document.getElementById('mbe-ue0').value, document.getElementById('mbe-ue1').value].filter(Boolean); m.firma = document.getElementById('mbe-firma').value;
     if (nr !== old) {
       DATA.forEach(a => { if (mbNrs(a).includes(old)) setMbNrs(a, mbNrs(a).map(x => x === old ? nr : x)); });
       ATS.forEach(t => { if (t.metode === old) t.metode = nr; });

@@ -216,18 +216,19 @@ function startSync(uid) {
     DATA = acts; ATS = ats;
     FIRMS = st.firms.length ? st.firms : DEFAULT_FIRMS.map(f => ({...f}));
     METHODS = st.metoder.length ? st.metoder : DEFAULT_METHODS.map(m => ({...m}));
-    SETTINGS = {skrastrek: false, fuIkkeVurdert: true, ...st.settings};
+    SETTINGS = {skrastrek: false, fuIkkeVurdert: true, metodesett: 0, ...st.settings};
     normalizeAll();
     USERS = [...st.users, ...(sys ? st.invites.map(i => ({...i, id: 'invite:' + i.email, pending: true})) : [])];
     currentUserId = uid;
     base = {
       akt: new Map(DATA.map(a => [a.id, stable(toDoc(a))])),
       ats: new Map(ATS.map(t => [t.id, stable(toATDoc(t))])),
-      firms: stable(FIRMS), metoder: stable(METHODS), settings: stable({skrastrek: !!SETTINGS.skrastrek}),
+      firms: stable(FIRMS), metoder: stable(METHODS), settings: stable({skrastrek: !!SETTINGS.skrastrek, metodesett: SETTINGS.metodesett || 0}),
       users: new Map(USERS.map(u => [u.id, stable(userDoc(u))]))
     };
     if (!started) { started = true; unlock(); startApp(); } else scheduleRender();
     if (readOnly) showToast('Endringer kan ikke lagres ennå: ' + readOnly);
+    if (sys && !readOnly && applyMetodesett()) { window.cloudSync(); renderCurrent(); }
   };
 
   unsubs.push(onSnapshot(collection(db, 'users'), s => { st.users = s.docs.map(d => ({id: d.id, ...d.data()})); apply(); }, fail));
@@ -288,7 +289,7 @@ window.cloudSync = () => {
   if (!isSys()) return;
   if (stable(METHODS) !== base.metoder) { base.metoder = stable(METHODS); setDoc(doc(db, 'config', 'metoder'), {list: METHODS}).catch(saveFail); }
   if (stable(FIRMS) !== base.firms) { base.firms = stable(FIRMS); setDoc(doc(db, 'config', 'firms'), {list: FIRMS}).catch(saveFail); }
-  const set = {skrastrek: !!SETTINGS.skrastrek};
+  const set = {skrastrek: !!SETTINGS.skrastrek, metodesett: SETTINGS.metodesett || 0};
   if (stable(set) !== base.settings) { base.settings = stable(set); setDoc(doc(db, 'config', 'settings'), set).catch(saveFail); }
   const ref = u => u.pending ? doc(db, 'invites', u.email.toLowerCase()) : doc(db, 'users', u.id);
   const now = new Map(USERS.map(u => [u.id, u]));

@@ -226,6 +226,7 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .mb-add select{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px}
 .firm-rename{display:flex;flex-wrap:wrap;gap:6px}
 .firm-rename input{padding:6px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;min-width:180px}
+.mb-fag{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#57606a;margin:10px 2px 4px}
 </style>
 </head>
 <body>
@@ -701,7 +702,7 @@ function load() {
   METHODS = readJSON(METHODS_KEY) || DEFAULT_METHODS.map(m => ({...m}));
   normalizeAll();
   USERS = loadUsers();
-  SETTINGS = {skrastrek: false, fuIkkeVurdert: false, ...(readJSON(SETTINGS_KEY) || {})};
+  SETTINGS = {skrastrek: false, fuIkkeVurdert: false, metodesett: 0, ...(readJSON(SETTINGS_KEY) || {})};
   if (!SETTINGS.fuIkkeVurdert) {
     // Engangsnullstilling: alle sju forutsetninger starter som «ikke vurdert».
     DATA.forEach(a => { a.forutsetninger = ikkeVurdert(); }); ATS.forEach(t => { t.forutsetninger = ikkeVurdert(); });
@@ -709,6 +710,7 @@ function load() {
   }
   currentUserId = readRaw(CURRENT_KEY);
   if (!USERS.some(u => u.id === currentUserId)) currentUserId = USERS.find(u => u.rolle === 'systemadmin').id;
+  applyMetodesett();
   save();
 }
 function save() {
@@ -1409,7 +1411,33 @@ document.addEventListener('click', e => {
 });
 
 // ---------- metodebeskrivelser (entreprenør → metodebeskrivelse → AT → aktiviteter) ----------
-const DEFAULT_METHODS = Object.entries(METODER).map(([nr, m]) => ({nr, navn: m.navn, rev: m.rev, firma: FIRMA_METODE[nr] || ''}));
+// Metodebeskrivelsene i prosjektet (PDF-ene i Dalux), gruppert per entreprenør og fag.
+const METODESETT = 2;
+const DEFAULT_METHODS = [
+  {nr: '1.1', navn: 'Rigg og logistikk', rev: '28.08.2026', firma: 'Skanska', fag: 'Rigg og drift'},
+  {nr: '1.2', navn: 'Stikningsarbeid', rev: '', firma: 'Skanska', fag: 'Rigg og drift'},
+  {nr: '1.3', navn: 'Elektrotilkobling av byggestrømskap', rev: '20.08.2026', firma: 'Skanska', fag: 'Rigg og drift'},
+  {nr: '1.4', navn: 'Kran', rev: '02.07.2026', firma: 'Skanska', fag: 'Rigg og drift'},
+  {nr: '1.5', navn: 'Stillasarbeid', rev: '', firma: 'Skanska', fag: 'Rigg og drift'},
+  {nr: '2.1', navn: 'Grunnarbeid', rev: '04.09.2026', firma: 'Vassbakk & Stol', fag: 'Grunnarbeider'},
+  {nr: '2.2', navn: 'Boring til rør', rev: '02.09.2026', firma: 'Vassbakk & Stol', fag: 'Grunnarbeider'},
+  {nr: '2.3', navn: 'Peling', rev: '19.06.2026', firma: 'Vassbakk & Stol', fag: 'Grunnarbeider'},
+  {nr: '3.1', navn: 'Fundament', rev: '26.08.2026', firma: 'Skanska', fag: 'Betong'},
+  {nr: '3.2', navn: 'Vegg, søyler og pilastere', rev: '19.06.2026', firma: 'Skanska', fag: 'Betong'}
+];
+// Engangsbytte til prosjektets metodebeskrivelser; tidligere endret revisjon beholdes.
+function applyMetodesett() {
+  if ((SETTINGS.metodesett || 0) >= METODESETT) return false;
+  METHODS = DEFAULT_METHODS.map(d => { const old = METHODS.find(m => m.nr === d.nr); return {...d, rev: (old && old.rev) || d.rev}; });
+  DEFAULT_METHODS.forEach(d => {
+    if (FIRMS.some(f => f.navn === d.firma)) return;
+    const used = new Set(FIRMS.map(f => f.farge.toLowerCase()));
+    const farge = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948', '#0e7c86', '#8a5a00', '#b0348f'].find(c => !used.has(c)) || '#6a737d';
+    FIRMS.push({navn: d.firma, farge});
+  });
+  SETTINGS.metodesett = METODESETT;
+  return true;
+}
 const byNr = (x, y) => String(x).localeCompare(String(y), 'nb', {numeric: true});
 function mbNrs(a) { return (a.metode.nr || '').split(',').map(s => s.trim()).filter(Boolean); }
 function setMbNrs(a, list) { a.metode.nr = [...new Set(list)].sort(byNr).join(', '); }
@@ -1455,6 +1483,7 @@ function renderMetoder() {
           <input type="text" id="mbe-nr" value="${esc(m.nr)}" placeholder="Nr." style="max-width:80px">
           <input type="text" id="mbe-navn" value="${esc(m.navn)}" placeholder="Navn">
           <input type="text" id="mbe-rev" value="${esc(m.rev || '')}" placeholder="Revisjon">
+          <input type="text" id="mbe-fag" value="${esc(m.fag || '')}" placeholder="Fag, f.eks. Betong">
           <select id="mbe-firma"><option value="">Uten entreprenør</option>${FIRMS.map(f => `<option value="${esc(f.navn)}" ${f.navn === m.firma ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')}</select>
           <button class="btn primary" data-action="mb-save">Lagre</button><button class="btn" data-action="mb-cancel">Avbryt</button></div>`
       : `<div class="mb-head"><div><b>MB ${esc(m.nr)}</b> ${esc(m.navn)}${m.rev ? ` <span class="sub">rev. ${esc(m.rev)}</span>` : ''}</div>
@@ -1474,6 +1503,7 @@ function renderMetoder() {
   const groups = [...FIRMS.map(f => f.navn), ''].map(firm => ({
     firm,
     methods: allMethods.filter(m => methodFirm(m) === firm).sort((x, y) => byNr(x.nr, y.nr)),
+    fag: [...new Set(allMethods.filter(m => methodFirm(m) === firm).map(m => m.fag).filter(Boolean))],
     orphans: orphanAts.filter(t => (FIRMS.some(f => f.navn === t.firma) ? t.firma : '') === firm)
   })).filter(g => g.methods.length || g.orphans.length);
 
@@ -1481,15 +1511,15 @@ function renderMetoder() {
     <div class="mb-firm${ui.metoder.closed.has(g.firm) ? ' closed' : ''}">
       <div class="mb-firm-head" data-action="mb-firm-toggle" data-firm="${esc(g.firm)}">
         <span>${ui.metoder.closed.has(g.firm) ? '＋' : '－'}</span> ${g.firm ? firmBadge(g.firm) : '<b>Uten entreprenør</b>'}
-        <span class="sub">${g.methods.length} metodebeskrivelser · ${g.methods.reduce((n, m) => n + ATS.filter(t => t.metode === m.nr).length, 0) + g.orphans.length} AT</span>
+        ${g.fag.length ? `<span class="sub"><b>${esc(g.fag.join(' · '))}</b></span>` : ''}<span class="sub">${g.methods.length} metodebeskrivelser · ${g.methods.reduce((n, m) => n + ATS.filter(t => t.metode === m.nr).length, 0) + g.orphans.length} AT</span>
       </div>
       <div class="mb-firm-body">
-        ${g.methods.map(methodCard).join('')}
+        ${g.methods.map((m, i) => (i === 0 || (g.methods[i - 1].fag || '') !== (m.fag || '')) && m.fag ? `<div class="mb-fag">${esc(m.fag)}</div>${methodCard(m)}` : methodCard(m)).join('')}
         ${g.orphans.length ? `<div class="mb-card orphan"><div class="mb-head"><div><b>AT uten metodebeskrivelse</b> <span class="sub">Dra AT-en til riktig metodebeskrivelse</span></div></div>${g.orphans.map(atBox).join('')}</div>` : ''}
       </div>
     </div>`).join('')
   + (sys ? `<div class="mb-add"><input type="text" id="mb-nr" placeholder="Nr., f.eks. 4.1"><input type="text" id="mb-navn" placeholder="Navn på metodebeskrivelsen">
-      <input type="text" id="mb-rev" placeholder="Revisjon (dato)"><select id="mb-firma"><option value="">Uten entreprenør</option>${FIRMS.map(f => `<option value="${esc(f.navn)}">${esc(f.navn)}</option>`).join('')}</select>
+      <input type="text" id="mb-rev" placeholder="Revisjon (dato)"><input type="text" id="mb-fag" placeholder="Fag, f.eks. Betong"><select id="mb-firma"><option value="">Uten entreprenør</option>${FIRMS.map(f => `<option value="${esc(f.navn)}">${esc(f.navn)}</option>`).join('')}</select>
       <button class="btn primary" data-action="mb-add">Legg til metodebeskrivelse</button></div>` : '');
 
   const shown = st.bareUkoblede ? acts.filter(a => !a.at.length) : acts;
@@ -1900,7 +1930,7 @@ document.addEventListener('click', e => {
     const nr = document.getElementById('mb-nr').value.trim(), navn = document.getElementById('mb-navn').value.trim();
     if (!nr || !navn) { alert('Fyll inn nummer og navn.'); return; }
     if (METHODS.some(m => m.nr === nr)) { alert(`MB ${nr} finnes allerede.`); return; }
-    METHODS.push({nr, navn, rev: document.getElementById('mb-rev').value.trim(), firma: document.getElementById('mb-firma').value});
+    METHODS.push({nr, navn, rev: document.getElementById('mb-rev').value.trim(), fag: document.getElementById('mb-fag').value.trim(), firma: document.getElementById('mb-firma').value});
     save(); renderMetoder(); return;
   }
   if (action === 'mb-del') {
@@ -1919,7 +1949,7 @@ document.addEventListener('click', e => {
     const nr = document.getElementById('mbe-nr').value.trim(), navn = document.getElementById('mbe-navn').value.trim();
     if (!m || !nr || !navn) { alert('Nummer og navn må fylles inn.'); return; }
     if (nr !== old && METHODS.some(x => x.nr === nr)) { alert(`MB ${nr} finnes allerede.`); return; }
-    m.nr = nr; m.navn = navn; m.rev = document.getElementById('mbe-rev').value.trim(); m.firma = document.getElementById('mbe-firma').value;
+    m.nr = nr; m.navn = navn; m.rev = document.getElementById('mbe-rev').value.trim(); m.fag = document.getElementById('mbe-fag').value.trim(); m.firma = document.getElementById('mbe-firma').value;
     if (nr !== old) {
       DATA.forEach(a => { if (mbNrs(a).includes(old)) setMbNrs(a, mbNrs(a).map(x => x === old ? nr : x)); });
       ATS.forEach(t => { if (t.metode === old) t.metode = nr; });
@@ -1930,6 +1960,7 @@ document.addEventListener('click', e => {
   if (action === 'reset-data') {
     if (!confirm(`Tilbakestille alle aktiviteter og AT-er til Excel-dataene?${CLOUD ? ' Dette gjelder for ALLE brukere.' : ''} Alle endringer og plasseringer slettes.`)) return;
     ({acts: DATA, ats: ATS} = freshData()); FIRMS = DEFAULT_FIRMS.map(f => ({...f})); METHODS = DEFAULT_METHODS.map(m => ({...m}));
+    SETTINGS.metodesett = 0; applyMetodesett();
     normalizeAll();
     ui.klargjoring.editing.clear(); ui.koord.selected = null;
     save(); alert('Dataene er tilbakestilt.'); renderAdmin(); return;

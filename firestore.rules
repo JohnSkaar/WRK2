@@ -40,6 +40,16 @@ service cloud.firestore {
       allow write: if sys();
     }
 
+    // Arbeidstillatelser: firma-admin kan endre AT-er for eget firma, eller AT-er knyttet til eget firmas aktiviteter.
+    function atOwner(d) { return d.firma == me().firma || me().firma in d.get('aktFirmaer', []); }
+    match /at/{id} {
+      allow read: if member();
+      allow create: if sys() || (member() && me().rolle == 'firmaadmin' && atOwner(request.resource.data));
+      allow update: if sys() || (member() && me().rolle == 'firmaadmin' && atOwner(resource.data)
+        && (request.resource.data.firma == resource.data.firma || me().firma in resource.data.get('aktFirmaer', [])));
+      allow delete: if sys() || (member() && me().rolle == 'firmaadmin' && atOwner(resource.data));
+    }
+
     match /aktiviteter/{id} {
       allow read: if member();
       allow create, delete: if sys();

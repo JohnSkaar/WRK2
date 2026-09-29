@@ -195,7 +195,8 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .mb-chip.locked{cursor:default;touch-action:auto}
 .mb-x{border:none;background:none;cursor:pointer;font-size:14px;color:#57606a;padding:0 2px;line-height:1}
 .mb-x:hover{color:var(--red)}
-.mb-acts{max-height:78vh;overflow:auto}
+.mb-acts{position:sticky;top:52px;max-height:calc(100vh - 64px);overflow:auto}
+@media(max-width:900px){.mb-acts{position:static;max-height:60vh}}
 .mb-act{display:flex;gap:8px;border:1px solid var(--line);border-left:6px solid #999;border-radius:6px;padding:8px;margin-bottom:8px;background:#fff;cursor:grab;user-select:none;-webkit-user-select:none}
 .mb-act.locked{cursor:default;background:#fafafa}
 .mb-act.uten{background:#fff8f8}
@@ -206,6 +207,23 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .mb-add input{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;flex:1;min-width:120px}
 .firm-move{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;background:#fff8e1;border:1px solid #e3b341;border-radius:6px;padding:8px;margin:4px 0 6px}
 .list-row{flex-wrap:wrap}
+.mb-firm{border:1px solid var(--line);border-radius:10px;margin-bottom:12px;background:#fafbfc}
+.mb-firm-head{display:flex;gap:8px;align-items:center;padding:10px 12px;cursor:pointer;font-size:14px}
+.mb-firm-body{padding:0 10px 4px}
+.mb-firm.closed .mb-firm-body{display:none}
+.mb-card.orphan{border-style:dashed;background:#fffdf5}
+.at-box{border:1px solid #d6dcf5;border-left:4px solid #3346a8;border-radius:6px;padding:6px 8px;margin:6px 0;background:#f7f8ff}
+.at-box.drop-hover{outline:3px dashed var(--accent);outline-offset:-2px;background:#e8eeff}
+.at-box-head{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px;font-size:13px}
+.at-box-tools{margin-left:auto;display:flex;gap:2px}
+.at-handle{font-size:16px;touch-action:none}
+.mb-direct{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+.mb-edit{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.mb-edit input,.mb-edit select{padding:6px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;flex:1;min-width:100px}
+.mb-chip.arkiv{opacity:.6}
+.mb-tag.at{background:#3346a8;color:#fff}
+.btn.small-dark{padding:4px 10px;font-size:12px;margin-top:4px}
+.mb-add select{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px}
 </style>
 </head>
 <body>
@@ -226,8 +244,8 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 </header>
 <nav class="tabs">
   <button data-tab="klargjoring">Klargjøring av aktiviteter</button>
-  <button data-tab="oversikt">Totaloversikt</button>
   <button data-tab="metoder">Metodebeskrivelser</button>
+  <button data-tab="oversikt">Totaloversikt</button>
   <button data-tab="skrastrek">Skråstreksdiagram</button>
   <button data-tab="koordinering">AT-koordinering</button>
   <button data-tab="admin">Admin</button>
@@ -273,11 +291,11 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
   <section class="page" id="page-metoder">
     <div class="panel">
       <h2>Metodebeskrivelser</h2>
-      <p class="intro">Dra en aktivitet fra listen til høyre over på en metodebeskrivelse til venstre for å koble dem. En aktivitet kan ha flere metodebeskrivelser. Dra en aktivitet mellom metodebeskrivelser for å flytte den, og trykk × for å fjerne koblingen. På mobil drar du i håndtaket ⠿. 🔒 betyr at aktiviteten tilhører et annet firma.</p>
+      <p class="intro">Her bestemmes hvilke arbeidstillatelser (AT) som hører til hvilke aktiviteter, og det er dette Totaloversikt og Klargjøring viser. Metodebeskrivelsene ligger under entreprenøren de hører til, og AT-ene under metodebeskrivelsen. Dra en aktivitet fra listen til høyre over på en AT for å knytte dem. En AT kan gjelde flere aktiviteter. Dra en AT i håndtaket ⠿ til en annen metodebeskrivelse for å flytte den, og trykk × for å fjerne en kobling. 🔒 betyr at du ikke har tilgang.</p>
       <div class="access-info"></div>
       <div class="toolbar">
         <input type="search" data-search="metoder" placeholder="Søk aktivitet, ID, område, firma …">
-        <label class="btn"><input type="checkbox" id="mb-unlinked"> Bare aktiviteter uten metodebeskrivelse</label>
+        <label class="btn"><input type="checkbox" id="mb-unlinked"> Bare aktiviteter uten AT</label>
         <button class="btn archive-btn" data-action="toggle-archive" data-page="metoder">📦 Vis arkiv</button>
       </div>
     </div>
@@ -448,7 +466,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 const CLOUD = location.protocol !== 'file:';
-const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder';
+const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at';
 const STORAGE_KEY = 'wrk2_v6', FIRMS_KEY = 'wrk2_firms_v6', USERS_KEY = 'wrk2_users_v6', CURRENT_KEY = 'wrk2_current_user',
   MAP_KEY = 'wrk2_sonekart', MAP_RATIO_KEY = 'wrk2_sonekart_ratio';
 
@@ -572,7 +590,7 @@ function buildData() {
 }
 
 // ---------- lagring ----------
-let DATA = [], FIRMS = [], USERS = [], METHODS = [], currentUserId = null, SETTINGS = {};
+let DATA = [], ATS = [], FIRMS = [], USERS = [], METHODS = [], currentUserId = null, SETTINGS = {};
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
 function readRaw(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -586,19 +604,62 @@ function giAnsvar(o, key) {
   o.ansvarGodkjenning = PERSONER[(u + 1 + Math.floor(r() * (PERSONER.length - 1))) % PERSONER.length];
 }
 function migrate(data) {
-  data.forEach(a => { giAnsvar(a, a.id); a.at.forEach(t => giAnsvar(t, t.nr)); });
-  data.forEach(a => a.at.forEach(t => {
+  data.forEach(a => { giAnsvar(a, a.id); (a.at || []).forEach(t => giAnsvar(t, t.nr)); });
+  data.forEach(a => (a.at || []).forEach(t => {
     if (!Array.isArray(t.plasseringer)) t.plasseringer = [];
     delete t.plassering;
   }));
   return data;
 }
+// AT-er lagres i egen liste (ATS) og kan knyttes til flere aktiviteter. a.at fylles ved kjøring av relink().
+function guessMetode(a, t) {
+  const nrs = mbNrs(a);
+  if (nrs.length <= 1) return nrs[0] || '';
+  return nrs.find(n => (DELOP[n] || []).some(([navn]) => navn === t.navn)) || nrs[0];
+}
+function splitLegacy(data) {
+  const ats = [];
+  data.forEach(a => {
+    (a.at || []).forEach(t => {
+      const {plassering, ...rest} = t;
+      ats.push({...rest, id: t.id || t.nr, metode: t.metode !== undefined ? t.metode : guessMetode(a, t), aktiviteter: [a.id]});
+    });
+    delete a.at;
+  });
+  return {acts: data, ats};
+}
+function normalizeAll() {
+  DATA.forEach(a => { giAnsvar(a, a.id); delete a.at; });
+  ATS.forEach(t => {
+    if (!t.id) t.id = t.nr || uid();
+    if (!Array.isArray(t.aktiviteter)) t.aktiviteter = [];
+    if (typeof t.metode !== 'string') t.metode = '';
+    if (!Array.isArray(t.plasseringer)) t.plasseringer = [];
+    if (!t.forutsetninger) t.forutsetninger = ikkeVurdert();
+    if (!Array.isArray(t.dodsrisiko)) t.dodsrisiko = [];
+    delete t.plassering;
+    giAnsvar(t, t.nr);
+  });
+  METHODS.forEach(m => { if (m.firma === undefined) m.firma = FIRMA_METODE[m.nr] || ''; });
+  relink();
+}
+function relink() {
+  const byId = new Map(DATA.map(a => [a.id, a]));
+  DATA.forEach(a => { Object.defineProperty(a, 'at', {value: [], writable: true, enumerable: false, configurable: true}); });
+  ATS.forEach(t => {
+    t.aktiviteter = [...new Set(t.aktiviteter)].filter(id => byId.has(id));
+    t.aktiviteter.forEach(id => byId.get(id).at.push(t));
+  });
+  DATA.forEach(a => a.at.sort((x, y) => byNr(x.nr, y.nr)));
+}
+const actById = id => DATA.find(a => a.id === id);
+function actMbNrs(a) { return [...new Set([...mbNrs(a), ...a.at.map(t => t.metode).filter(Boolean)])].sort(byNr); }
 function ferdigFoerPlan(a) {
   return a.status === 'Utført' && a.at.every(t => t.status === 'Utført')
     && endDate(a) < PLAN_FRA && a.at.every(t => endDate(t) < PLAN_FRA);
 }
 function cleanup(data) { return data.filter(a => !ferdigFoerPlan(a)); }
-function freshData() { return cleanup(migrate(buildData())); }
+function freshData() { return splitLegacy(cleanup(migrate(buildData()))); }
 
 function seedUsers() {
   return [
@@ -628,19 +689,20 @@ function normalizeFirms(list) {
   return list;
 }
 function load() {
-  let d = readJSON(STORAGE_KEY);
+  let d = readJSON(STORAGE_KEY), ats = readJSON(ATS_KEY);
   if (!Array.isArray(d) || !d.length) {
     const old = readJSON('wrk2_v5');
-    d = cleanup(migrate(Array.isArray(old) && old.length ? old : buildData()));
-  }
-  DATA = migrate(d);
+    ({acts: d, ats} = splitLegacy(cleanup(migrate(Array.isArray(old) && old.length ? old : buildData()))));
+  } else if (!Array.isArray(ats)) ({acts: d, ats} = splitLegacy(migrate(d)));
+  DATA = d; ATS = ats;
   FIRMS = normalizeFirms(readJSON(FIRMS_KEY) || readJSON('wrk2_firms_v5'));
   METHODS = readJSON(METHODS_KEY) || DEFAULT_METHODS.map(m => ({...m}));
+  normalizeAll();
   USERS = loadUsers();
   SETTINGS = {skrastrek: false, fuIkkeVurdert: false, ...(readJSON(SETTINGS_KEY) || {})};
   if (!SETTINGS.fuIkkeVurdert) {
     // Engangsnullstilling: alle sju forutsetninger starter som «ikke vurdert».
-    DATA.forEach(a => { a.forutsetninger = ikkeVurdert(); a.at.forEach(t => { t.forutsetninger = ikkeVurdert(); }); });
+    DATA.forEach(a => { a.forutsetninger = ikkeVurdert(); }); ATS.forEach(t => { t.forutsetninger = ikkeVurdert(); });
     SETTINGS.fuIkkeVurdert = true;
   }
   currentUserId = readRaw(CURRENT_KEY);
@@ -650,6 +712,7 @@ function load() {
 function save() {
   if (CLOUD) { if (window.cloudSync) window.cloudSync(); return; }
   writeRaw(STORAGE_KEY, JSON.stringify(DATA));
+  writeRaw(ATS_KEY, JSON.stringify(ATS));
   writeRaw(FIRMS_KEY, JSON.stringify(FIRMS));
   writeRaw(METHODS_KEY, JSON.stringify(METHODS));
   writeRaw(USERS_KEY, JSON.stringify(USERS));
@@ -660,7 +723,7 @@ function loadMap() { return readRaw(MAP_KEY); }
 
 const OMRADER = () => [...new Set(EXCEL.map(r => r[1]).concat(DATA.map(a => a.omrade), ZONES.map(z => z.navn)))];
 function firmColor(n) { const f = FIRMS.find(x => x.navn === n); return f && /^#[0-9a-f]{6}$/i.test(f.farge) ? f.farge : '#7f8c8d'; }
-function findAT(nr) { for (const a of DATA) { const t = a.at.find(x => x.nr === nr); if (t) return {a, t}; } return null; }
+function findAT(nr) { const t = ATS.find(x => x.nr === nr); return t ? {a: actById(t.aktiviteter[0]) || null, t} : null; }
 
 // ---------- tilgang ----------
 // Demo-innlogging i nettleseren: styrer hva brukergrensesnittet tillater, men er ingen sikker tilgangskontroll.
@@ -693,7 +756,7 @@ const ui = {
   klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set(), showArchive: false},
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
-  metoder: {search: '', bareUkoblede: false, showArchive: false},
+  metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set()},
   admin: {firmDel: null},
   koord: {week: null, selected: null, drawing: null}
 };
@@ -768,7 +831,7 @@ function mainRow(a, page) {
     </td>
     <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : mondayOf(a.startdato) < mondayOf(TODAY) ? ` <span class="badge carry-tag" title="Startet ${fmtNo(a.startdato)} og pågår fortsatt">Videreført fra uke ${isoWeek(a.startdato)}</span>` : ''}</div></td>
     ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
-    <td class="c">${cLys('metode.status', a.metode.status, ed, METODE_LYS)}${a.metode.nr ? `<div class="sub">MB ${esc(a.metode.nr)}</div>` : ''}</td>
+    <td class="c">${cLys('metode.status', a.metode.status, ed, METODE_LYS)}${actMbNrs(a).length ? `<div class="sub">MB ${esc(actMbNrs(a).join(', '))}</div>` : ''}</td>
     <td>${a.at.length ? a.at.map(t => `<span class="at-chip" data-action="goto-at" data-nr="${esc(t.nr)}" title="Gå til ${esc(t.nr)}">${esc(t.nr)}</span>`).join('<br>') : '<span class="muted">Ingen</span>'}</td>
     ${c.lys}
     <td>${cRisk(a.risikoniva, ed)}</td>
@@ -801,9 +864,9 @@ function detailRows(a, page) {
   a.at.forEach((t, i) => {
     const ed = editing && canEditAT(a, t);
     const c = commonCells(t, ed, editing && canEditAct(a));
-    h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(t.nr)}">
+    h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(a.id)}-${esc(t.nr)}">
       <td class="col-ctrl">${actEd ? `<button class="icon-btn danger" data-action="del-at" title="Slett ${esc(t.nr)}">🗑</button> ` : ''}<span class="conn">↳</span></td>
-      <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(t.navn)}">` : esc(t.navn)}<div class="sub">${esc(t.nr)} · ${esc(a.id)} ${esc(a.navn)}</div></td>
+      <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(t.navn)}">` : esc(t.navn)}<div class="sub">${esc(t.nr)}${t.metode ? ` · MB ${esc(t.metode)}` : ''}${t.aktiviteter.length > 1 ? ` · også på ${esc(t.aktiviteter.filter(x => x !== a.id).join(', '))}` : ''}</div></td>
       ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
       ${i === 0 ? metodeCell : ''}
       <td class="at-nr-cell">${ed ? `<input type="text" class="w-nr" data-field="nr" value="${esc(t.nr)}">` : `<span class="at-chip linked">${esc(t.nr)}</span>`}</td>
@@ -878,7 +941,7 @@ function renderTable(page) {
 }
 
 function renderStats(page, rows) {
-  const ats = rows.flatMap(a => a.at);
+  const ats = [...new Set(rows.flatMap(a => a.at))];
   const cnt = s => rows.filter(a => a.status === s).length;
   const red = rows.filter(a => a.metode.status === 'rod' || FORUTSETNINGER.some(([k]) => a.forutsetninger[k] === 'rod')).length;
   const ikke = rows.filter(a => FORUTSETNINGER.some(([k]) => a.forutsetninger[k] === 'ikke')).length;
@@ -917,7 +980,7 @@ function periodRange() {
 function atsInPeriod() {
   const [from, to] = periodRange();
   const list = [];
-  DATA.forEach(a => a.at.forEach(t => { if (t.startdato <= to && endDate(t) >= from) list.push({a, t}); }));
+  ATS.forEach(t => { if (t.startdato <= to && endDate(t) >= from) list.push({a: actById(t.aktiviteter[0]) || {id: '', navn: 'Ikke knyttet til aktivitet', firma: t.firma}, t}); });
   return list.sort((x, y) => x.t.startdato.localeCompare(y.t.startdato) || x.t.nr.localeCompare(y.t.nr));
 }
 function zonesApply() {
@@ -1027,7 +1090,7 @@ function renderKoord() {
       <div class="at-card-body">
         <div class="at-card-top"><span class="at-chip linked">${esc(t.nr)}</span>${cDod(t.dodsrisiko, false)}<span class="badge ${RISK_CLS[t.risikoniva] || ''}">${esc(t.risikoniva)}</span></div>
         <div class="at-card-name">${esc(t.navn)}</div>
-        <div class="sub">${esc(a.id)} ${esc(a.navn)}</div>
+        <div class="sub">${esc(a.id)} ${esc(a.navn)}${t.aktiviteter.length > 1 ? ` <span class="muted">+ ${t.aktiviteter.length - 1} til</span>` : ''}</div>
         <div class="sub" style="margin-top:3px">${firmBadge(t.firma)} ${fmtShort(t.startdato)}–${fmtShort(endDate(t))} · ${esc(t.omrade)}</div>
         <div class="placement">${n ? `📍 ${zones.map(esc).join(', ')}${n > 1 ? ` <span class="muted">(${n} plasseringer)</span>` : ''}${can ? ` · <button class="link-btn" data-action="unplace-all">Fjern alle</button>` : ''}`
           : `<span class="muted">${can ? 'Ikke plassert – dra til kartet' : 'Ikke plassert'}</span>`}</div>
@@ -1201,12 +1264,14 @@ function skRange(items) {
 }
 function skCollect() {
   const st = ui.skrastrek, items = [];
+  const seen = new Set();
   DATA.filter(a => matches(a, st) && (st.showArchive || !erArkiv(a))).forEach(a => {
     if (st.niva === 'akt') {
       items.push({a, key: a.id, label: a.id, navn: a.navn, firma: a.firma, zone: a.omrade, start: a.startdato, end: endDate(a), status: a.status, dod: [...new Set([...a.dodsrisiko, ...a.at.flatMap(t => t.dodsrisiko)])]});
     } else {
       a.at.forEach(t => {
-        if (st.firms && !st.firms.has(t.firma)) return;
+        if (seen.has(t) || (st.firms && !st.firms.has(t.firma))) return;
+        seen.add(t);
         const zones = [...new Set(t.plasseringer.map(p => p.sone).filter(Boolean))];
         (zones.length ? zones : [t.omrade]).forEach(z => items.push({a, t, key: t.nr + '|' + z, label: t.nr, navn: t.navn, firma: t.firma, zone: z,
           start: t.startdato, end: endDate(t), status: t.status, dod: t.dodsrisiko, placed: zones.length > 0}));
@@ -1341,101 +1406,182 @@ document.addEventListener('click', e => {
   if (row) { row.scrollIntoView({block: 'center'}); row.classList.add('flash-main'); setTimeout(() => row.classList.remove('flash-main'), 1700); }
 });
 
-// ---------- metodebeskrivelser ----------
-const DEFAULT_METHODS = Object.entries(METODER).map(([nr, m]) => ({nr, navn: m.navn, rev: m.rev}));
-const byNr = (x, y) => x.localeCompare(y, 'nb', {numeric: true});
+// ---------- metodebeskrivelser (entreprenør → metodebeskrivelse → AT → aktiviteter) ----------
+const DEFAULT_METHODS = Object.entries(METODER).map(([nr, m]) => ({nr, navn: m.navn, rev: m.rev, firma: FIRMA_METODE[nr] || ''}));
+const byNr = (x, y) => String(x).localeCompare(String(y), 'nb', {numeric: true});
 function mbNrs(a) { return (a.metode.nr || '').split(',').map(s => s.trim()).filter(Boolean); }
 function setMbNrs(a, list) { a.metode.nr = [...new Set(list)].sort(byNr).join(', '); }
+const methodByNr = nr => METHODS.find(m => m.nr === nr);
+const methodFirm = m => (m && m.firma && FIRMS.some(f => f.navn === m.firma)) ? m.firma : '';
+function canLinkAT(t) { return canEditFirm(t.firma) || t.aktiviteter.some(id => { const a = actById(id); return a && canEditAct(a); }); }
+const atById = id => ATS.find(t => t.id === id);
 
 function renderMetoder() {
   const st = ui.metoder, sys = isSys();
-  const acts = DATA.filter(a => (st.showArchive || !erArkiv(a)) && matches(a, {firms: null, search: st.search}))
+  const q = {firms: null, search: st.search};
+  const acts = DATA.filter(a => (st.showArchive || !erArkiv(a)) && matches(a, q))
     .sort((x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
   const ab = document.querySelector('.archive-btn[data-page="metoder"]');
-  const nArkiv = DATA.filter(a => matches(a, {firms: null, search: st.search}) && erArkiv(a)).length;
+  const nArkiv = DATA.filter(a => matches(a, q) && erArkiv(a)).length;
   ab.textContent = st.showArchive ? `📦 Skjul arkiv (${nArkiv})` : `📦 Vis arkiv (${nArkiv})`;
   ab.classList.toggle('on', st.showArchive);
   document.getElementById('mb-unlinked').checked = st.bareUkoblede;
 
-  const unknown = [...new Set(DATA.flatMap(mbNrs))].filter(n => !METHODS.some(m => m.nr === n)).sort(byNr);
-  const methods = [...[...METHODS].sort((x, y) => byNr(x.nr, y.nr)), ...unknown.map(nr => ({nr, navn: 'Ikke i listen over metodebeskrivelser', rev: '', ukjent: true}))];
-  const chip = (a, from) => `<span class="mb-chip${canEditAct(a) ? '' : ' locked'}" data-id="${esc(a.id)}" data-from="${esc(from)}" style="border-left-color:${firmColor(a.firma)}" title="${esc(a.id + ' ' + a.navn + ' – ' + a.firma)}">
-      <b>${esc(a.id)}</b> ${esc(a.navn)}${canEditAct(a) ? ` <button class="mb-x" data-action="mb-unlink" title="Fjern koblingen">×</button>` : ''}</span>`;
-  document.getElementById('mb-methods').innerHTML = `<h3>Metodebeskrivelser</h3>` + methods.map(m => {
-    const linked = acts.filter(a => mbNrs(a).includes(m.nr));
-    return `<div class="mb-card${m.ukjent ? ' ukjent' : ''}" data-nr="${esc(m.nr)}">
-      <div class="mb-head"><div><b>MB ${esc(m.nr)}</b> ${esc(m.navn)}${m.rev ? ` <span class="sub">rev. ${esc(m.rev)}</span>` : ''}</div>
-        <div class="mb-head-r"><span class="badge st-plan">${linked.length}</span>${sys && !m.ukjent ? `<button class="mb-x" data-action="mb-del" title="Slett metodebeskrivelsen">🗑</button>` : ''}</div></div>
-      <div class="mb-chips">${linked.length ? linked.map(a => chip(a, m.nr)).join('') : '<span class="muted sub">Dra aktiviteter hit</span>'}</div>
+  const actChip = (a, attrs) => `<span class="mb-chip${attrs.can ? '' : ' locked'}${erArkiv(a) ? ' arkiv' : ''}" data-id="${esc(a.id)}" ${attrs.data}
+      style="border-left-color:${firmColor(a.firma)}" title="${esc(a.id + ' ' + a.navn + ' – ' + a.firma)}"><b>${esc(a.id)}</b> ${esc(a.navn)}${attrs.can ? ` <button class="mb-x" data-action="${attrs.action}" title="Fjern koblingen">×</button>` : ''}</span>`;
+  const atBox = t => {
+    const canT = canEditFirm(t.firma), canL = canLinkAT(t);
+    const linked = t.aktiviteter.map(actById).filter(Boolean);
+    return `<div class="at-box" data-atid="${esc(t.id)}">
+      <div class="at-box-head">
+        ${canT ? '<span class="drag-handle at-handle" title="Dra AT-en til en annen metodebeskrivelse">⠿</span>' : ''}
+        <span class="at-chip linked">${esc(t.nr)}</span> <b>${esc(t.navn)}</b>
+        ${methodFirm(methodByNr(t.metode)) !== t.firma ? firmBadge(t.firma) : ''}
+        <span class="dod">${t.dodsrisiko.map(k => dodIcon(k, 20)).join('')}</span>
+        <span class="at-box-tools">${canT ? `<button class="mb-x" data-action="at-rename" title="Endre navn">✏️</button><button class="mb-x" data-action="at-del" title="Slett AT-en">🗑</button>` : ''}</span>
+      </div>
+      <div class="mb-chips">${linked.length ? linked.map(a => actChip(a, {can: canL, action: 'at-unlink', data: `data-from-at="${esc(t.id)}"`})).join('')
+        : `<span class="muted sub">${canL ? 'Dra aktiviteter hit for å knytte dem til AT-en' : 'Ingen aktiviteter knyttet'}</span>`}</div>
     </div>`;
-  }).join('')
-  + (sys ? `<div class="mb-add"><input type="text" id="mb-nr" placeholder="Nr., f.eks. 4.1"><input type="text" id="mb-navn" placeholder="Navn på metodebeskrivelsen">
-      <input type="text" id="mb-rev" placeholder="Revisjon (dato)"><button class="btn primary" data-action="mb-add">Legg til</button></div>` : '');
+  };
+  const methodCard = m => {
+    const ats = ATS.filter(t => t.metode === m.nr).sort((x, y) => byNr(x.nr, y.nr));
+    const direct = DATA.filter(a => mbNrs(a).includes(m.nr) && !a.at.some(t => t.metode === m.nr));
+    const editing = sys && st.editMb === m.nr && !m.ukjent;
+    const head = editing
+      ? `<div class="mb-edit">
+          <input type="text" id="mbe-nr" value="${esc(m.nr)}" placeholder="Nr." style="max-width:80px">
+          <input type="text" id="mbe-navn" value="${esc(m.navn)}" placeholder="Navn">
+          <input type="text" id="mbe-rev" value="${esc(m.rev || '')}" placeholder="Revisjon">
+          <select id="mbe-firma"><option value="">Uten entreprenør</option>${FIRMS.map(f => `<option value="${esc(f.navn)}" ${f.navn === m.firma ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')}</select>
+          <button class="btn primary" data-action="mb-save">Lagre</button><button class="btn" data-action="mb-cancel">Avbryt</button></div>`
+      : `<div class="mb-head"><div><b>MB ${esc(m.nr)}</b> ${esc(m.navn)}${m.rev ? ` <span class="sub">rev. ${esc(m.rev)}</span>` : ''}</div>
+          <div class="mb-head-r"><span class="badge st-plan" title="AT-er">${ats.length} AT</span>${sys && !m.ukjent ? `<button class="mb-x" data-action="mb-edit" title="Endre tekst og entreprenør">✏️</button><button class="mb-x" data-action="mb-del" title="Slett metodebeskrivelsen">🗑</button>` : ''}</div></div>`;
+    return `<div class="mb-card${m.ukjent ? ' ukjent' : ''}" data-nr="${esc(m.nr)}">
+      ${head}
+      ${ats.map(atBox).join('') || '<p class="muted sub" style="margin:4px 0">Ingen AT-er ennå.</p>'}
+      ${direct.length ? `<div class="mb-direct"><span class="sub">Knyttet direkte uten AT:</span><div class="mb-chips">${direct.map(a => actChip(a, {can: canEditAct(a), action: 'mb-unlink', data: `data-from="${esc(m.nr)}"`})).join('')}</div></div>` : ''}
+      ${!m.ukjent && (sys || canEditFirm(m.firma)) ? `<button class="btn small-dark" data-action="at-new">+ Ny AT</button>` : ''}
+    </div>`;
+  };
 
-  const shown = st.bareUkoblede ? acts.filter(a => !mbNrs(a).length) : acts;
-  const nUten = acts.filter(a => !mbNrs(a).length).length;
-  document.getElementById('mb-acts').innerHTML = `<h3>Aktiviteter <span class="sub">(${nUten} uten metodebeskrivelse)</span></h3>` + (shown.length ? shown.map(a => {
-    const can = canEditAct(a), nrs = mbNrs(a);
-    return `<div class="mb-act${can ? '' : ' locked'}${nrs.length ? '' : ' uten'}" data-id="${esc(a.id)}" style="border-left-color:${firmColor(a.firma)}">
-      ${can ? '<span class="drag-handle" title="Dra til en metodebeskrivelse">⠿</span>' : `<span class="lock" title="Bare ${esc(a.firma)} kan koble denne aktiviteten">🔒</span>`}
+  const unknown = [...new Set([...DATA.flatMap(mbNrs), ...ATS.map(t => t.metode).filter(Boolean)])].filter(n => !methodByNr(n)).sort(byNr)
+    .map(nr => ({nr, navn: 'Ikke i listen over metodebeskrivelser', rev: '', firma: '', ukjent: true}));
+  const allMethods = [...METHODS, ...unknown];
+  const orphanAts = ATS.filter(t => !t.metode || !methodByNr(t.metode));
+  const groups = [...FIRMS.map(f => f.navn), ''].map(firm => ({
+    firm,
+    methods: allMethods.filter(m => methodFirm(m) === firm).sort((x, y) => byNr(x.nr, y.nr)),
+    orphans: orphanAts.filter(t => (FIRMS.some(f => f.navn === t.firma) ? t.firma : '') === firm)
+  })).filter(g => g.methods.length || g.orphans.length);
+
+  document.getElementById('mb-methods').innerHTML = `<h3>Entreprenører og metodebeskrivelser</h3>` + groups.map(g => `
+    <div class="mb-firm${ui.metoder.closed.has(g.firm) ? ' closed' : ''}">
+      <div class="mb-firm-head" data-action="mb-firm-toggle" data-firm="${esc(g.firm)}">
+        <span>${ui.metoder.closed.has(g.firm) ? '＋' : '－'}</span> ${g.firm ? firmBadge(g.firm) : '<b>Uten entreprenør</b>'}
+        <span class="sub">${g.methods.length} metodebeskrivelser · ${g.methods.reduce((n, m) => n + ATS.filter(t => t.metode === m.nr).length, 0) + g.orphans.length} AT</span>
+      </div>
+      <div class="mb-firm-body">
+        ${g.methods.map(methodCard).join('')}
+        ${g.orphans.length ? `<div class="mb-card orphan"><div class="mb-head"><div><b>AT uten metodebeskrivelse</b> <span class="sub">Dra AT-en til riktig metodebeskrivelse</span></div></div>${g.orphans.map(atBox).join('')}</div>` : ''}
+      </div>
+    </div>`).join('')
+  + (sys ? `<div class="mb-add"><input type="text" id="mb-nr" placeholder="Nr., f.eks. 4.1"><input type="text" id="mb-navn" placeholder="Navn på metodebeskrivelsen">
+      <input type="text" id="mb-rev" placeholder="Revisjon (dato)"><select id="mb-firma"><option value="">Uten entreprenør</option>${FIRMS.map(f => `<option value="${esc(f.navn)}">${esc(f.navn)}</option>`).join('')}</select>
+      <button class="btn primary" data-action="mb-add">Legg til metodebeskrivelse</button></div>` : '');
+
+  const shown = st.bareUkoblede ? acts.filter(a => !a.at.length) : acts;
+  const nUten = acts.filter(a => !a.at.length).length;
+  document.getElementById('mb-acts').innerHTML = `<h3>Aktiviteter <span class="sub">(${nUten} uten AT)</span></h3>` + (shown.length ? shown.map(a => {
+    const can = canEditAct(a) || a.at.some(canLinkAT) || ATS.some(t => canEditFirm(t.firma));
+    const nrs = actMbNrs(a);
+    return `<div class="mb-act${can ? '' : ' locked'}${a.at.length ? '' : ' uten'}" data-id="${esc(a.id)}" style="border-left-color:${firmColor(a.firma)}">
+      ${can ? '<span class="drag-handle" title="Dra til en AT eller metodebeskrivelse">⠿</span>' : '<span class="lock" title="Du kan ikke koble denne aktiviteten">🔒</span>'}
       <div class="at-card-body">
         <div><b>${esc(a.id)}</b> ${esc(a.navn)}</div>
         <div class="sub">${esc(a.omrade)} · uke ${isoWeek(a.startdato)} · ${firmBadge(a.firma)}</div>
-        <div class="mb-tags">${nrs.length ? nrs.map(n => `<span class="mb-tag">MB ${esc(n)}</span>`).join('') : '<span class="mb-tag none">Ingen metodebeskrivelse</span>'}</div>
+        <div class="mb-tags">${a.at.map(t => `<span class="mb-tag at">${esc(t.nr)}</span>`).join('')}${nrs.map(n => `<span class="mb-tag">MB ${esc(n)}</span>`).join('')}${a.at.length ? '' : '<span class="mb-tag none">Ingen AT</span>'}</div>
       </div>
     </div>`;
   }).join('') : '<p class="muted">Ingen aktiviteter passer med filteret.</p>');
 }
 
-function mbLink(id, nr, from) {
-  const a = DATA.find(x => x.id === id);
-  if (!a || !canEditAct(a) || nr === from) return;
-  const nrs = mbNrs(a).filter(n => n !== from);
-  if (!nrs.includes(nr)) nrs.push(nr);
-  setMbNrs(a, nrs);
+function linkActToAt(id, atid, fromAt, fromMb) {
+  const a = actById(id), t = atById(atid);
+  if (!a || !t || !canLinkAT(t)) { showToast('Du har ikke tilgang til å koble denne AT-en.'); return; }
+  if (fromAt === atid) return;
+  if (!t.aktiviteter.length && !t.omrade) { t.omrade = a.omrade; t.startdato = a.startdato; t.varighet = a.varighet; }
+  if (!t.aktiviteter.includes(id)) t.aktiviteter.push(id);
+  if (fromAt) { const s = atById(fromAt); if (s && canLinkAT(s)) s.aktiviteter = s.aktiviteter.filter(x => x !== id); }
+  if (fromMb && canEditAct(a)) setMbNrs(a, mbNrs(a).filter(n => n !== fromMb));
+  relink(); save(); renderMetoder();
+  showToast(`${a.id} er ${fromAt || fromMb ? 'flyttet' : 'knyttet'} til ${t.nr}.`);
+}
+function mbLink(id, nr, fromMb, fromAt) {
+  const a = actById(id);
+  if (!a || !canEditAct(a) || nr === fromMb) return;
+  setMbNrs(a, [...mbNrs(a).filter(n => n !== fromMb), nr]);
+  if (fromAt) { const s = atById(fromAt); if (s && canLinkAT(s)) s.aktiviteter = s.aktiviteter.filter(x => x !== id); }
+  relink(); save(); renderMetoder();
+  showToast(`${a.id} er knyttet direkte til MB ${nr}.`);
+}
+function moveAtToMethod(atid, nr) {
+  const t = atById(atid);
+  if (!t || !canEditFirm(t.firma) || t.metode === nr) return;
+  t.metode = nr;
   save(); renderMetoder();
-  showToast(`${a.id} er ${from ? 'flyttet' : 'koblet'} til MB ${nr}.`);
+  showToast(`${t.nr} er flyttet til MB ${nr}.`);
 }
 
 let mbDrag = null;
 document.addEventListener('pointerdown', e => {
   if (currentTab !== 'metoder' || e.button > 0 || e.target.closest('button')) return;
+  const h = e.target.closest('.at-handle');
+  if (h) { mbDrag = {kind: 'at', id: h.closest('.at-box').dataset.atid, x0: e.clientX, y0: e.clientY, moved: false}; e.preventDefault(); return; }
   const el = e.target.closest('.mb-act, .mb-chip');
   if (!el || el.classList.contains('locked')) return;
   if (el.classList.contains('mb-act') && e.pointerType !== 'mouse' && !e.target.closest('.drag-handle')) return;
-  mbDrag = {id: el.dataset.id, from: el.dataset.from || null, x0: e.clientX, y0: e.clientY, moved: false, ghost: null};
+  mbDrag = {kind: 'act', id: el.dataset.id, fromMb: el.dataset.from || null, fromAt: el.dataset.fromAt || null, x0: e.clientX, y0: e.clientY, moved: false};
   e.preventDefault();
 });
+function mbTarget(e) {
+  const over = document.elementFromPoint(e.clientX, e.clientY);
+  if (!over) return null;
+  if (mbDrag.kind === 'act') { const b = over.closest('.at-box'); if (b) return b; }
+  const c = over.closest('.mb-card:not(.ukjent):not(.orphan)');
+  return c;
+}
 document.addEventListener('pointermove', e => {
   if (!mbDrag) return;
   if (!mbDrag.moved && Math.hypot(e.clientX - mbDrag.x0, e.clientY - mbDrag.y0) < 5) return;
   mbDrag.moved = true;
   if (!mbDrag.ghost) {
-    const a = DATA.find(x => x.id === mbDrag.id);
+    const t = mbDrag.kind === 'at' ? atById(mbDrag.id) : null, a = t ? null : actById(mbDrag.id);
     mbDrag.ghost = document.createElement('div');
     mbDrag.ghost.className = 'drag-ghost';
-    mbDrag.ghost.textContent = mbDrag.id;
-    mbDrag.ghost.style.background = firmColor(a ? a.firma : '');
+    mbDrag.ghost.textContent = t ? t.nr : mbDrag.id;
+    mbDrag.ghost.style.background = firmColor(t ? t.firma : a ? a.firma : '');
     document.body.appendChild(mbDrag.ghost);
   }
   mbDrag.ghost.style.left = e.clientX + 'px';
   mbDrag.ghost.style.top = e.clientY + 'px';
   if (e.clientY < 70) window.scrollBy(0, -18);
   else if (e.clientY > window.innerHeight - 70) window.scrollBy(0, 18);
-  const over = document.elementFromPoint(e.clientX, e.clientY);
-  const card = over && over.closest('.mb-card');
-  document.querySelectorAll('.mb-card.drop-hover').forEach(c => c !== card && c.classList.remove('drop-hover'));
-  if (card) card.classList.add('drop-hover');
+  const tgt = mbTarget(e);
+  document.querySelectorAll('.drop-hover').forEach(c => c !== tgt && c.classList.remove('drop-hover'));
+  if (tgt) tgt.classList.add('drop-hover');
 });
 function mbEnd(e, cancelled) {
   if (!mbDrag) return;
-  const d = mbDrag; mbDrag = null;
+  const d = mbDrag;
+  const tgt = !cancelled && d.moved ? mbTarget(e) : null;
+  mbDrag = null;
   if (d.ghost) d.ghost.remove();
-  document.querySelectorAll('.mb-card.drop-hover').forEach(c => c.classList.remove('drop-hover'));
-  if (cancelled || !d.moved) return;
-  const over = document.elementFromPoint(e.clientX, e.clientY);
-  const card = over && over.closest('.mb-card');
-  if (card) mbLink(d.id, card.dataset.nr, d.from);
+  document.querySelectorAll('.drop-hover').forEach(c => c.classList.remove('drop-hover'));
+  if (!tgt) return;
+  if (d.kind === 'at') { moveAtToMethod(d.id, tgt.dataset.nr); return; }
+  if (tgt.classList.contains('at-box')) linkActToAt(d.id, tgt.dataset.atid, d.fromAt, d.fromMb);
+  else mbLink(d.id, tgt.dataset.nr, d.fromMb, d.fromAt);
 }
 document.addEventListener('pointerup', e => mbEnd(e, false));
 document.addEventListener('pointercancel', e => mbEnd(e, true));
@@ -1535,7 +1681,7 @@ function setPath(obj, path, v) {
   o[parts[parts.length - 1]] = v;
 }
 function nextAtNr() {
-  const max = DATA.flatMap(a => a.at).reduce((m, t) => { const n = parseInt(String(t.nr).replace(/\D/g, ''), 10); return isNaN(n) ? m : Math.max(m, n); }, 0);
+  const max = ATS.reduce((m, t) => { const n = parseInt(String(t.nr).replace(/\D/g, ''), 10); return isNaN(n) ? m : Math.max(m, n); }, 0);
   return 'AT-' + String(max + 1).padStart(3, '0');
 }
 
@@ -1590,7 +1736,7 @@ document.addEventListener('click', e => {
     const {a} = targetOf(btn); const nr = btn.dataset.nr;
     ui[page].expanded.add(a.id);
     renderTable(page);
-    const row = document.getElementById(`row-${page}-${nr}`);
+    const row = document.getElementById(`row-${page}-${a.id}-${nr}`);
     if (row) { row.scrollIntoView({block: 'center', behavior: 'smooth'}); row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1700); }
     return;
   }
@@ -1602,16 +1748,18 @@ document.addEventListener('click', e => {
   }
   if (action === 'add-at') {
     const {a} = targetOf(btn); if (!canEditAct(a)) return;
-    a.at.push({nr: nextAtNr(), navn: 'Ny arbeidsoperasjon', omrade: a.omrade, startdato: a.startdato, varighet: a.varighet, firma: a.firma,
+    ATS.push({id: uid(), metode: actMbNrs(a)[0] || '', aktiviteter: [a.id], nr: nextAtNr(), navn: 'Ny arbeidsoperasjon', omrade: a.omrade, startdato: a.startdato, varighet: a.varighet, firma: a.firma,
       forutsetninger: {...a.forutsetninger}, risikoniva: 'Middels', dodsrisiko: [], status: 'Til utførelse', kommentar: '', plasseringer: [],
       ansvarUtforelse: a.ansvarUtforelse, ansvarGodkjenning: a.ansvarGodkjenning});
-    save(); renderTable(page); return;
+    relink(); save(); renderTable(page); return;
   }
   if (action === 'del-at') {
     const {a, obj} = targetOf(btn); if (!canEditAct(a)) return;
-    if (!confirm(`Slette ${obj.nr} «${obj.navn}»?`)) return;
-    a.at.splice(a.at.indexOf(obj), 1);
-    save(); renderTable(page); return;
+    const keep = obj.aktiviteter.length > 1 || obj.metode;
+    if (!confirm(keep ? `Fjerne ${obj.nr} «${obj.navn}» fra ${a.id}? AT-en beholdes under metodebeskrivelsen.` : `Slette ${obj.nr} «${obj.navn}»?`)) return;
+    obj.aktiviteter = obj.aktiviteter.filter(id => id !== a.id);
+    if (!keep) ATS = ATS.filter(t => t !== obj);
+    relink(); save(); renderTable(page); return;
   }
 
   // AT-koordinering
@@ -1619,6 +1767,33 @@ document.addEventListener('click', e => {
   if (action === 'unplace-all') {
     const f = findAT(btn.closest('.at-card').dataset.nr);
     if (f && canPlaceAT(f.t) && confirm(`Fjerne alle ${f.t.plasseringer.length} plasseringer for ${f.t.nr}?`)) { f.t.plasseringer = []; ui.koord.selected = null; save(); renderKoord(); }
+    return;
+  }
+  if (action === 'mb-firm-toggle') { const f = btn.dataset.firm, c = ui.metoder.closed; c.has(f) ? c.delete(f) : c.add(f); renderMetoder(); return; }
+  if (action === 'at-new') {
+    const m = methodByNr(btn.closest('.mb-card').dataset.nr); if (!m) return;
+    const firma = methodFirm(m) || me().firma;
+    if (!canEditFirm(firma)) return;
+    const navn = prompt(`Navn på ny AT under MB ${m.nr} ${m.navn}:`, 'Ny arbeidstillatelse');
+    if (!navn || !navn.trim()) return;
+    ATS.push({id: uid(), nr: nextAtNr(), navn: navn.trim(), firma, metode: m.nr, aktiviteter: [], omrade: '', startdato: mondayOf(TODAY), varighet: 5,
+      forutsetninger: ikkeVurdert(), risikoniva: 'Middels', dodsrisiko: [], status: 'Til utførelse', kommentar: '', plasseringer: [], ansvarUtforelse: '', ansvarGodkjenning: ''});
+    save(); renderMetoder(); return;
+  }
+  if (action === 'at-rename') {
+    const t = atById(btn.closest('.at-box').dataset.atid); if (!t || !canEditFirm(t.firma)) return;
+    const navn = prompt(`Nytt navn på ${t.nr}:`, t.navn);
+    if (navn && navn.trim()) { t.navn = navn.trim(); save(); renderMetoder(); }
+    return;
+  }
+  if (action === 'at-del') {
+    const t = atById(btn.closest('.at-box').dataset.atid); if (!t || !canEditFirm(t.firma)) return;
+    if (!confirm(`Slette ${t.nr} «${t.navn}»?${t.aktiviteter.length ? ` Den fjernes fra ${t.aktiviteter.length} aktivitet(er).` : ''}`)) return;
+    ATS = ATS.filter(x => x !== t); relink(); save(); renderMetoder(); return;
+  }
+  if (action === 'at-unlink') {
+    const c = btn.closest('.mb-chip'), t = atById(c.dataset.fromAt);
+    if (t && canLinkAT(t)) { t.aktiviteter = t.aktiviteter.filter(id => id !== c.dataset.id); relink(); save(); renderMetoder(); }
     return;
   }
   if (action === 'mb-unlink') {
@@ -1681,7 +1856,7 @@ document.addEventListener('click', e => {
   if (action === 'del-firm') {
     const f = FIRMS[Number(btn.dataset.i)]; if (!f) return;
     if (FIRMS.length === 1) { alert('Det må finnes minst ett firma.'); return; }
-    const inUse = DATA.some(a => a.firma === f.navn || a.at.some(t => t.firma === f.navn)) || USERS.some(u => u.firma === f.navn);
+    const inUse = DATA.some(a => a.firma === f.navn) || ATS.some(t => t.firma === f.navn) || USERS.some(u => u.firma === f.navn) || METHODS.some(m => m.firma === f.navn);
     if (inUse) { ui.admin.firmDel = f.navn; renderAdmin(); return; }
     if (!confirm(`Fjerne ${f.navn}?`)) return;
     FIRMS.splice(Number(btn.dataset.i), 1); save(); renderAdmin(); return;
@@ -1690,7 +1865,9 @@ document.addEventListener('click', e => {
   if (action === 'firm-move-del') {
     const f = FIRMS[Number(btn.dataset.i)], to = document.getElementById('firm-move-to').value;
     if (!f || !to || !confirm(`Flytte alt fra ${f.navn} til ${to} og fjerne ${f.navn}?`)) return;
-    DATA.forEach(a => { if (a.firma === f.navn) a.firma = to; a.at.forEach(t => { if (t.firma === f.navn) t.firma = to; }); });
+    DATA.forEach(a => { if (a.firma === f.navn) a.firma = to; });
+    ATS.forEach(t => { if (t.firma === f.navn) t.firma = to; });
+    METHODS.forEach(m => { if (m.firma === f.navn) m.firma = to; });
     USERS.forEach(u => { if (u.firma === f.navn) u.firma = to; });
     FIRMS = FIRMS.filter(x => x !== f);
     ui.admin.firmDel = null;
@@ -1700,20 +1877,37 @@ document.addEventListener('click', e => {
     const nr = document.getElementById('mb-nr').value.trim(), navn = document.getElementById('mb-navn').value.trim();
     if (!nr || !navn) { alert('Fyll inn nummer og navn.'); return; }
     if (METHODS.some(m => m.nr === nr)) { alert(`MB ${nr} finnes allerede.`); return; }
-    METHODS.push({nr, navn, rev: document.getElementById('mb-rev').value.trim()});
+    METHODS.push({nr, navn, rev: document.getElementById('mb-rev').value.trim(), firma: document.getElementById('mb-firma').value});
     save(); renderMetoder(); return;
   }
   if (action === 'mb-del') {
     const nr = btn.closest('.mb-card').dataset.nr;
-    const n = DATA.filter(a => mbNrs(a).includes(nr)).length;
-    if (!confirm(`Slette MB ${nr}?${n ? ` Koblingen fjernes fra ${n} aktiviteter.` : ''}`)) return;
+    const n = DATA.filter(a => mbNrs(a).includes(nr)).length, na = ATS.filter(t => t.metode === nr).length;
+    if (!confirm(`Slette MB ${nr}?${na ? ` ${na} AT-er flyttes til «AT uten metodebeskrivelse».` : ''}${n ? ` Direkte koblinger fjernes fra ${n} aktiviteter.` : ''}`)) return;
     DATA.forEach(a => { if (mbNrs(a).includes(nr)) setMbNrs(a, mbNrs(a).filter(x => x !== nr)); });
+    ATS.forEach(t => { if (t.metode === nr) t.metode = ''; });
     METHODS = METHODS.filter(m => m.nr !== nr);
+    save(); renderMetoder(); return;
+  }
+  if (action === 'mb-edit') { ui.metoder.editMb = btn.closest('.mb-card').dataset.nr; renderMetoder(); return; }
+  if (action === 'mb-cancel') { ui.metoder.editMb = null; renderMetoder(); return; }
+  if (action === 'mb-save') {
+    const old = ui.metoder.editMb, m = methodByNr(old);
+    const nr = document.getElementById('mbe-nr').value.trim(), navn = document.getElementById('mbe-navn').value.trim();
+    if (!m || !nr || !navn) { alert('Nummer og navn må fylles inn.'); return; }
+    if (nr !== old && METHODS.some(x => x.nr === nr)) { alert(`MB ${nr} finnes allerede.`); return; }
+    m.nr = nr; m.navn = navn; m.rev = document.getElementById('mbe-rev').value.trim(); m.firma = document.getElementById('mbe-firma').value;
+    if (nr !== old) {
+      DATA.forEach(a => { if (mbNrs(a).includes(old)) setMbNrs(a, mbNrs(a).map(x => x === old ? nr : x)); });
+      ATS.forEach(t => { if (t.metode === old) t.metode = nr; });
+    }
+    ui.metoder.editMb = null;
     save(); renderMetoder(); return;
   }
   if (action === 'reset-data') {
     if (!confirm(`Tilbakestille alle aktiviteter og AT-er til Excel-dataene?${CLOUD ? ' Dette gjelder for ALLE brukere.' : ''} Alle endringer og plasseringer slettes.`)) return;
-    DATA = freshData(); FIRMS = DEFAULT_FIRMS.map(f => ({...f})); METHODS = DEFAULT_METHODS.map(m => ({...m}));
+    ({acts: DATA, ats: ATS} = freshData()); FIRMS = DEFAULT_FIRMS.map(f => ({...f})); METHODS = DEFAULT_METHODS.map(m => ({...m}));
+    normalizeAll();
     ui.klargjoring.editing.clear(); ui.koord.selected = null;
     save(); alert('Dataene er tilbakestilt.'); renderAdmin(); return;
   }
@@ -1764,7 +1958,7 @@ document.addEventListener('change', e => {
   if (f === 'startdato' && !v) { renderTable(page); return; }
   if (f === 'nr') {
     v = v.trim();
-    if (!v || (DATA.some(a => a.at.some(t => t !== tg.obj && t.nr === v)))) { alert('AT-nummeret må være unikt og kan ikke være tomt.'); renderTable(page); return; }
+    if (!v || ATS.some(t => t !== tg.obj && t.nr === v)) { alert('AT-nummeret må være unikt og kan ikke være tomt.'); renderTable(page); return; }
   }
   if (f === 'navn' && !v.trim()) { renderTable(page); return; }
   setPath(tg.obj, f, v);

@@ -121,18 +121,29 @@ window.cloudSignOut = () => signOut(auth);
 
 // ---------- dataformat ----------
 // Firestore tillater ikke lister i lister, så områdepunktene lagres som {x, y}.
+const pToDoc = ps => (ps || []).map(p => ({...p, omrade: p.omrade ? p.omrade.map(([x, y]) => ({x, y})) : null}));
+const pFromDoc = ps => (ps || []).map(p => ({...p, omrade: p.omrade ? p.omrade.map(q => [q.x, q.y]) : null}));
+// Aktiviteter lagres uten AT-er; a.at er en kjøretidsliste (ikke-tellbar) og blir ikke med i JSON.
 function toDoc(a) {
   const c = JSON.parse(JSON.stringify(a));
-  c.at.forEach(t => (t.plasseringer || []).forEach(p => { p.omrade = p.omrade ? p.omrade.map(([x, y]) => ({x, y})) : null; }));
-  c.atFirmaer = [...new Set(c.at.map(t => t.firma))];
+  delete c.at;
+  c.atFirmaer = [...new Set((a.at || []).map(t => t.firma))];
   return c;
 }
+// Eldre dokumenter kan ha AT-ene innebygd i aktiviteten; de flyttes til samlingen «at» av systemadministratoren.
 function fromDoc(d) {
   const c = {...d};
   delete c.atFirmaer;
-  c.at = (c.at || []).map(t => ({...t, plasseringer: (t.plasseringer || []).map(p => ({...p, omrade: p.omrade ? p.omrade.map(q => [q.x, q.y]) : null}))}));
+  if (Array.isArray(c.at)) c.at = c.at.map(t => ({...t, plasseringer: pFromDoc(t.plasseringer)}));
   return c;
 }
+function toATDoc(t, lookup = actById) {
+  const c = JSON.parse(JSON.stringify(t));
+  c.plasseringer = pToDoc(t.plasseringer);
+  c.aktFirmaer = [...new Set(t.aktiviteter.map(id => (lookup(id) || {}).firma).filter(Boolean))];
+  return c;
+}
+function fromATDoc(d) { const c = {...d}; delete c.aktFirmaer; c.plasseringer = pFromDoc(d.plasseringer); return c; }
 function stable(v) {
   if (Array.isArray(v)) return '[' + v.map(stable).join(',') + ']';
   if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
@@ -142,7 +153,8 @@ const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma
 
 // ---------- innlogget bruker ----------
 let unsubs = [], started = false, myUid = null;
-let base = {akt: new Map(), firms: '', metoder: '', settings: '', users: new Map()};
+let base = {akt: new Map(), ats: new Map(), firms: '', metoder: '', settings: '', users: new Map()};
+let readOnly = '';
 
 onAuthStateChanged(auth, user => handleUser(user));
 
@@ -177,12 +189,12 @@ async function ensureProfile(user) {
 
 function startSync(uid) {
   myUid = uid;
-  const st = {users: null, invites: [], firms: null, metoder: null, settings: null, akt: null};
-  let invitesOn = false, seeding = false;
+  const st = {users: null, invites: [], firms: null, metoder: null, settings: null, akt: null, ats: null, atsDenied: false};
+  let invitesOn = false, seeding = false, migrating = false;
   const fail = err => { view('error', 'Mistet kontakten med databasen: ' + errText(err)); };
 
   const apply = async () => {
-    if (!st.users || !st.firms || !st.metoder || !st.settings || !st.akt) return;
+    if (!st.users || !st.firms || !st.metoder || !st.settings || !st.akt || !st.ats) return;
     const meDoc = st.users.find(u => u.id === uid);
     if (!meDoc) { unsubs.forEach(f => f()); unsubs = []; view('noaccess', auth.currentUser ? auth.currentUser.email : ''); return; }
     const sys = meDoc.rolle === 'systemadmin';
@@ -192,35 +204,63 @@ function startSync(uid) {
     }
     if (sys && !seeding && (!st.akt.length || !st.firms.length || !st.metoder.length)) { seeding = true; await seed(st); return; }
 
-    DATA = migrate(st.akt.map(fromDoc));
+    const acts = st.akt.map(fromDoc);
+    const legacy = acts.some(a => Array.isArray(a.at) && a.at.length);
+    let ats;
+    if (st.ats.length || !legacy) { acts.forEach(a => { delete a.at; }); ats = st.ats.map(fromATDoc); readOnly = ''; }
+    else {
+      if (sys && !st.atsDenied && !migrating) { migrating = true; await migrateAts(acts); return; }
+      ({ats} = splitLegacy(migrate(acts)));
+      readOnly = st.atsDenied ? 'sikkerhetsreglene i Firebase må oppdateres (se firestore.rules).' : 'en systemadministrator må logge inn én gang for å oppgradere databasen.';
+    }
+    DATA = acts; ATS = ats;
     FIRMS = st.firms.length ? st.firms : DEFAULT_FIRMS.map(f => ({...f}));
     METHODS = st.metoder.length ? st.metoder : DEFAULT_METHODS.map(m => ({...m}));
     SETTINGS = {skrastrek: false, fuIkkeVurdert: true, ...st.settings};
+    normalizeAll();
     USERS = [...st.users, ...(sys ? st.invites.map(i => ({...i, id: 'invite:' + i.email, pending: true})) : [])];
     currentUserId = uid;
     base = {
       akt: new Map(DATA.map(a => [a.id, stable(toDoc(a))])),
+      ats: new Map(ATS.map(t => [t.id, stable(toATDoc(t))])),
       firms: stable(FIRMS), metoder: stable(METHODS), settings: stable({skrastrek: !!SETTINGS.skrastrek}),
       users: new Map(USERS.map(u => [u.id, stable(userDoc(u))]))
     };
     if (!started) { started = true; unlock(); startApp(); } else scheduleRender();
+    if (readOnly) showToast('Endringer kan ikke lagres ennå: ' + readOnly);
   };
 
   unsubs.push(onSnapshot(collection(db, 'users'), s => { st.users = s.docs.map(d => ({id: d.id, ...d.data()})); apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'metoder'), s => { st.metoder = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'firms'), s => { st.firms = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'settings'), s => { st.settings = s.exists() ? s.data() : {}; apply(); }, fail));
+  unsubs.push(onSnapshot(collection(db, 'at'), s => { st.ats = s.docs.map(d => d.data()); st.atsDenied = false; apply(); },
+    () => { st.ats = []; st.atsDenied = true; apply(); }));
   unsubs.push(onSnapshot(collection(db, 'aktiviteter'), s => { st.akt = s.docs.map(d => d.data()); apply(); }, fail));
+}
+
+// Engangsoppgradering: AT-er som ligger inni aktivitetene flyttes til egen samling.
+async function migrateAts(acts) {
+  const {acts: a2, ats} = splitLegacy(migrate(acts));
+  const byId = new Map(a2.map(a => [a.id, a]));
+  const batch = writeBatch(db);
+  ats.forEach(t => batch.set(doc(db, 'at', t.id), toATDoc(t, id => byId.get(id))));
+  a2.forEach(a => batch.set(doc(db, 'aktiviteter', a.id), toDoc(a)));
+  await batch.commit();
 }
 
 // Første gang databasen er tom, lastes planen fra denne nettleseren (eller Excel-utdraget) opp av systemadministratoren.
 async function seed(st) {
   const batch = writeBatch(db);
   if (!st.akt.length) {
-    const local = readJSON('wrk2_v6');
-    let data = Array.isArray(local) && local.length ? migrate(local) : freshData();
-    if (!(readJSON('wrk2_settings') || {}).fuIkkeVurdert) data.forEach(a => { a.forutsetninger = ikkeVurdert(); a.at.forEach(t => { t.forutsetninger = ikkeVurdert(); }); });
-    data.forEach(a => batch.set(doc(db, 'aktiviteter', a.id), toDoc(a)));
+    const local = readJSON('wrk2_v6'), localAts = readJSON('wrk2_at');
+    const {acts, ats} = Array.isArray(local) && local.length
+      ? (Array.isArray(localAts) ? {acts: local, ats: localAts} : splitLegacy(migrate(local)))
+      : freshData();
+    if (!(readJSON('wrk2_settings') || {}).fuIkkeVurdert) { acts.forEach(a => { a.forutsetninger = ikkeVurdert(); }); ats.forEach(t => { t.forutsetninger = ikkeVurdert(); }); }
+    const byId = new Map(acts.map(a => [a.id, a]));
+    acts.forEach(a => batch.set(doc(db, 'aktiviteter', a.id), toDoc(a)));
+    ats.forEach(t => { if (!t.id) t.id = t.nr; if (!Array.isArray(t.aktiviteter)) t.aktiviteter = []; batch.set(doc(db, 'at', t.id), toATDoc(t, id => byId.get(id))); });
   }
   if (!st.firms.length) batch.set(doc(db, 'config', 'firms'), {list: normalizeFirms(readJSON('wrk2_firms_v6'))});
   if (!st.metoder.length) batch.set(doc(db, 'config', 'metoder'), {list: readJSON('wrk2_metoder') || DEFAULT_METHODS});
@@ -232,12 +272,19 @@ async function seed(st) {
 const saveFail = err => showToast('Kunne ikke lagre: ' + errText(err) + ' Endringen er rullet tilbake.');
 window.cloudSync = () => {
   if (!started) return;
+  if (readOnly) { showToast('Endringer kan ikke lagres ennå: ' + readOnly); return; }
   const cur = new Map(DATA.map(a => [a.id, toDoc(a)]));
   for (const [id, d] of cur) {
     const s = stable(d);
     if (base.akt.get(id) !== s) { base.akt.set(id, s); setDoc(doc(db, 'aktiviteter', id), d).catch(saveFail); }
   }
   for (const id of [...base.akt.keys()]) if (!cur.has(id)) { base.akt.delete(id); deleteDoc(doc(db, 'aktiviteter', id)).catch(saveFail); }
+  const curAt = new Map(ATS.map(t => [t.id, toATDoc(t)]));
+  for (const [id, d] of curAt) {
+    const s = stable(d);
+    if (base.ats.get(id) !== s) { base.ats.set(id, s); setDoc(doc(db, 'at', id), d).catch(saveFail); }
+  }
+  for (const id of [...base.ats.keys()]) if (!curAt.has(id)) { base.ats.delete(id); deleteDoc(doc(db, 'at', id)).catch(saveFail); }
   if (!isSys()) return;
   if (stable(METHODS) !== base.metoder) { base.metoder = stable(METHODS); setDoc(doc(db, 'config', 'metoder'), {list: METHODS}).catch(saveFail); }
   if (stable(FIRMS) !== base.firms) { base.firms = stable(FIRMS); setDoc(doc(db, 'config', 'firms'), {list: FIRMS}).catch(saveFail); }

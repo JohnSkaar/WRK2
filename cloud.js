@@ -1,29 +1,15 @@
 // Innlogging og database (Firebase Auth + Firestore). Lastes av oversikt.html når siden ikke åpnes som lokal fil.
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { app, auth, useEmulator } from './fb.js';
 import {
-  getAuth, connectAuthEmulator, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   sendEmailVerification, sendPasswordResetEmail, signOut
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
   getFirestore, connectFirestoreEmulator, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc, writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-const firebaseConfig = {
-  apiKey: 'AIzaSyBxfixz2HjuZmz1LUYKRNXuJB03n0fWrSU',
-  authDomain: 'wrk2-utkikk.firebaseapp.com',
-  projectId: 'wrk2-utkikk',
-  storageBucket: 'wrk2-utkikk.firebasestorage.app',
-  messagingSenderId: '697255744604',
-  appId: '1:697255744604:web:6a0c45285d9403a49e4299'
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getFirestore(app);
-if (location.hostname === 'localhost' && new URLSearchParams(location.search).has('emulator')) {
-  connectAuthEmulator(auth, 'http://localhost:9099', {disableWarnings: true});
-  connectFirestoreEmulator(db, 'localhost', 8080);
-}
+if (useEmulator) connectFirestoreEmulator(db, 'localhost', 8080);
 
 const $ = id => document.getElementById(id);
 const ERR = {
@@ -61,7 +47,7 @@ function view(state, info = '') {
     return;
   }
   if (state === 'verify') {
-    body.innerHTML = `<p>Vi har sendt en bekreftelseslenke til <b>${esc(info)}</b>. Åpne e-posten og trykk på lenken, og kom så tilbake hit.</p>
+    body.innerHTML = `<p>Vi har sendt en bekreftelseslenke til <b>${esc(info)}</b>. Åpne e-posten, trykk på lenken og deretter på knappen <b>«Bekreft e-postadressen»</b> på siden som åpnes. Kom så tilbake hit.</p>
       <div class="login-actions">
         <button class="btn primary" data-login="check">Jeg har bekreftet</button>
         <button class="btn" data-login="resend">Send lenken på nytt</button>

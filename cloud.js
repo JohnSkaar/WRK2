@@ -149,11 +149,12 @@ function stable(v) {
   if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
+const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0});
 const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
 
 // ---------- innlogget bruker ----------
 let unsubs = [], started = false, myUid = null;
-let base = {akt: new Map(), ats: new Map(), firms: '', metoder: '', settings: '', users: new Map()};
+let base = {akt: new Map(), ats: new Map(), firms: '', metoder: '', register: '', settings: '', users: new Map()};
 let readOnly = '';
 
 onAuthStateChanged(auth, user => handleUser(user));
@@ -189,12 +190,12 @@ async function ensureProfile(user) {
 
 function startSync(uid) {
   myUid = uid;
-  const st = {users: null, invites: [], firms: null, metoder: null, settings: null, akt: null, ats: null, atsDenied: false};
+  const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false};
   let invitesOn = false, seeding = false, migrating = false;
   const fail = err => { view('error', 'Mistet kontakten med databasen: ' + errText(err)); };
 
   const apply = async () => {
-    if (!st.users || !st.firms || !st.metoder || !st.settings || !st.akt || !st.ats) return;
+    if (!st.users || !st.firms || !st.metoder || !st.register || !st.settings || !st.akt || !st.ats) return;
     const meDoc = st.users.find(u => u.id === uid);
     if (!meDoc) { unsubs.forEach(f => f()); unsubs = []; view('noaccess', auth.currentUser ? auth.currentUser.email : ''); return; }
     const sys = meDoc.rolle === 'systemadmin';
@@ -216,22 +217,24 @@ function startSync(uid) {
     DATA = acts; ATS = ats;
     FIRMS = st.firms.length ? st.firms : DEFAULT_FIRMS.map(f => ({...f}));
     METHODS = st.metoder.length ? st.metoder : DEFAULT_METHODS.map(m => ({...m}));
-    SETTINGS = {skrastrek: false, fuIkkeVurdert: true, metodesett: 0, ...st.settings};
+    REGISTER = st.register;
+    SETTINGS = {skrastrek: false, fuIkkeVurdert: true, metodesett: 0, registersett: 0, ...st.settings};
     normalizeAll();
     USERS = [...st.users, ...(sys ? st.invites.map(i => ({...i, id: 'invite:' + i.email, pending: true})) : [])];
     currentUserId = uid;
     base = {
       akt: new Map(DATA.map(a => [a.id, stable(toDoc(a))])),
       ats: new Map(ATS.map(t => [t.id, stable(toATDoc(t))])),
-      firms: stable(FIRMS), metoder: stable(METHODS), settings: stable({skrastrek: !!SETTINGS.skrastrek, metodesett: SETTINGS.metodesett || 0}),
+      firms: stable(FIRMS), metoder: stable(METHODS), register: stable(REGISTER), settings: stable(settingsDoc()),
       users: new Map(USERS.map(u => [u.id, stable(userDoc(u))]))
     };
     if (!started) { started = true; unlock(); startApp(); } else scheduleRender();
     if (readOnly) showToast('Endringer kan ikke lagres ennå: ' + readOnly);
-    if (sys && !readOnly && applyMetodesett()) { window.cloudSync(); renderCurrent(); }
+    if (sys && !readOnly && (applyMetodesett() | applyRegistersett())) { window.cloudSync(); renderCurrent(); }
   };
 
   unsubs.push(onSnapshot(collection(db, 'users'), s => { st.users = s.docs.map(d => ({id: d.id, ...d.data()})); apply(); }, fail));
+  unsubs.push(onSnapshot(doc(db, 'config', 'firmaregister'), s => { st.register = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'metoder'), s => { st.metoder = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'firms'), s => { st.firms = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'settings'), s => { st.settings = s.exists() ? s.data() : {}; apply(); }, fail));
@@ -287,9 +290,10 @@ window.cloudSync = () => {
   }
   for (const id of [...base.ats.keys()]) if (!curAt.has(id)) { base.ats.delete(id); deleteDoc(doc(db, 'at', id)).catch(saveFail); }
   if (!isSys()) return;
+  if (stable(REGISTER) !== base.register) { base.register = stable(REGISTER); setDoc(doc(db, 'config', 'firmaregister'), {list: REGISTER}).catch(saveFail); }
   if (stable(METHODS) !== base.metoder) { base.metoder = stable(METHODS); setDoc(doc(db, 'config', 'metoder'), {list: METHODS}).catch(saveFail); }
   if (stable(FIRMS) !== base.firms) { base.firms = stable(FIRMS); setDoc(doc(db, 'config', 'firms'), {list: FIRMS}).catch(saveFail); }
-  const set = {skrastrek: !!SETTINGS.skrastrek, metodesett: SETTINGS.metodesett || 0};
+  const set = settingsDoc();
   if (stable(set) !== base.settings) { base.settings = stable(set); setDoc(doc(db, 'config', 'settings'), set).catch(saveFail); }
   const ref = u => u.pending ? doc(db, 'invites', u.email.toLowerCase()) : doc(db, 'users', u.id);
   const now = new Map(USERS.map(u => [u.id, u]));

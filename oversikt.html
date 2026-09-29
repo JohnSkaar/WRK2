@@ -130,7 +130,7 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
 .form-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .form-row input,.form-row select{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px}
 .list-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #eef0f2}
-.list-row .grow{flex:1;min-width:0}
+.list-row .grow{flex:1 1 170px;min-width:0}
 
 .app-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .user-bar{font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;max-width:100%;min-width:0}
@@ -233,6 +233,11 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .kjede-pil{color:#8c959f}
 td.firma-cell{white-space:normal;min-width:130px}
 .mb-edit label{display:flex;flex-direction:column;gap:2px;flex:1;min-width:150px}
+.reg-panel{grid-column:1/-1}
+.reg-search{padding:7px 10px;border:1px solid #d0d7de;border-radius:6px;font-size:14px;width:100%;max-width:420px;margin-bottom:8px}
+.reg-list{max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:6px}
+.reg-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid #eef0f2;font-size:13px}
+.reg-row:nth-child(odd){background:#fafbfc}
 </style>
 </head>
 <body>
@@ -370,6 +375,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <div id="firm-form"></div>
         <div id="firm-list"></div>
       </div>
+      <div class="panel reg-panel" id="register-panel"></div>
       <div class="panel" id="modules-panel"></div>
       <div class="panel" id="data-panel"></div>
     </div>
@@ -475,7 +481,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 const CLOUD = location.protocol !== 'file:';
-const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at';
+const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
 const STORAGE_KEY = 'wrk2_v6', FIRMS_KEY = 'wrk2_firms_v6', USERS_KEY = 'wrk2_users_v6', CURRENT_KEY = 'wrk2_current_user',
   MAP_KEY = 'wrk2_sonekart', MAP_RATIO_KEY = 'wrk2_sonekart_ratio';
 
@@ -718,7 +724,8 @@ function load() {
   METHODS = readJSON(METHODS_KEY) || DEFAULT_METHODS.map(m => ({...m}));
   normalizeAll();
   USERS = loadUsers();
-  SETTINGS = {skrastrek: false, fuIkkeVurdert: false, metodesett: 0, ...(readJSON(SETTINGS_KEY) || {})};
+  SETTINGS = {skrastrek: false, fuIkkeVurdert: false, metodesett: 0, registersett: 0, ...(readJSON(SETTINGS_KEY) || {})};
+  REGISTER = readJSON(REGISTER_KEY) || [];
   if (!SETTINGS.fuIkkeVurdert) {
     // Engangsnullstilling: alle sju forutsetninger starter som «ikke vurdert».
     DATA.forEach(a => { a.forutsetninger = ikkeVurdert(); }); ATS.forEach(t => { t.forutsetninger = ikkeVurdert(); });
@@ -727,6 +734,7 @@ function load() {
   currentUserId = readRaw(CURRENT_KEY);
   if (!USERS.some(u => u.id === currentUserId)) currentUserId = USERS.find(u => u.rolle === 'systemadmin').id;
   applyMetodesett();
+  applyRegistersett();
   save();
 }
 function save() {
@@ -735,6 +743,7 @@ function save() {
   writeRaw(ATS_KEY, JSON.stringify(ATS));
   writeRaw(FIRMS_KEY, JSON.stringify(FIRMS));
   writeRaw(METHODS_KEY, JSON.stringify(METHODS));
+  writeRaw(REGISTER_KEY, JSON.stringify(REGISTER));
   writeRaw(USERS_KEY, JSON.stringify(USERS));
   writeRaw(CURRENT_KEY, currentUserId);
   writeRaw(SETTINGS_KEY, JSON.stringify(SETTINGS));
@@ -777,7 +786,7 @@ const ui = {
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
   metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set()},
-  admin: {firmDel: null, firmEdit: null},
+  admin: {firmDel: null, firmEdit: null, regSearch: ''},
   koord: {week: null, selected: null, drawing: null}
 };
 let currentTab = 'oversikt';
@@ -1501,8 +1510,8 @@ function renderMetoder() {
           <input type="text" id="mbe-rev" value="${esc(m.rev || '')}" placeholder="Revisjon">
           <input type="text" id="mbe-fag" value="${esc(m.fag || '')}" placeholder="Fag, f.eks. Betong">
           ${[0, 1].map(i => `<label class="sub">${i ? 'UE-ens UE / innleid' : 'Underentreprenør (UE)'}
-            <select id="mbe-ue${i}"><option value="">Ingen</option>${FIRMS.map(f => `<option value="${esc(f.navn)}" ${(m.ue || [])[i] === f.navn ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')}</select></label>`).join('')}
-          <select id="mbe-firma"><option value="">Uten entreprenør</option>${FIRMS.map(f => `<option value="${esc(f.navn)}" ${f.navn === m.firma ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')}</select>
+            <select id="mbe-ue${i}"><option value="">Ingen</option>${firmOptionsWithRegister((m.ue || [])[i])}</select></label>`).join('')}
+          <select id="mbe-firma"><option value="">Uten entreprenør</option>${firmOptionsWithRegister(m.firma)}</select>
           <button class="btn primary" data-action="mb-save">Lagre</button><button class="btn" data-action="mb-cancel">Avbryt</button></div>`
       : `<div class="mb-head"><div><b>MB ${esc(m.nr)}</b> ${esc(m.navn)}${m.rev ? ` <span class="sub">rev. ${esc(m.rev)}</span>` : ''}${(m.ue || []).length ? chainHtml([m.nr], false) : ''}</div>
           <div class="mb-head-r"><span class="badge st-plan" title="AT-er">${ats.length} AT</span>${sys && !m.ukjent ? `<button class="mb-x" data-action="mb-edit" title="Endre tekst og entreprenør">✏️</button><button class="mb-x" data-action="mb-del" title="Slett metodebeskrivelsen">🗑</button>` : ''}</div></div>`;
@@ -1637,6 +1646,133 @@ function mbEnd(e, cancelled) {
 document.addEventListener('pointerup', e => mbEnd(e, false));
 document.addEventListener('pointercancel', e => mbEnd(e, true));
 
+// ---------- firmaregister ----------
+// Firma i prosjektet (fra HMSreg-oversikten). Nivå 0 = byggherre, 1 = hovedentreprenør, 2 = UE, 3 = UE-ens UE.
+// Rekkefølgen er et tre: overordnet er nærmeste rad over med lavere nivå. Beskrivelser med «…» var avkortet i kilden.
+const REGISTER_KILDE = [
+  [0, 'HYDRO ALUMINIUM AS', '917537534', 'Byggherre'],
+  [1, 'SKANSKA NORGE AS', '943049467', 'Hovedentreprenør'],
+  [2, 'UTLEIECOMPAGNIET AS', '979926464', 'UTLEIECOMPAGNIET AS'],
+  [3, 'JAKOBSEN TRANSPORT AS', '983431755', 'JAKOBSEN TRANSPORT AS - …'],
+  [3, 'MODULSERVICE AS', '998210585', 'MODULSERVICE - Montører …'],
+  [3, 'CRANE NORWAY VEST AS', '923079718', 'Mobilkran'],
+  [2, 'VEST STÅL & FASADE AS', '930622176', 'VEST STÅL & FASADE AS'],
+  [2, 'VASSBAKK & STOL AS', '927048841', 'VASSBAKK & STOL - Grunnar…'],
+  [3, 'WIMO FJELLSIKRING AS', '992185139', 'WIMO - Fjellsikring'],
+  [3, 'ODDA PLAST AS', '988251313', 'ODDA PLAST AS'],
+  [3, 'BJARNE NESHEIM MASKIN AS', '991430075', 'BJARNE NESHEIM MASKIN - …'],
+  [2, 'ENTREPRENØRSERVICE AS', '911469138', 'Entreprenørservice AS'],
+  [3, 'SØR-NORSK BORING AS', '933954986', 'Sør-Norsk Boring AS'],
+  [3, 'VÆRÅS BRØNNBORING AS', '947586416', 'VÆRÅS BRØNNBORING - Ha…'],
+  [3, 'RØR TEKNIKK 13 Bjørn Ødegård', '979632290', 'Sveis og leveranse av rør (Avl…'],
+  [3, 'MIGLAVS ANLEGG', '935275067', 'Innleid arbeidskraft'],
+  [2, 'SMISTAD MUR OG FLIS AS', '912394433', 'SMISTAD - Rådgivningsbista…'],
+  [2, 'O.HANSEN & SØNNER AS', '934235347', 'O. HANSEN - Grunnarbeid'],
+  [2, 'OMEGA 365 PROTEK AS', '980361330', 'OMEGA 365 - Stikningstjene…'],
+  [3, 'RH OPPMÅLING RUNE HEMNES', '990856664', 'RH Oppmåling'],
+  [2, 'HEIDELBERG MATERIALS BETONG NORGE AS', '934468740', 'HEIDELBERG MATERIALS BET…'],
+  [3, 'KOO BETONGTRANSPORT AS', '931996924', 'KOO BETONGTRANSPORT - …'],
+  [3, 'GEIR KVAMME TRANSPORT AS', '897165872', 'GEIR KVAMME - Betong lever…'],
+  [3, 'DYRLAND TRANSPORT Per Ståle Dyrland', '981528999', 'DYRLAND TRANSPORT - Bet…'],
+  [3, 'ODD OLAF DAGSLAND', '976738136', 'DAGSLAND - Betong leveran…'],
+  [2, 'HAUCON NORGE AS', '970928200', 'HAUCON AS'],
+  [3, 'SVILAND TRANSPORT AS', '977675049', 'SVILAND - Transport for Hau…'],
+  [2, 'MOTEK AS', '920295932', 'MOTEK AS'],
+  [3, 'TNR SPEDISJON AS', '968823396', 'TNR SPEDISJON - leveranser …'],
+  [2, '7 STEEL SERVICE NORWAY AS', '980345106', '7 STEEL - stålleveranse'],
+  [3, 'PENTAGON TRANSPORT AS', '911876000', 'PENTAGON - varelevering stål'],
+  [2, 'NÆRENERGI AS', '920929982', 'NÆRENERGI - Rørindustri'],
+  [3, 'AGDER RØR OG ANLEGGSERVICE AS', '927063972', 'Sveisearbeid'],
+  [2, 'HELGEVOLD AS', '986389180', 'HELGEVOLD - Leveranse av p…'],
+  [2, 'PERI NORGE AS', '959514798', 'Peri Norge AS'],
+  [2, 'BRIKKS CONSULTING AS', '936454623', 'BRIKKS CONSULTING AS'],
+  [2, 'SIKKER BEMANNING AS', '994637282', 'SIKKER BEMANNING AS - SIBE'],
+  [2, 'RAGN SELLS AS', '952187627', 'Avfallshåndtering'],
+  [3, 'O.HANSEN & SØNNER AS', '934235347', 'O.Hansen & sønner AS - for …'],
+  [3, 'O HANSEN & SØNNER STORD AS', '977044065', 'O.Hansen & sønner AS - STO…'],
+  [2, 'KB SPENNTEKNIKK AS', '966074035', 'KB SPENNTEKNIKK AS - vann…'],
+  [2, 'NCC NORGE AS', '911274426', 'NCC'],
+  [2, 'INVOLVED CONSULTING AS', '934230841', 'Konsulent/Rådgivning'],
+  [2, 'NORCONSULT NORGE AS', '962392687', 'NORCONSULT'],
+  [2, 'STILLASTJENESTER AS', '966448652', 'Stillastjenester'],
+  [2, 'E BETONGGULV AS', '999048994', 'EGELAND BETONGGULV AS'],
+  [3, 'ÅGE RAFOSS', '986927719', ''],
+  [3, 'NILSEN SERVICE', '923326812', ''],
+  [3, 'TOM OVE MYGLAND', '928757722', ''],
+  [2, 'TOMA FACILITY NORGE AS', '984684037', 'TOMA FACILITY NORGE AS'],
+  [2, 'HAMMERSTAD MASKIN AS', '980404730', 'Kranfører']
+];
+const REGISTERSETT = 1;
+function buildRegister() {
+  const stack = [];
+  return REGISTER_KILDE.map(([niva, navn, orgnr, beskrivelse], i) => {
+    stack[niva] = orgnr; stack.length = niva + 1;
+    return {id: 'r' + (i + 1), niva, navn, orgnr, beskrivelse, overordnet: niva ? stack[niva - 1] : ''};
+  });
+}
+let REGISTER = [];
+function applyRegistersett() {
+  if ((SETTINGS.registersett || 0) >= REGISTERSETT && REGISTER.length) return false;
+  REGISTER = buildRegister();
+  SETTINGS.registersett = REGISTERSETT;
+  return true;
+}
+const normFirm = s => String(s || '').toLowerCase().replace(/\./g, '').replace(/\s+as$/, '').replace(/\s+/g, ' ').trim();
+// Et registerfirma regnes som «i bruk» når et aktivt firma har samme navn, eller det ene navnet starter med det andre (f.eks. Skanska / Skanska Norge AS).
+function activeFirmFor(r) {
+  const n = normFirm(r.navn);
+  return FIRMS.find(f => { const m = normFirm(f.navn); return m === n || n.startsWith(m + ' ') || m.startsWith(n + ' '); });
+}
+function prettyFirm(navn) {
+  return navn.split(' ').map(w => /^(AS|ASA|ANS|DA|NUF)$/i.test(w) ? w.toUpperCase()
+    : /^[A-ZÆØÅ0-9.&\-]+$/.test(w) ? w.toLowerCase().replace(/(^|[.\-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()) : w).join(' ');
+}
+function nextFirmColor() {
+  const used = new Set(FIRMS.map(f => String(f.farge).toLowerCase()));
+  return ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948', '#0e7c86', '#8a5a00', '#b0348f'].find(c => !used.has(c)) || '#6a737d';
+}
+function addFirmFromRegister(r) {
+  const hit = activeFirmFor(r);
+  if (hit) return hit.navn;
+  const navn = prettyFirm(r.navn);
+  FIRMS.push({navn, farge: nextFirmColor(), orgnr: r.orgnr});
+  return navn;
+}
+
+function renderRegister() {
+  const el = document.getElementById('register-panel'); if (!el) return;
+  const unik = new Set(REGISTER.map(r => r.orgnr)).size;
+  el.innerHTML = `<h3>Firmaregister for prosjektet</h3>
+    <p class="intro" style="margin-bottom:8px">${unik} firma fra HMSreg, med byggherre, hovedentreprenør, UE og UE-enes UE. Registeret er et oppslagsverk: firmaene blir først aktive i planen (med farge og tilgang) når de tas i bruk. Firma i registeret kan også velges som UE på metodebeskrivelsene.</p>
+    <input type="search" id="reg-search" class="reg-search" placeholder="Søk navn, org.nr eller beskrivelse …" value="${esc(ui.admin.regSearch)}">
+    <div class="reg-list" id="reg-list"></div>`;
+  renderRegisterList();
+}
+function renderRegisterList() {
+  const el = document.getElementById('reg-list'); if (!el) return;
+  const sys = isSys(), q = ui.admin.regSearch.trim().toLowerCase();
+  const rows = REGISTER.filter(r => !q || [r.navn, r.orgnr, r.beskrivelse].some(x => String(x).toLowerCase().includes(q)));
+  el.innerHTML = `${rows.map(r => {
+      const hit = activeFirmFor(r);
+      return `<div class="reg-row" style="padding-left:${8 + r.niva * 18}px">
+        <div class="grow"><b>${esc(r.navn)}</b> <span class="sub">org.nr ${esc(r.orgnr)}</span>${r.beskrivelse ? `<div class="sub">${esc(r.beskrivelse)}</div>` : ''}</div>
+        <span class="badge ${['st-done', 'st-go', 'st-plan', 'rk-l'][r.niva] || 'st-plan'}">${['Byggherre', 'Hovedentreprenør', 'UE', 'UE av UE'][r.niva] || 'Nivå ' + r.niva}</span>
+        ${hit ? `<span title="Aktivt firma i planen">${firmBadge(hit.navn)}</span>` : sys ? `<button class="btn" data-action="reg-use" data-rid="${esc(r.id)}">Ta i bruk</button>` : ''}
+      </div>`;
+    }).join('') || '<p class="muted">Ingen treff.</p>'}`;
+}
+// Valg for firmafelt: aktive firma, og firma fra registeret som ikke er tatt i bruk (verdi «reg:<id>»).
+function firmOptionsWithRegister(selected) {
+  const inactive = REGISTER.filter((r, i, all) => !activeFirmFor(r) && all.findIndex(x => x.orgnr === r.orgnr) === i);
+  return FIRMS.map(f => `<option value="${esc(f.navn)}" ${f.navn === selected ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')
+    + (inactive.length ? `<optgroup label="Fra firmaregisteret">${inactive.map(r => `<option value="reg:${esc(r.id)}">${esc(prettyFirm(r.navn))}</option>`).join('')}</optgroup>` : '');
+}
+function resolveFirmChoice(v) {
+  if (!v || !v.startsWith('reg:')) return v;
+  const r = REGISTER.find(x => x.id === v.slice(4));
+  return r ? addFirmFromRegister(r) : '';
+}
+
 // ---------- admin ----------
 function renderAdmin() {
   const sys = isSys();
@@ -1685,6 +1821,7 @@ function renderAdmin() {
         <button class="btn" data-action="firm-move-cancel">Avbryt</button></div>` : ''}`;
   }).join('');
 
+  renderRegister();
   document.getElementById('modules-panel').innerHTML = `<h3>Moduler i prosjektet</h3>
     <p class="intro" style="margin-bottom:8px">Tilleggsmoduler er skrudd av som standard. En systemadministrator kan gjøre dem tilgjengelige for alle brukerne i prosjektet.</p>
     <label class="module-row"><input type="checkbox" id="mod-skrastrek" ${SETTINGS.skrastrek ? 'checked' : ''} ${sys ? '' : 'disabled'}>
@@ -1877,7 +2014,7 @@ document.addEventListener('click', e => {
   }
 
   // admin (kun systemadministrator)
-  if (!isSys() && ['add-user', 'del-user', 'add-firm', 'del-firm', 'firm-move-del', 'firm-rename-save', 'reset-data', 'mb-add', 'mb-del'].includes(action)) return;
+  if (!isSys() && ['add-user', 'del-user', 'add-firm', 'del-firm', 'firm-move-del', 'firm-rename-save', 'reg-use', 'reset-data', 'mb-add', 'mb-del'].includes(action)) return;
   if (action === 'add-user') {
     const name = document.getElementById('u-name').value.trim(), email = document.getElementById('u-email').value.trim().toLowerCase();
     if (!name) { alert('Skriv inn navn.'); return; }
@@ -1913,6 +2050,11 @@ document.addEventListener('click', e => {
     if (inUse) { ui.admin.firmDel = f.navn; renderAdmin(); return; }
     if (!confirm(`Fjerne ${f.navn}?`)) return;
     FIRMS.splice(Number(btn.dataset.i), 1); save(); renderAdmin(); return;
+  }
+  if (action === 'reg-use') {
+    const r = REGISTER.find(x => x.id === btn.dataset.rid); if (!r) return;
+    const navn = addFirmFromRegister(r);
+    save(); renderAdmin(); showToast(`${navn} er tatt i bruk som firma i planen.`); return;
   }
   if (action === 'firm-rename') { ui.admin.firmEdit = Number(btn.dataset.i); ui.admin.firmDel = null; renderAdmin(); const el = document.getElementById('firm-new-name'); if (el) el.focus(); return; }
   if (action === 'firm-rename-cancel') { ui.admin.firmEdit = null; renderAdmin(); return; }
@@ -1969,7 +2111,7 @@ document.addEventListener('click', e => {
     if (!m || !nr || !navn) { alert('Nummer og navn må fylles inn.'); return; }
     if (nr !== old && METHODS.some(x => x.nr === nr)) { alert(`MB ${nr} finnes allerede.`); return; }
     m.nr = nr; m.navn = navn; m.rev = document.getElementById('mbe-rev').value.trim(); m.fag = document.getElementById('mbe-fag').value.trim();
-    m.ue = [document.getElementById('mbe-ue0').value, document.getElementById('mbe-ue1').value].filter(Boolean); m.firma = document.getElementById('mbe-firma').value;
+    m.ue = [resolveFirmChoice(document.getElementById('mbe-ue0').value), resolveFirmChoice(document.getElementById('mbe-ue1').value)].filter(Boolean); m.firma = resolveFirmChoice(document.getElementById('mbe-firma').value);
     if (nr !== old) {
       DATA.forEach(a => { if (mbNrs(a).includes(old)) setMbNrs(a, mbNrs(a).map(x => x === old ? nr : x)); });
       ATS.forEach(t => { if (t.metode === old) t.metode = nr; });
@@ -2042,6 +2184,7 @@ document.addEventListener('change', e => {
 
 document.addEventListener('input', e => {
   const el = e.target;
+  if (el.id === 'reg-search') { ui.admin.regSearch = el.value; renderRegisterList(); return; }
   if (el.dataset.search) { ui[el.dataset.search].search = el.value; rerenderPage(el.dataset.search); }
 });
 

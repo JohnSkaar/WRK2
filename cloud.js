@@ -142,7 +142,7 @@ const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma
 
 // ---------- innlogget bruker ----------
 let unsubs = [], started = false, myUid = null;
-let base = {akt: new Map(), firms: '', settings: '', users: new Map()};
+let base = {akt: new Map(), firms: '', metoder: '', settings: '', users: new Map()};
 
 onAuthStateChanged(auth, user => handleUser(user));
 
@@ -177,12 +177,12 @@ async function ensureProfile(user) {
 
 function startSync(uid) {
   myUid = uid;
-  const st = {users: null, invites: [], firms: null, settings: null, akt: null};
+  const st = {users: null, invites: [], firms: null, metoder: null, settings: null, akt: null};
   let invitesOn = false, seeding = false;
   const fail = err => { view('error', 'Mistet kontakten med databasen: ' + errText(err)); };
 
   const apply = async () => {
-    if (!st.users || !st.firms || !st.settings || !st.akt) return;
+    if (!st.users || !st.firms || !st.metoder || !st.settings || !st.akt) return;
     const meDoc = st.users.find(u => u.id === uid);
     if (!meDoc) { unsubs.forEach(f => f()); unsubs = []; view('noaccess', auth.currentUser ? auth.currentUser.email : ''); return; }
     const sys = meDoc.rolle === 'systemadmin';
@@ -190,22 +190,24 @@ function startSync(uid) {
       invitesOn = true;
       unsubs.push(onSnapshot(collection(db, 'invites'), s => { st.invites = s.docs.map(d => d.data()); apply(); }, () => {}));
     }
-    if (sys && !seeding && (!st.akt.length || !st.firms.length)) { seeding = true; await seed(st); return; }
+    if (sys && !seeding && (!st.akt.length || !st.firms.length || !st.metoder.length)) { seeding = true; await seed(st); return; }
 
     DATA = migrate(st.akt.map(fromDoc));
     FIRMS = st.firms.length ? st.firms : DEFAULT_FIRMS.map(f => ({...f}));
+    METHODS = st.metoder.length ? st.metoder : DEFAULT_METHODS.map(m => ({...m}));
     SETTINGS = {skrastrek: false, fuIkkeVurdert: true, ...st.settings};
     USERS = [...st.users, ...(sys ? st.invites.map(i => ({...i, id: 'invite:' + i.email, pending: true})) : [])];
     currentUserId = uid;
     base = {
       akt: new Map(DATA.map(a => [a.id, stable(toDoc(a))])),
-      firms: stable(FIRMS), settings: stable({skrastrek: !!SETTINGS.skrastrek}),
+      firms: stable(FIRMS), metoder: stable(METHODS), settings: stable({skrastrek: !!SETTINGS.skrastrek}),
       users: new Map(USERS.map(u => [u.id, stable(userDoc(u))]))
     };
     if (!started) { started = true; unlock(); startApp(); } else scheduleRender();
   };
 
   unsubs.push(onSnapshot(collection(db, 'users'), s => { st.users = s.docs.map(d => ({id: d.id, ...d.data()})); apply(); }, fail));
+  unsubs.push(onSnapshot(doc(db, 'config', 'metoder'), s => { st.metoder = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'firms'), s => { st.firms = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'settings'), s => { st.settings = s.exists() ? s.data() : {}; apply(); }, fail));
   unsubs.push(onSnapshot(collection(db, 'aktiviteter'), s => { st.akt = s.docs.map(d => d.data()); apply(); }, fail));
@@ -221,6 +223,7 @@ async function seed(st) {
     data.forEach(a => batch.set(doc(db, 'aktiviteter', a.id), toDoc(a)));
   }
   if (!st.firms.length) batch.set(doc(db, 'config', 'firms'), {list: normalizeFirms(readJSON('wrk2_firms_v6'))});
+  if (!st.metoder.length) batch.set(doc(db, 'config', 'metoder'), {list: readJSON('wrk2_metoder') || DEFAULT_METHODS});
   if (!Object.keys(st.settings).length) batch.set(doc(db, 'config', 'settings'), {skrastrek: !!(readJSON('wrk2_settings') || {}).skrastrek});
   await batch.commit();
 }
@@ -236,6 +239,7 @@ window.cloudSync = () => {
   }
   for (const id of [...base.akt.keys()]) if (!cur.has(id)) { base.akt.delete(id); deleteDoc(doc(db, 'aktiviteter', id)).catch(saveFail); }
   if (!isSys()) return;
+  if (stable(METHODS) !== base.metoder) { base.metoder = stable(METHODS); setDoc(doc(db, 'config', 'metoder'), {list: METHODS}).catch(saveFail); }
   if (stable(FIRMS) !== base.firms) { base.firms = stable(FIRMS); setDoc(doc(db, 'config', 'firms'), {list: FIRMS}).catch(saveFail); }
   const set = {skrastrek: !!SETTINGS.skrastrek};
   if (stable(set) !== base.settings) { base.settings = stable(set); setDoc(doc(db, 'config', 'settings'), set).catch(saveFail); }

@@ -183,6 +183,29 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .login-msg{min-height:18px;color:#a40e26;font-size:13px;margin:6px 0}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#24292f;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:300;max-width:90vw;box-shadow:0 4px 14px rgba(0,0,0,.3)}
 .btn.small{padding:4px 10px;font-size:12px;background:transparent;color:#fff;border-color:#4a5d70}
+.mb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media(max-width:900px){.mb-grid{grid-template-columns:1fr}}
+.mb-card{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px;background:#fff;transition:background .1s}
+.mb-card.ukjent{border-style:dashed;background:#fffbef}
+.mb-card.drop-hover{outline:3px dashed var(--accent);outline-offset:-3px;background:#eef4ff}
+.mb-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:6px}
+.mb-head-r{display:flex;gap:6px;align-items:center}
+.mb-chips{display:flex;flex-wrap:wrap;gap:6px}
+.mb-chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-left:5px solid #999;border-radius:5px;padding:3px 6px;font-size:12px;background:#f6f8fa;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;max-width:100%}
+.mb-chip.locked{cursor:default;touch-action:auto}
+.mb-x{border:none;background:none;cursor:pointer;font-size:14px;color:#57606a;padding:0 2px;line-height:1}
+.mb-x:hover{color:var(--red)}
+.mb-acts{max-height:78vh;overflow:auto}
+.mb-act{display:flex;gap:8px;border:1px solid var(--line);border-left:6px solid #999;border-radius:6px;padding:8px;margin-bottom:8px;background:#fff;cursor:grab;user-select:none;-webkit-user-select:none}
+.mb-act.locked{cursor:default;background:#fafafa}
+.mb-act.uten{background:#fff8f8}
+.mb-tags{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px}
+.mb-tag{font-size:11px;padding:1px 6px;border-radius:4px;background:#eef2ff;color:#3346a8;font-family:ui-monospace,Menlo,monospace}
+.mb-tag.none{background:#ffe0e0;color:#a40e26;font-family:inherit}
+.mb-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mb-add input{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;flex:1;min-width:120px}
+.firm-move{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;background:#fff8e1;border:1px solid #e3b341;border-radius:6px;padding:8px;margin:4px 0 6px}
+.list-row{flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -204,6 +227,7 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 <nav class="tabs">
   <button data-tab="klargjoring">Klargjøring av aktiviteter</button>
   <button data-tab="oversikt">Totaloversikt</button>
+  <button data-tab="metoder">Metodebeskrivelser</button>
   <button data-tab="skrastrek">Skråstreksdiagram</button>
   <button data-tab="koordinering">AT-koordinering</button>
   <button data-tab="admin">Admin</button>
@@ -244,6 +268,23 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
       <div class="legend legend-box"></div>
     </div>
     <div class="table-wrap" id="table-oversikt"></div>
+  </section>
+
+  <section class="page" id="page-metoder">
+    <div class="panel">
+      <h2>Metodebeskrivelser</h2>
+      <p class="intro">Dra en aktivitet fra listen til høyre over på en metodebeskrivelse til venstre for å koble dem. En aktivitet kan ha flere metodebeskrivelser. Dra en aktivitet mellom metodebeskrivelser for å flytte den, og trykk × for å fjerne koblingen. På mobil drar du i håndtaket ⠿. 🔒 betyr at aktiviteten tilhører et annet firma.</p>
+      <div class="access-info"></div>
+      <div class="toolbar">
+        <input type="search" data-search="metoder" placeholder="Søk aktivitet, ID, område, firma …">
+        <label class="btn"><input type="checkbox" id="mb-unlinked"> Bare aktiviteter uten metodebeskrivelse</label>
+        <button class="btn archive-btn" data-action="toggle-archive" data-page="metoder">📦 Vis arkiv</button>
+      </div>
+    </div>
+    <div class="mb-grid">
+      <div class="panel" id="mb-methods"></div>
+      <div class="panel mb-acts" id="mb-acts"></div>
+    </div>
   </section>
 
   <section class="page" id="page-skrastrek">
@@ -407,7 +448,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 const CLOUD = location.protocol !== 'file:';
-const SETTINGS_KEY = 'wrk2_settings';
+const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder';
 const STORAGE_KEY = 'wrk2_v6', FIRMS_KEY = 'wrk2_firms_v6', USERS_KEY = 'wrk2_users_v6', CURRENT_KEY = 'wrk2_current_user',
   MAP_KEY = 'wrk2_sonekart', MAP_RATIO_KEY = 'wrk2_sonekart_ratio';
 
@@ -531,7 +572,7 @@ function buildData() {
 }
 
 // ---------- lagring ----------
-let DATA = [], FIRMS = [], USERS = [], currentUserId = null, SETTINGS = {};
+let DATA = [], FIRMS = [], USERS = [], METHODS = [], currentUserId = null, SETTINGS = {};
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
 function readRaw(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -594,6 +635,7 @@ function load() {
   }
   DATA = migrate(d);
   FIRMS = normalizeFirms(readJSON(FIRMS_KEY) || readJSON('wrk2_firms_v5'));
+  METHODS = readJSON(METHODS_KEY) || DEFAULT_METHODS.map(m => ({...m}));
   USERS = loadUsers();
   SETTINGS = {skrastrek: false, fuIkkeVurdert: false, ...(readJSON(SETTINGS_KEY) || {})};
   if (!SETTINGS.fuIkkeVurdert) {
@@ -609,6 +651,7 @@ function save() {
   if (CLOUD) { if (window.cloudSync) window.cloudSync(); return; }
   writeRaw(STORAGE_KEY, JSON.stringify(DATA));
   writeRaw(FIRMS_KEY, JSON.stringify(FIRMS));
+  writeRaw(METHODS_KEY, JSON.stringify(METHODS));
   writeRaw(USERS_KEY, JSON.stringify(USERS));
   writeRaw(CURRENT_KEY, currentUserId);
   writeRaw(SETTINGS_KEY, JSON.stringify(SETTINGS));
@@ -650,6 +693,8 @@ const ui = {
   klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set(), showArchive: false},
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
+  metoder: {search: '', bareUkoblede: false, showArchive: false},
+  admin: {firmDel: null},
   koord: {week: null, selected: null, drawing: null}
 };
 let currentTab = 'oversikt';
@@ -1296,6 +1341,105 @@ document.addEventListener('click', e => {
   if (row) { row.scrollIntoView({block: 'center'}); row.classList.add('flash-main'); setTimeout(() => row.classList.remove('flash-main'), 1700); }
 });
 
+// ---------- metodebeskrivelser ----------
+const DEFAULT_METHODS = Object.entries(METODER).map(([nr, m]) => ({nr, navn: m.navn, rev: m.rev}));
+const byNr = (x, y) => x.localeCompare(y, 'nb', {numeric: true});
+function mbNrs(a) { return (a.metode.nr || '').split(',').map(s => s.trim()).filter(Boolean); }
+function setMbNrs(a, list) { a.metode.nr = [...new Set(list)].sort(byNr).join(', '); }
+
+function renderMetoder() {
+  const st = ui.metoder, sys = isSys();
+  const acts = DATA.filter(a => (st.showArchive || !erArkiv(a)) && matches(a, {firms: null, search: st.search}))
+    .sort((x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
+  const ab = document.querySelector('.archive-btn[data-page="metoder"]');
+  const nArkiv = DATA.filter(a => matches(a, {firms: null, search: st.search}) && erArkiv(a)).length;
+  ab.textContent = st.showArchive ? `📦 Skjul arkiv (${nArkiv})` : `📦 Vis arkiv (${nArkiv})`;
+  ab.classList.toggle('on', st.showArchive);
+  document.getElementById('mb-unlinked').checked = st.bareUkoblede;
+
+  const unknown = [...new Set(DATA.flatMap(mbNrs))].filter(n => !METHODS.some(m => m.nr === n)).sort(byNr);
+  const methods = [...[...METHODS].sort((x, y) => byNr(x.nr, y.nr)), ...unknown.map(nr => ({nr, navn: 'Ikke i listen over metodebeskrivelser', rev: '', ukjent: true}))];
+  const chip = (a, from) => `<span class="mb-chip${canEditAct(a) ? '' : ' locked'}" data-id="${esc(a.id)}" data-from="${esc(from)}" style="border-left-color:${firmColor(a.firma)}" title="${esc(a.id + ' ' + a.navn + ' – ' + a.firma)}">
+      <b>${esc(a.id)}</b> ${esc(a.navn)}${canEditAct(a) ? ` <button class="mb-x" data-action="mb-unlink" title="Fjern koblingen">×</button>` : ''}</span>`;
+  document.getElementById('mb-methods').innerHTML = `<h3>Metodebeskrivelser</h3>` + methods.map(m => {
+    const linked = acts.filter(a => mbNrs(a).includes(m.nr));
+    return `<div class="mb-card${m.ukjent ? ' ukjent' : ''}" data-nr="${esc(m.nr)}">
+      <div class="mb-head"><div><b>MB ${esc(m.nr)}</b> ${esc(m.navn)}${m.rev ? ` <span class="sub">rev. ${esc(m.rev)}</span>` : ''}</div>
+        <div class="mb-head-r"><span class="badge st-plan">${linked.length}</span>${sys && !m.ukjent ? `<button class="mb-x" data-action="mb-del" title="Slett metodebeskrivelsen">🗑</button>` : ''}</div></div>
+      <div class="mb-chips">${linked.length ? linked.map(a => chip(a, m.nr)).join('') : '<span class="muted sub">Dra aktiviteter hit</span>'}</div>
+    </div>`;
+  }).join('')
+  + (sys ? `<div class="mb-add"><input type="text" id="mb-nr" placeholder="Nr., f.eks. 4.1"><input type="text" id="mb-navn" placeholder="Navn på metodebeskrivelsen">
+      <input type="text" id="mb-rev" placeholder="Revisjon (dato)"><button class="btn primary" data-action="mb-add">Legg til</button></div>` : '');
+
+  const shown = st.bareUkoblede ? acts.filter(a => !mbNrs(a).length) : acts;
+  const nUten = acts.filter(a => !mbNrs(a).length).length;
+  document.getElementById('mb-acts').innerHTML = `<h3>Aktiviteter <span class="sub">(${nUten} uten metodebeskrivelse)</span></h3>` + (shown.length ? shown.map(a => {
+    const can = canEditAct(a), nrs = mbNrs(a);
+    return `<div class="mb-act${can ? '' : ' locked'}${nrs.length ? '' : ' uten'}" data-id="${esc(a.id)}" style="border-left-color:${firmColor(a.firma)}">
+      ${can ? '<span class="drag-handle" title="Dra til en metodebeskrivelse">⠿</span>' : `<span class="lock" title="Bare ${esc(a.firma)} kan koble denne aktiviteten">🔒</span>`}
+      <div class="at-card-body">
+        <div><b>${esc(a.id)}</b> ${esc(a.navn)}</div>
+        <div class="sub">${esc(a.omrade)} · uke ${isoWeek(a.startdato)} · ${firmBadge(a.firma)}</div>
+        <div class="mb-tags">${nrs.length ? nrs.map(n => `<span class="mb-tag">MB ${esc(n)}</span>`).join('') : '<span class="mb-tag none">Ingen metodebeskrivelse</span>'}</div>
+      </div>
+    </div>`;
+  }).join('') : '<p class="muted">Ingen aktiviteter passer med filteret.</p>');
+}
+
+function mbLink(id, nr, from) {
+  const a = DATA.find(x => x.id === id);
+  if (!a || !canEditAct(a) || nr === from) return;
+  const nrs = mbNrs(a).filter(n => n !== from);
+  if (!nrs.includes(nr)) nrs.push(nr);
+  setMbNrs(a, nrs);
+  save(); renderMetoder();
+  showToast(`${a.id} er ${from ? 'flyttet' : 'koblet'} til MB ${nr}.`);
+}
+
+let mbDrag = null;
+document.addEventListener('pointerdown', e => {
+  if (currentTab !== 'metoder' || e.button > 0 || e.target.closest('button')) return;
+  const el = e.target.closest('.mb-act, .mb-chip');
+  if (!el || el.classList.contains('locked')) return;
+  if (el.classList.contains('mb-act') && e.pointerType !== 'mouse' && !e.target.closest('.drag-handle')) return;
+  mbDrag = {id: el.dataset.id, from: el.dataset.from || null, x0: e.clientX, y0: e.clientY, moved: false, ghost: null};
+  e.preventDefault();
+});
+document.addEventListener('pointermove', e => {
+  if (!mbDrag) return;
+  if (!mbDrag.moved && Math.hypot(e.clientX - mbDrag.x0, e.clientY - mbDrag.y0) < 5) return;
+  mbDrag.moved = true;
+  if (!mbDrag.ghost) {
+    const a = DATA.find(x => x.id === mbDrag.id);
+    mbDrag.ghost = document.createElement('div');
+    mbDrag.ghost.className = 'drag-ghost';
+    mbDrag.ghost.textContent = mbDrag.id;
+    mbDrag.ghost.style.background = firmColor(a ? a.firma : '');
+    document.body.appendChild(mbDrag.ghost);
+  }
+  mbDrag.ghost.style.left = e.clientX + 'px';
+  mbDrag.ghost.style.top = e.clientY + 'px';
+  if (e.clientY < 70) window.scrollBy(0, -18);
+  else if (e.clientY > window.innerHeight - 70) window.scrollBy(0, 18);
+  const over = document.elementFromPoint(e.clientX, e.clientY);
+  const card = over && over.closest('.mb-card');
+  document.querySelectorAll('.mb-card.drop-hover').forEach(c => c !== card && c.classList.remove('drop-hover'));
+  if (card) card.classList.add('drop-hover');
+});
+function mbEnd(e, cancelled) {
+  if (!mbDrag) return;
+  const d = mbDrag; mbDrag = null;
+  if (d.ghost) d.ghost.remove();
+  document.querySelectorAll('.mb-card.drop-hover').forEach(c => c.classList.remove('drop-hover'));
+  if (cancelled || !d.moved) return;
+  const over = document.elementFromPoint(e.clientX, e.clientY);
+  const card = over && over.closest('.mb-card');
+  if (card) mbLink(d.id, card.dataset.nr, d.from);
+}
+document.addEventListener('pointerup', e => mbEnd(e, false));
+document.addEventListener('pointercancel', e => mbEnd(e, true));
+
 // ---------- admin ----------
 function renderAdmin() {
   const sys = isSys();
@@ -1335,7 +1479,11 @@ function renderAdmin() {
     return `<div class="list-row">
       ${sys ? `<input type="color" value="${firmColor(f.navn)}" data-firm-color="${i}">` : ''}
       <div class="grow">${firmBadge(f.navn)} <span class="sub">${used} aktiviteter · ${users} brukere</span></div>
-      ${sys ? `<button class="btn danger" data-action="del-firm" data-i="${i}" ${used || users ? 'disabled title="Firmaet er i bruk"' : ''}>Fjern</button>` : ''}</div>`;
+      ${sys ? `<button class="btn danger" data-action="del-firm" data-i="${i}">Fjern</button>` : ''}</div>
+      ${sys && ui.admin.firmDel === f.navn ? `<div class="firm-move">${used} aktiviteter og ${users} brukere er knyttet til ${esc(f.navn)}. Flytt dem til
+        <select id="firm-move-to">${FIRMS.filter(x => x.navn !== f.navn).map(x => `<option value="${esc(x.navn)}">${esc(x.navn)}</option>`).join('')}</select>
+        <button class="btn danger" data-action="firm-move-del" data-i="${i}">Flytt og fjern</button>
+        <button class="btn" data-action="firm-move-cancel">Avbryt</button></div>` : ''}`;
   }).join('');
 
   document.getElementById('modules-panel').innerHTML = `<h3>Moduler i prosjektet</h3>
@@ -1354,6 +1502,7 @@ function renderCurrent() {
   renderUserBar();
   if (currentTab === 'klargjoring' || currentTab === 'oversikt') renderTable(currentTab);
   else if (currentTab === 'skrastrek') renderSkrastrek();
+  else if (currentTab === 'metoder') renderMetoder();
   else if (currentTab === 'koordinering') renderKoord();
   else if (currentTab === 'admin') renderAdmin();
 }
@@ -1368,7 +1517,7 @@ function showTab(tab) {
 }
 
 // ---------- hendelser ----------
-function rerenderPage(page) { if (page === 'skrastrek') renderSkrastrek(); else renderTable(page); }
+function rerenderPage(page) { if (page === 'skrastrek') renderSkrastrek(); else if (page === 'metoder') renderMetoder(); else renderTable(page); }
 function pageOf(el) { const p = el.closest('.page'); return p ? p.id.replace('page-', '') : null; }
 function targetOf(el) {
   const tr = el.closest('tr[data-id]');
@@ -1472,6 +1621,11 @@ document.addEventListener('click', e => {
     if (f && canPlaceAT(f.t) && confirm(`Fjerne alle ${f.t.plasseringer.length} plasseringer for ${f.t.nr}?`)) { f.t.plasseringer = []; ui.koord.selected = null; save(); renderKoord(); }
     return;
   }
+  if (action === 'mb-unlink') {
+    const c = btn.closest('.mb-chip'), a = DATA.find(x => x.id === c.dataset.id);
+    if (a && canEditAct(a)) { setMbNrs(a, mbNrs(a).filter(n => n !== c.dataset.from)); save(); renderMetoder(); }
+    return;
+  }
   if (action === 'select-at') { ui.koord.selected = {nr: btn.dataset.nr, pid: btn.dataset.pid}; renderKoord(); return; }
   if (action === 'sel-close') { ui.koord.selected = null; renderKoord(); return; }
   if (action === 'place-del') {
@@ -1495,7 +1649,7 @@ document.addEventListener('click', e => {
   }
 
   // admin (kun systemadministrator)
-  if (!isSys() && ['add-user', 'del-user', 'add-firm', 'del-firm', 'reset-data'].includes(action)) return;
+  if (!isSys() && ['add-user', 'del-user', 'add-firm', 'del-firm', 'firm-move-del', 'reset-data', 'mb-add', 'mb-del'].includes(action)) return;
   if (action === 'add-user') {
     const name = document.getElementById('u-name').value.trim(), email = document.getElementById('u-email').value.trim().toLowerCase();
     if (!name) { alert('Skriv inn navn.'); return; }
@@ -1524,10 +1678,42 @@ document.addEventListener('click', e => {
     FIRMS.push({navn, farge: document.getElementById('f-color').value});
     save(); renderAdmin(); return;
   }
-  if (action === 'del-firm') { FIRMS.splice(Number(btn.dataset.i), 1); save(); renderAdmin(); return; }
+  if (action === 'del-firm') {
+    const f = FIRMS[Number(btn.dataset.i)]; if (!f) return;
+    if (FIRMS.length === 1) { alert('Det må finnes minst ett firma.'); return; }
+    const inUse = DATA.some(a => a.firma === f.navn || a.at.some(t => t.firma === f.navn)) || USERS.some(u => u.firma === f.navn);
+    if (inUse) { ui.admin.firmDel = f.navn; renderAdmin(); return; }
+    if (!confirm(`Fjerne ${f.navn}?`)) return;
+    FIRMS.splice(Number(btn.dataset.i), 1); save(); renderAdmin(); return;
+  }
+  if (action === 'firm-move-cancel') { ui.admin.firmDel = null; renderAdmin(); return; }
+  if (action === 'firm-move-del') {
+    const f = FIRMS[Number(btn.dataset.i)], to = document.getElementById('firm-move-to').value;
+    if (!f || !to || !confirm(`Flytte alt fra ${f.navn} til ${to} og fjerne ${f.navn}?`)) return;
+    DATA.forEach(a => { if (a.firma === f.navn) a.firma = to; a.at.forEach(t => { if (t.firma === f.navn) t.firma = to; }); });
+    USERS.forEach(u => { if (u.firma === f.navn) u.firma = to; });
+    FIRMS = FIRMS.filter(x => x !== f);
+    ui.admin.firmDel = null;
+    save(); renderAdmin(); return;
+  }
+  if (action === 'mb-add') {
+    const nr = document.getElementById('mb-nr').value.trim(), navn = document.getElementById('mb-navn').value.trim();
+    if (!nr || !navn) { alert('Fyll inn nummer og navn.'); return; }
+    if (METHODS.some(m => m.nr === nr)) { alert(`MB ${nr} finnes allerede.`); return; }
+    METHODS.push({nr, navn, rev: document.getElementById('mb-rev').value.trim()});
+    save(); renderMetoder(); return;
+  }
+  if (action === 'mb-del') {
+    const nr = btn.closest('.mb-card').dataset.nr;
+    const n = DATA.filter(a => mbNrs(a).includes(nr)).length;
+    if (!confirm(`Slette MB ${nr}?${n ? ` Koblingen fjernes fra ${n} aktiviteter.` : ''}`)) return;
+    DATA.forEach(a => { if (mbNrs(a).includes(nr)) setMbNrs(a, mbNrs(a).filter(x => x !== nr)); });
+    METHODS = METHODS.filter(m => m.nr !== nr);
+    save(); renderMetoder(); return;
+  }
   if (action === 'reset-data') {
     if (!confirm(`Tilbakestille alle aktiviteter og AT-er til Excel-dataene?${CLOUD ? ' Dette gjelder for ALLE brukere.' : ''} Alle endringer og plasseringer slettes.`)) return;
-    DATA = freshData(); FIRMS = DEFAULT_FIRMS.map(f => ({...f}));
+    DATA = freshData(); FIRMS = DEFAULT_FIRMS.map(f => ({...f})); METHODS = DEFAULT_METHODS.map(m => ({...m}));
     ui.klargjoring.editing.clear(); ui.koord.selected = null;
     save(); alert('Dataene er tilbakestilt.'); renderAdmin(); return;
   }
@@ -1543,6 +1729,7 @@ document.addEventListener('change', e => {
   if (el.id === 'sk-niva' || el.id === 'sk-uker') { ui.skrastrek[el.id === 'sk-niva' ? 'niva' : 'uker'] = el.value; renderSkrastrek(); return; }
   if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; renderKoord(); return; }
   if (el.id === 'map-upload') { if (el.files[0]) uploadMap(el.files[0]); el.value = ''; return; }
+  if (el.id === 'mb-unlinked') { ui.metoder.bareUkoblede = el.checked; renderMetoder(); return; }
   if (el.id === 'mod-skrastrek') { if (isSys()) { SETTINGS.skrastrek = el.checked; save(); } renderCurrent(); return; }
   if (el.dataset.firmColor !== undefined) { if (isSys()) { FIRMS[Number(el.dataset.firmColor)].farge = el.value; save(); } renderAdmin(); return; }
   if (el.dataset.userField) {
@@ -1603,7 +1790,7 @@ function showToast(t) {
 // Endringer fra andre brukere tegnes ikke mens du skriver eller drar noe.
 function scheduleRender() {
   const a = document.activeElement;
-  const busy = drag || (a && a.closest('main') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'checkbox');
+  const busy = drag || mbDrag || (a && a.closest('main') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'checkbox');
   if (busy) { clearTimeout(scheduleRender.t); scheduleRender.t = setTimeout(scheduleRender, 400); return; }
   renderCurrent();
 }

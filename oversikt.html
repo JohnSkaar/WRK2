@@ -224,6 +224,8 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .mb-tag.at{background:#3346a8;color:#fff}
 .btn.small-dark{padding:4px 10px;font-size:12px;margin-top:4px}
 .mb-add select{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px}
+.firm-rename{display:flex;flex-wrap:wrap;gap:6px}
+.firm-rename input{padding:6px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;min-width:180px}
 </style>
 </head>
 <body>
@@ -757,7 +759,7 @@ const ui = {
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
   metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set()},
-  admin: {firmDel: null},
+  admin: {firmDel: null, firmEdit: null},
   koord: {week: null, selected: null, drawing: null}
 };
 let currentTab = 'oversikt';
@@ -1624,8 +1626,10 @@ function renderAdmin() {
     const users = USERS.filter(u => u.firma === f.navn).length;
     return `<div class="list-row">
       ${sys ? `<input type="color" value="${firmColor(f.navn)}" data-firm-color="${i}">` : ''}
-      <div class="grow">${firmBadge(f.navn)} <span class="sub">${used} aktiviteter · ${users} brukere</span></div>
-      ${sys ? `<button class="btn danger" data-action="del-firm" data-i="${i}">Fjern</button>` : ''}</div>
+      <div class="grow">${sys && ui.admin.firmEdit === i
+        ? `<span class="firm-rename"><input type="text" id="firm-new-name" value="${esc(f.navn)}" maxlength="60"><button class="btn primary" data-action="firm-rename-save" data-i="${i}">Lagre</button><button class="btn" data-action="firm-rename-cancel">Avbryt</button></span>`
+        : `${firmBadge(f.navn)} <span class="sub">${used} aktiviteter · ${users} brukere</span>`}</div>
+      ${sys && ui.admin.firmEdit !== i ? `<button class="btn" data-action="firm-rename" data-i="${i}" title="Endre navn">✏️ Endre navn</button><button class="btn danger" data-action="del-firm" data-i="${i}">Fjern</button>` : ''}</div>
       ${sys && ui.admin.firmDel === f.navn ? `<div class="firm-move">${used} aktiviteter og ${users} brukere er knyttet til ${esc(f.navn)}. Flytt dem til
         <select id="firm-move-to">${FIRMS.filter(x => x.navn !== f.navn).map(x => `<option value="${esc(x.navn)}">${esc(x.navn)}</option>`).join('')}</select>
         <button class="btn danger" data-action="firm-move-del" data-i="${i}">Flytt og fjern</button>
@@ -1824,7 +1828,7 @@ document.addEventListener('click', e => {
   }
 
   // admin (kun systemadministrator)
-  if (!isSys() && ['add-user', 'del-user', 'add-firm', 'del-firm', 'firm-move-del', 'reset-data', 'mb-add', 'mb-del'].includes(action)) return;
+  if (!isSys() && ['add-user', 'del-user', 'add-firm', 'del-firm', 'firm-move-del', 'firm-rename-save', 'reset-data', 'mb-add', 'mb-del'].includes(action)) return;
   if (action === 'add-user') {
     const name = document.getElementById('u-name').value.trim(), email = document.getElementById('u-email').value.trim().toLowerCase();
     if (!name) { alert('Skriv inn navn.'); return; }
@@ -1860,6 +1864,25 @@ document.addEventListener('click', e => {
     if (inUse) { ui.admin.firmDel = f.navn; renderAdmin(); return; }
     if (!confirm(`Fjerne ${f.navn}?`)) return;
     FIRMS.splice(Number(btn.dataset.i), 1); save(); renderAdmin(); return;
+  }
+  if (action === 'firm-rename') { ui.admin.firmEdit = Number(btn.dataset.i); ui.admin.firmDel = null; renderAdmin(); const el = document.getElementById('firm-new-name'); if (el) el.focus(); return; }
+  if (action === 'firm-rename-cancel') { ui.admin.firmEdit = null; renderAdmin(); return; }
+  if (action === 'firm-rename-save') {
+    const f = FIRMS[Number(btn.dataset.i)], navn = document.getElementById('firm-new-name').value.trim();
+    if (!f || !navn) { alert('Skriv inn et firmanavn.'); return; }
+    if (navn !== f.navn && FIRMS.some(x => x !== f && x.navn.toLowerCase() === navn.toLowerCase())) { alert('Et firma med dette navnet finnes allerede.'); return; }
+    const old = f.navn;
+    if (navn !== old) {
+      f.navn = navn;
+      DATA.forEach(a => { if (a.firma === old) a.firma = navn; });
+      ATS.forEach(t => { if (t.firma === old) t.firma = navn; });
+      METHODS.forEach(m => { if (m.firma === old) m.firma = navn; });
+      USERS.forEach(u => { if (u.firma === old) u.firma = navn; });
+      ['klargjoring', 'oversikt', 'skrastrek'].forEach(pg => { const set = ui[pg].firms; if (set && set.delete(old)) set.add(navn); });
+      if (ui.metoder.closed.delete(old)) ui.metoder.closed.add(navn);
+    }
+    ui.admin.firmEdit = null;
+    save(); renderCurrent(); return;
   }
   if (action === 'firm-move-cancel') { ui.admin.firmDel = null; renderAdmin(); return; }
   if (action === 'firm-move-del') {

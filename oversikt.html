@@ -74,6 +74,8 @@ tr.at-row.flash td{animation:flash 1.6s}
 .icon-btn.danger{color:var(--red)}
 .lys{width:16px;height:16px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.18);vertical-align:middle}
 .lys-gronn{background:var(--green)}.lys-gul{background:var(--yellow)}.lys-rod{background:var(--red)}
+.lys.lys-ikke{background:#d0d7de;border-radius:3px}
+select.lys-sel.lys-ikke{background:#d0d7de;color:#24292f}
 select.lys-sel{color:#fff;font-weight:600;border:none}
 select.lys-sel option{color:#000;background:#fff}
 .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:500;white-space:nowrap}
@@ -168,6 +170,8 @@ tr.week-row.arkiv-row td{background:#eceef1;color:#57606a}
 tr.main-row.flash-main td{animation:flash 1.6s}
 @media(max-width:600px){.sk-axis{width:130px !important}.sk-zone{font-size:11px;padding:0 6px}}
 .person{display:inline-block;min-width:30px;padding:2px 6px;border-radius:4px;background:#eef1f4;color:#24292f;font-weight:600;font-size:12px;font-family:ui-monospace,Menlo,monospace}
+.module-row{display:flex;gap:10px;align-items:flex-start;padding:8px;border:1px solid var(--line);border-radius:6px;cursor:pointer}
+.module-row input{width:18px;height:18px;margin-top:2px}
 </style>
 </head>
 <body>
@@ -283,6 +287,7 @@ tr.main-row.flash-main td{animation:flash 1.6s}
         <div id="firm-form"></div>
         <div id="firm-list"></div>
       </div>
+      <div class="panel" id="modules-panel"></div>
       <div class="panel" id="data-panel"></div>
     </div>
   </section>
@@ -310,11 +315,13 @@ function dodIcon(k, size = 32) {
   return `<img class="dod-icon" src="ikoner/dod-${k}.png" width="${size}" height="${Math.round(size * 0.91)}" alt="${esc(DOD[k].label)}" title="${esc(DOD[k].label)}">`;
 }
 const LYS = {
-  gronn: {label: 'Grønn – avklart', emoji: '🟢'},
-  gul: {label: 'Gul – under avklaring', emoji: '🟡'},
-  rod: {label: 'Rød – ikke avklart', emoji: '🔴'}
+  ikke: {label: 'Grå – ikke vurdert', kort: 'Ikke vurdert', emoji: '⬜'},
+  gronn: {label: 'Grønn – avklart', kort: 'Grønn', emoji: '🟢'},
+  gul: {label: 'Gul – under avklaring', kort: 'Gul', emoji: '🟡'},
+  rod: {label: 'Rød – ikke avklart', kort: 'Rød', emoji: '🔴'}
 };
-const LYS_RANK = {gronn: 0, gul: 1, rod: 2};
+const METODE_LYS = ['gronn', 'gul', 'rod'];
+function ikkeVurdert() { return Object.fromEntries(FORUTSETNINGER.map(([k]) => [k, 'ikke'])); }
 const STATUSER = ['Til utførelse', 'Pågår', 'Utført'];
 const STATUS_CLS = {'Til utførelse': 'st-plan', 'Pågår': 'st-go', 'Utført': 'st-done'};
 const RISIKONIVA = ['Høyt', 'Middels', 'Lavt'];
@@ -383,6 +390,7 @@ const AX_ROWS_R = [['B', 340, 1794], ['C', 540, 1794]];
 // PLAN_FRA: aktiviteter som var ferdige før uke 40 er tatt ut av planen.
 const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
+const SETTINGS_KEY = 'wrk2_settings';
 const STORAGE_KEY = 'wrk2_v6', FIRMS_KEY = 'wrk2_firms_v6', USERS_KEY = 'wrk2_users_v6', CURRENT_KEY = 'wrk2_current_user',
   MAP_KEY = 'wrk2_sonekart', MAP_RATIO_KEY = 'wrk2_sonekart_ratio';
 
@@ -449,25 +457,6 @@ function risikoFra(dod) {
   if (dod.some(k => ['fall', 'konstruksjon', 'eksplosjon', 'elektrisk'].includes(k))) return 'Høyt';
   return dod.length ? 'Middels' : 'Lavt';
 }
-function genLys(r, status, start) {
-  const o = {}, d = daysBetween(TODAY, start);
-  FORUTSETNINGER.forEach(([k]) => {
-    let v;
-    if (status === 'Utført') v = 'gronn';
-    else if (status === 'Pågår') v = r() < 0.85 ? 'gronn' : 'gul';
-    else {
-      const [g, y] = d <= 7 ? [0.6, 0.3] : d <= 21 ? [0.4, 0.4] : [0.25, 0.4];
-      const x = r(); v = x < g ? 'gronn' : x < g + y ? 'gul' : 'rod';
-    }
-    o[k] = v;
-  });
-  return o;
-}
-function worstOf(list) {
-  const o = {};
-  FORUTSETNINGER.forEach(([k]) => { o[k] = list.reduce((w, x) => LYS_RANK[x[k]] > LYS_RANK[w] ? x[k] : w, 'gronn'); });
-  return o;
-}
 function buildData() {
   let atCounter = 0;
   return EXCEL.map(([id, omrade, navn, dato, metodeOK, metodeNr]) => {
@@ -490,12 +479,12 @@ function buildData() {
       const st = statusFor(aStart, aVar);
       at.push({
         nr: 'AT-' + String(atCounter).padStart(3, '0'), navn: subNavn, omrade, startdato: aStart, varighet: aVar,
-        firma, forutsetninger: genLys(r, st, aStart), risikoniva: risikoFra(dod), dodsrisiko: [...dod],
+        firma, forutsetninger: ikkeVurdert(), risikoniva: risikoFra(dod), dodsrisiko: [...dod],
         status: st, kommentar: '', plasseringer: []
       });
     }
     const status = statusFor(start, varighet);
-    const forutsetninger = at.length ? worstOf(at.map(a => a.forutsetninger)) : genLys(r, status, start);
+    const forutsetninger = ikkeVurdert();
     const ownDod = at.length ? [] : subs[0][1].slice();
     const allDod = [...new Set(at.flatMap(a => a.dodsrisiko).concat(ownDod))];
 
@@ -525,7 +514,7 @@ function buildData() {
 }
 
 // ---------- lagring ----------
-let DATA = [], FIRMS = [], USERS = [], currentUserId = null;
+let DATA = [], FIRMS = [], USERS = [], currentUserId = null, SETTINGS = {};
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
 function readRaw(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -587,6 +576,12 @@ function load() {
     FIRMS = DEFAULT_FIRMS.map(d => ({...d})).concat(extra);
   }
   USERS = loadUsers();
+  SETTINGS = {skrastrek: false, fuIkkeVurdert: false, ...(readJSON(SETTINGS_KEY) || {})};
+  if (!SETTINGS.fuIkkeVurdert) {
+    // Engangsnullstilling: alle sju forutsetninger starter som «ikke vurdert».
+    DATA.forEach(a => { a.forutsetninger = ikkeVurdert(); a.at.forEach(t => { t.forutsetninger = ikkeVurdert(); }); });
+    SETTINGS.fuIkkeVurdert = true;
+  }
   currentUserId = readRaw(CURRENT_KEY);
   if (!USERS.some(u => u.id === currentUserId)) currentUserId = USERS.find(u => u.rolle === 'systemadmin').id;
   save();
@@ -596,6 +591,7 @@ function save() {
   writeRaw(FIRMS_KEY, JSON.stringify(FIRMS));
   writeRaw(USERS_KEY, JSON.stringify(USERS));
   writeRaw(CURRENT_KEY, currentUserId);
+  writeRaw(SETTINGS_KEY, JSON.stringify(SETTINGS));
 }
 function loadMap() { return readRaw(MAP_KEY); }
 
@@ -639,8 +635,9 @@ function selectHtml(field, options, val, cls = '') {
   return `<select data-field="${field}" class="${cls}">${opts.map(o => `<option value="${esc(o)}" ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
 }
 function firmBadge(n) { return `<span class="badge firm-badge" style="background:${firmColor(n)}">${esc(n)}</span>`; }
-function cLys(path, val, ed) {
-  if (ed) return `<select class="lys-sel lys-${val}" data-field="${path}" title="${esc(LYS[val].label)}">${Object.keys(LYS).map(k => `<option value="${k}" ${k === val ? 'selected' : ''}>${LYS[k].emoji} ${LYS[k].label.split(' ')[0]}</option>`).join('')}</select>`;
+function cLys(path, val, ed, keys = Object.keys(LYS)) {
+  if (!LYS[val]) val = 'ikke';
+  if (ed) return `<select class="lys-sel lys-${val}" data-field="${path}" title="${esc(LYS[val].label)}">${keys.map(k => `<option value="${k}" ${k === val ? 'selected' : ''}>${LYS[k].emoji} ${LYS[k].kort}</option>`).join('')}</select>`;
   return `<span class="lys lys-${val}" title="${esc(LYS[val].label)}"></span>`;
 }
 function cRisk(v, ed) { return ed ? selectHtml('risikoniva', RISIKONIVA, v) : `<span class="badge ${RISK_CLS[v] || ''}">${esc(v)}</span>`; }
@@ -701,7 +698,7 @@ function mainRow(a, page) {
     </td>
     <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : mondayOf(a.startdato) < mondayOf(TODAY) ? ` <span class="badge carry-tag" title="Startet ${fmtNo(a.startdato)} og pågår fortsatt">Videreført fra uke ${isoWeek(a.startdato)}</span>` : ''}</div></td>
     ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
-    <td class="c">${cLys('metode.status', a.metode.status, ed)}${a.metode.nr ? `<div class="sub">MB ${esc(a.metode.nr)}</div>` : ''}</td>
+    <td class="c">${cLys('metode.status', a.metode.status, ed, METODE_LYS)}${a.metode.nr ? `<div class="sub">MB ${esc(a.metode.nr)}</div>` : ''}</td>
     <td>${a.at.length ? a.at.map(t => `<span class="at-chip" data-action="goto-at" data-nr="${esc(t.nr)}" title="Gå til ${esc(t.nr)}">${esc(t.nr)}</span>`).join('<br>') : '<span class="muted">Ingen</span>'}</td>
     ${c.lys}
     <td>${cRisk(a.risikoniva, ed)}</td>
@@ -814,10 +811,11 @@ function renderStats(page, rows) {
   const ats = rows.flatMap(a => a.at);
   const cnt = s => rows.filter(a => a.status === s).length;
   const red = rows.filter(a => a.metode.status === 'rod' || FORUTSETNINGER.some(([k]) => a.forutsetninger[k] === 'rod')).length;
+  const ikke = rows.filter(a => FORUTSETNINGER.some(([k]) => a.forutsetninger[k] === 'ikke')).length;
   document.getElementById('stats-' + page).innerHTML =
     `<span><b>${rows.length}</b> aktiviteter</span><span><b>${ats.length}</b> AT</span>
      <span><b>${cnt('Til utførelse')}</b> til utførelse</span><span><b>${cnt('Pågår')}</b> pågår</span><span><b>${cnt('Utført')}</b> utført</span>
-     <span><b style="color:var(--red)">${red}</b> med rødt lys</span>`;
+     <span><b style="color:var(--red)">${red}</b> med rødt lys</span><span><b>${ikke}</b> med forutsetninger som ikke er vurdert</span>`;
 }
 
 function renderFirmFilter(page) {
@@ -835,7 +833,7 @@ function renderFirmFilter(page) {
 }
 
 function renderLegend() {
-  const h = `<span><b>Lys:</b></span>${Object.values(LYS).map(l => `<span>${l.emoji} ${l.label}</span>`).join('')}
+  const h = `<span><b>Lys:</b></span>${Object.entries(LYS).map(([k, l]) => `<span><span class="lys lys-${k}"></span> ${l.label}</span>`).join('')}
     <span style="margin-left:10px"><b>Dødsrisiko:</b></span>${Object.keys(DOD).map(k => `<span>${dodIcon(k, 28)} ${DOD[k].label}</span>`).join('')}`;
   document.querySelectorAll('.legend-box').forEach(e => e.innerHTML = h);
 }
@@ -1315,6 +1313,10 @@ function renderAdmin() {
       ${sys ? `<button class="btn danger" data-action="del-firm" data-i="${i}" ${used || users ? 'disabled title="Firmaet er i bruk"' : ''}>Fjern</button>` : ''}</div>`;
   }).join('');
 
+  document.getElementById('modules-panel').innerHTML = `<h3>Moduler i prosjektet</h3>
+    <p class="intro" style="margin-bottom:8px">Tilleggsmoduler er skrudd av som standard. En systemadministrator kan gjøre dem tilgjengelige for alle brukerne i prosjektet.</p>
+    <label class="module-row"><input type="checkbox" id="mod-skrastrek" ${SETTINGS.skrastrek ? 'checked' : ''} ${sys ? '' : 'disabled'}>
+      <span><b>Skråstreksdiagram</b><br><span class="sub">Soner mot uker, med hver aktivitet eller AT som en skråstrek.</span></span></label>`;
   document.getElementById('data-panel').innerHTML = `<h3>Data</h3>
     <p class="intro" style="margin-bottom:10px">Data lagres i denne nettleseren. Planen viser ${DATA.length} aktiviteter. Aktiviteter som var ferdige før uke 40 er tatt ut.
     ${sys ? 'Tilbakestilling henter aktivitetene fra Excel-utdraget på nytt og sletter alle endringer og AT-plasseringer.' : ''}</p>
@@ -1323,6 +1325,7 @@ function renderAdmin() {
 
 // ---------- navigasjon ----------
 function renderCurrent() {
+  document.querySelector('nav.tabs button[data-tab="skrastrek"]').hidden = !SETTINGS.skrastrek;
   renderUserBar();
   if (currentTab === 'klargjoring' || currentTab === 'oversikt') renderTable(currentTab);
   else if (currentTab === 'skrastrek') renderSkrastrek();
@@ -1330,7 +1333,7 @@ function renderCurrent() {
   else if (currentTab === 'admin') renderAdmin();
 }
 function showTab(tab) {
-  if (!document.getElementById('page-' + tab)) tab = 'oversikt';
+  if (!document.getElementById('page-' + tab) || (tab === 'skrastrek' && !SETTINGS.skrastrek)) tab = 'oversikt';
   currentTab = tab;
   ui.koord.drawing = null;
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + tab));
@@ -1508,6 +1511,7 @@ document.addEventListener('change', e => {
   if (el.id === 'sk-niva' || el.id === 'sk-uker') { ui.skrastrek[el.id === 'sk-niva' ? 'niva' : 'uker'] = el.value; renderSkrastrek(); return; }
   if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; renderKoord(); return; }
   if (el.id === 'map-upload') { if (el.files[0]) uploadMap(el.files[0]); el.value = ''; return; }
+  if (el.id === 'mod-skrastrek') { if (isSys()) { SETTINGS.skrastrek = el.checked; save(); } renderCurrent(); return; }
   if (el.dataset.firmColor !== undefined) { if (isSys()) { FIRMS[Number(el.dataset.firmColor)].farge = el.value; save(); } renderAdmin(); return; }
   if (el.dataset.userField) {
     const u = USERS.find(x => x.id === el.dataset.uid);

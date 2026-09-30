@@ -35,7 +35,7 @@ service cloud.firestore {
               && request.resource.data.rolle == get(invitePath()).data.rolle
               && request.resource.data.firma == get(invitePath()).data.firma)
             || byCode(request.resource.data)
-            || (signedIn() && email() == 'BYTT_TIL_DIN_EPOST' && request.resource.data.rolle == 'systemadmin'));
+            || (signedIn() && email() == 'john.skaar@skanska.no' && request.resource.data.rolle == 'systemadmin'));
       allow update: if sys() && validUser(request.resource.data);
       allow delete: if sys() && request.auth.uid != uid;
     }

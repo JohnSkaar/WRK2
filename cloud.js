@@ -184,7 +184,7 @@ function stable(v) {
   if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
-const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0});
+const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0});
 const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle, ...(u.pending && u.kode ? {kode: u.kode} : {})});
 const codeDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
 
@@ -244,7 +244,7 @@ async function ensureProfile(user) {
 function startSync(uid) {
   myUid = uid;
   const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false, avh: null};
-  let loggOn = false, invitesOn = false, seeding = false, migrating = false;
+  let importing = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
   const fail = err => { view('error', 'Mistet kontakten med databasen: ' + errText(err)); };
 
   const apply = async () => {
@@ -291,6 +291,9 @@ function startSync(uid) {
     if (!started) { started = true; unlock(); startApp(); } else scheduleRender();
     if (readOnly) showToast('Endringer kan ikke lagres ennå: ' + readOnly);
     if (sys && !readOnly && (applyMetodesett() | applyRegistersett())) { window.cloudSync(); renderCurrent(); }
+    // Sitedrive-planen importeres én gang, i én samlet skriving, når de andre engangsoppdateringene er lagret.
+    else if (sys && !readOnly && !importing && (st.settings.plansett || 0) < PLANSETT
+      && (st.settings.metodesett || 0) >= METODESETT && (st.settings.registersett || 0) >= REGISTERSETT) { importing = true; await importPlan(); }
   };
 
   unsubs.push(onSnapshot(collection(db, 'users'), s => { st.users = s.docs.map(d => ({id: d.id, ...d.data()})); apply(); }, fail));
@@ -306,6 +309,22 @@ function startSync(uid) {
     if (sysOrAdmin()) showToast('Avhengigheter kan ikke lagres før sikkerhetsreglene i Firebase er publisert på nytt (firestore.rules fra GitHub).');
   }));
   unsubs.push(onSnapshot(collection(db, 'aktiviteter'), s => { st.akt = s.docs.map(d => d.data()); apply(); }, fail));
+}
+
+// Import av Sitedrive-planen: alle endringer skrives i én batch, slik at øyeblikksbildene ikke blander gammel og ny plan.
+async function importPlan() {
+  const gamle = new Set(DATA.map(a => a.id)), gamleAvh = new Set(AVH.map(d => d.id));
+  if (!applyPlansett()) return;
+  const batch = writeBatch(db), byId = new Map(DATA.map(a => [a.id, a]));
+  DATA.forEach(a => batch.set(doc(db, 'aktiviteter', a.id), toDoc(a)));
+  gamle.forEach(id => { if (!byId.has(id)) batch.delete(doc(db, 'aktiviteter', id)); });
+  ATS.forEach(t => batch.set(doc(db, 'at', t.id), toATDoc(t, id => byId.get(id))));
+  const nyAvh = new Set(AVH.map(d => d.id));
+  gamleAvh.forEach(id => { if (!nyAvh.has(id)) batch.delete(doc(db, 'avhengigheter', id)); });
+  batch.set(doc(db, 'config', 'firms'), {list: FIRMS});
+  batch.set(doc(db, 'config', 'settings'), settingsDoc());
+  try { await batch.commit(); showToast(`Sitedrive-planen er importert: ${SETTINGS.planImport.ny} nye, ${SETTINGS.planImport.oppdatert} oppdatert, ${SETTINGS.planImport.fjernet} fjernet.`); }
+  catch (err) { showToast('Importen av Sitedrive-planen feilet: ' + errText(err)); }
 }
 
 // Engangsoppgradering: AT-er som ligger inni aktivitetene flyttes til egen samling.

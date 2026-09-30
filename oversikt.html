@@ -208,7 +208,8 @@ tr.main-row.flash-main td{animation:flash 1.6s}
 .sv-switch input:checked+.sl::after{left:17px}
 .sv-switch input:focus-visible+.sl{outline:2px solid var(--accent);outline-offset:2px}
 .sv-avh-hint{background:#f3f0ff;border-color:#c5b8f5}
-.sv-panel.deps .sv-bar{overflow:visible}
+.sv-panel.deps .sv-bar{overflow:visible;z-index:3}
+.sv-panel.deps .sv-bar:hover,.sv-panel.deps .sv-bar.hover{z-index:4}
 .sv-panel.deps .sv-lab{margin-left:12px}
 .sv-h{position:absolute;top:4px;width:13px;height:13px;border-radius:50%;background:#fff;border:2px solid #57606a;box-sizing:border-box;cursor:crosshair;z-index:4;touch-action:none;display:none}
 .sv-panel.deps .sv-h{display:block}
@@ -362,12 +363,12 @@ td.firma-cell{white-space:normal;min-width:130px}
   <div class="user-bar" id="user-bar"></div>
 </header>
 <nav class="tabs">
-  <button data-tab="klargjoring">Klargjøring av aktiviteter</button>
-  <button data-tab="metoder">Metodebeskrivelser</button>
-  <button data-tab="oversikt">Totaloversikt</button>
   <button data-tab="statustavle">Statustavle</button>
-  <button data-tab="skrastrek">Skråstreksdiagram</button>
+  <button data-tab="metoder">Metodebeskrivelser</button>
+  <button data-tab="klargjoring">Klargjøring av aktiviteter</button>
+  <button data-tab="oversikt">Totaloversikt</button>
   <button data-tab="koordinering">AT-koordinering</button>
+  <button data-tab="skrastrek">Skråstreksdiagram</button>
   <button data-tab="admin">Admin</button>
 </nav>
 <main>
@@ -637,7 +638,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-09-30.5';
+const APP_VERSION = '2026-09-30.8';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -898,6 +899,7 @@ function load() {
   if (!USERS.some(u => u.id === currentUserId)) currentUserId = USERS.find(u => u.rolle === 'systemadmin').id;
   applyMetodesett();
   applyRegistersett();
+  applyPlansett();
   save();
 }
 function save() {
@@ -984,7 +986,7 @@ const ui = {
   admin: {firmDel: null, firmEdit: null, regSearch: '', loggSearch: ''},
   koord: {week: null, selected: null, drawing: null}
 };
-let currentTab = 'oversikt';
+let currentTab = 'statustavle';
 
 // ---------- cellebyggere ----------
 function selectHtml(field, options, val, cls = '') {
@@ -1473,8 +1475,9 @@ function uploadMap(file) {
 }
 
 // ---------- skråstreksdiagram ----------
-const SK_ZONE_ORDER = ['8300 - Utomhus', '8302 - Kjeller / Kjellerinnkjøring', '8302 - Kjeller / Vest', '8302 - Kjeller / Øst',
-  '8301 - Ovnshall', '8302 - Trådhall', '8302 - Kontrollsenter', '8303 - Driftssenter', '8304 - Lagerhall', 'Pallelager'];
+// Samme rekkefølge som Grovsoner i Sitedrive.
+const SK_ZONE_ORDER = ['8300 - Utomhus', '8301 - Ovnshall', '8302 - Kjeller / Vest', '8302 - Kjeller / Øst', '8302 - Kjeller / Kjellerinnkjøring',
+  '8302 - Trådhall', '8302 - Kontrollsenter', '8303 - Driftssenter', '8304 - Lagerhall', 'Pallelager'];
 const SK = {dayW: 14, bandMin: 78, bandEmpty: 34, labelH: 13, left: 210, top: 58, pad: 8};
 let skItems = [];
 
@@ -1744,6 +1747,8 @@ function renderStatustavle() {
     <span class="muted">Blek stolpe = utført · ◂ = startet før denne uken · ✎ = endret i WRK2</span>`;
   const left = document.querySelector('#sv-chart .sv-row .sv-left');
   if (left) document.querySelector('#sv-chart .sv-bgwrap').style.setProperty('--svl', left.offsetWidth + 'px');
+  const pi = SETTINGS.planImport;
+  if (pi) document.getElementById('stats-statustavle').insertAdjacentHTML('afterbegin', `<span title="${esc(`${pi.ny} nye, ${pi.oppdatert} oppdatert, ${pi.fjernet} fjernet ved import`)}">📥 Plan: <b>${esc(pi.plan)}</b> (Sitedrive, ${esc(pi.visning)}, eksportert ${fmtNo(pi.eksportert.slice(0, 10))})</span>`);
   const brutt = AVH.filter(avhBrudd).length;
   if (brutt) document.getElementById('stats-statustavle').insertAdjacentHTML('beforeend', `<span style="color:var(--red)"><b>⚠ ${brutt}</b> brutt${brutt === 1 ? '' : 'e'} avhengighet${brutt === 1 ? '' : 'er'}</span>`);
   else if (AVH.length) document.getElementById('stats-statustavle').insertAdjacentHTML('beforeend', `<span><b>${AVH.length}</b> avhengighet${AVH.length === 1 ? '' : 'er'}, ingen brutt</span>`);
@@ -1774,6 +1779,7 @@ function svTipHtml(it) {
     ${svAvhTip(a)}
     <div class="sec">Kommentarer</div>
     ${kom.length ? kom.map(([k, v]) => `<div class="kom"><b>${esc(k)}:</b> ${esc(v)}</div>`).join('') : '<div class="sub">Ingen kommentarer registrert.</div>'}
+    ${a.sd ? `<div class="sub" style="margin-top:7px">📥 Fra Sitedrive (${esc(a.sd.plan)}, eksportert ${fmtNo(a.sd.eksportert.slice(0, 10))}) · team «${esc(a.sd.team)}»${a.sd.merknad ? `<br>⚠ ${esc(a.sd.merknad)}` : ''}</div>` : ''}
     ${a.endretIWRK2 ? `<div class="sub" style="margin-top:7px">✎ ${a.kilde === 'WRK2' ? 'Lagt inn' : 'Endret'} i WRK2 ${fmtNo(a.endretIWRK2.tid.slice(0, 10))}${a.endretIWRK2.av ? ' av ' + esc(a.endretIWRK2.av) : ''}. Ikke synkronisert med Sitedrive/Tactplan.</div>` : ''}
     <div class="sub" style="margin-top:7px">${ui.statustavle.edit ? (canEditAct(a) ? 'Dra for å flytte · dra i høyre kant for varighet · trykk for å endre' : `🔒 Bare ${esc(a.firma)} eller systemadministrator kan endre`) : ui.statustavle.lenke ? 'Trykk for å åpne i Klargjøring av aktiviteter' : 'Slå på «Hyperlink mot aktivitet» for å åpne aktiviteten med et trykk'}</div>`;
 }
@@ -2341,6 +2347,181 @@ function loggCsv() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// ---------- Sitedrive-plan: speiling av 8-ukersplanen (Sitedrive er master for navn, sone og datoer) ----------
+// Hentet fra PDF-eksporten «Fremdriftsplan original 15-09-2026 – Grovsoner», eksportert 30.09.2026 16:44.
+// Rad: [sone, team i Sitedrive, start, slutt, navn, navn avkortet i PDF, stolpen starter i venstre kant (kan ha startet før), fortsetter etter 30.11]
+const SD_PLAN_INFO = {plan: 'Fremdriftsplan original 15-09-2026', visning: 'Grovsoner', eksportert: '2026-09-30T16:44', fra: '2026-09-28', til: '2026-11-30', kilde: 'PDF-eksport'};
+const SD_PLAN = [
+  ["8300 - Utomhus", "Grunn (V&S)", "2026-09-28", "2026-11-13", "Tilbakefylling hovedgrøft", 0, 1, 0],
+  ["8300 - Utomhus", "Grunn (V&S)", "2026-09-28", "2026-10-09", "Kum for Trykkluft", 0, 1, 0],
+  ["8300 - Utomhus", "Betong", "2026-10-05", "2026-10-09", "Betongarbeid boregrop (Ø)", 0, 0, 0],
+  ["8300 - Utomhus", "Boring", "2026-10-19", "2026-10-30", "Boring for overvann (Ø)", 0, 0, 0],
+  ["8300 - Utomhus", "Grunn (V&S)", "2026-10-26", "2026-10-30", "Grave for naturgass (vestside ovnshall)", 0, 0, 0],
+  ["8300 - Utomhus", "Grunn (V&S)", "2026-11-02", "2026-11-13", "Grave for naturgass (kryssing av", 1, 0, 0],
+  ["8300 - Utomhus", "Grunn (V&S)", "2026-11-02", "2026-11-06", "Grave for Naturgassledning", 1, 0, 0],
+  ["8300 - Utomhus", "Grunn (V&S)", "2026-11-02", "2026-11-30", "Kryssing av vei (fra byggegrop (S) frem til vannkum 1", 0, 0, 1],
+  ["8300 - Utomhus", "Rør/naturgass", "2026-11-09", "2026-11-30", "16-C010 Naturgass ledning i grunn", 0, 0, 1],
+  ["8300 - Utomhus", "Elektro", "2026-11-09", "2026-11-13", "39-C030 Kobberplate Kum", 0, 0, 0],
+  ["8300 - Utomhus", "Rør/naturgass", "2026-11-16", "2026-11-20", "16-C010 Naturgass avgrening eksis-", 1, 0, 0],
+  ["8300 - Utomhus", "Grunn (V&S)", "2026-11-16", "2026-11-30", "Oppbygging Utområde Vest", 0, 0, 1],
+  ["8300 - Utomhus", "Rør/naturgass", "2026-11-23", "2026-11-27", "16-C010 Naturgass avgrening eksis-", 1, 0, 0],
+  ["8301 - Ovnshall", "Betong", "2026-09-28", "2026-10-16", "Ovnsgrube Vegger", 0, 1, 0],
+  ["8301 - Ovnshall", "Betong", "2026-09-28", "2026-10-02", "Støp bunnplate ovnsgrube", 0, 1, 0],
+  ["8301 - Ovnshall", "Vitnepunkt", "2026-09-28", "2026-10-02", "Vitnepunkt før støp ovnsgrube plate og støpepit", 0, 1, 0],
+  ["8301 - Ovnshall", "Grunn (V&S)", "2026-10-05", "2026-10-16", "Tilbakefylding Drossrom", 0, 0, 0],
+  ["8301 - Ovnshall", "Betong", "2026-10-12", "2026-10-16", "Trekking gewistag (spennteknikk)", 0, 0, 0],
+  ["8301 - Ovnshall", "Betong", "2026-10-19", "2026-11-06", "Fundamentering drossrom og fundament F1 FD F3 FI F5 FI", 0, 0, 0],
+  ["8301 - Ovnshall", "Betong", "2026-11-02", "2026-11-06", "Trekking gewistag (spennteknikk)", 0, 0, 0],
+  ["8301 - Ovnshall", "Betong", "2026-11-02", "2026-11-27", "Vegger og dekker drossrom (ink innstøpt stålplate)", 0, 0, 0],
+  ["8301 - Ovnshall", "Betong", "2026-11-16", "2026-11-30", "Preheater, Drosspress og vekt fundament", 0, 0, 1],
+  ["8301 - Ovnshall", "Grunn (V&S)", "2026-11-16", "2026-11-20", "Tilbakefylling glasopor", 0, 0, 0],
+  ["8301 - Ovnshall", "Betong", "2026-11-23", "2026-11-30", "Kulvert fra ovnsgrube (til kjellervegg)", 0, 0, 1],
+  ["8301 - Ovnshall", "Vitnepunkt", "2026-11-23", "2026-11-27", "Vitnepunkt innstøpning drossrom", 0, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Boring", "2026-09-28", "2026-10-02", "Opprømming", 0, 1, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Boring", "2026-09-28", "2026-10-16", "Boring for overvann (N)", 0, 1, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Elektro", "2026-10-12", "2026-10-16", "39-C010 Ringjord tverrforbindelse", 0, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Grunn (V&S)", "2026-10-12", "2026-10-23", "Plannering nedkjøringsrampe", 1, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Boring", "2026-10-12", "2026-10-23", "Trekke 710", 0, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Betong", "2026-10-19", "2026-11-06", "Bunnplate (til nedkjøringsrampe)", 0, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Grunn (V&S)", "2026-10-19", "2026-10-23", "Komplettering WRK3 grøft", 0, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Vitnepunkt", "2026-10-19", "2026-10-23", "Vitnepunktsbefaring tilkopling 710", 0, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Grunn (V&S)", "2026-10-26", "2026-11-13", "Oljeutskiller og kummer", 0, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Betong", "2026-10-26", "2026-11-13", "Vegger til nedkjøringsrampe", 0, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Elektro", "2026-11-09", "2026-11-13", "39-C020 Kobberplate Kum", 0, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Rør/naturgass", "2026-11-16", "2026-11-20", "88-C010 Leveranse Emulsjonstank", 0, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Grunn (V&S)", "2026-11-16", "2026-11-20", "Emulsjonstank", 0, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Vitnepunkt", "2026-11-23", "2026-11-27", "88-C010 Vitnebefaring", 1, 0, 0],
+  ["8302 - Kjeller / Kjellerinnkjøring", "Grunn (V&S)", "2026-11-23", "2026-11-30", "Tilbakefylling emulusjonstanker", 0, 0, 1],
+  ["8302 - Kjeller / Vest", "Grunn (V&S)", "2026-09-28", "2026-10-02", "Drens Yttervegg Ves", 0, 1, 0],
+  ["8302 - Kjeller / Vest", "Betong", "2026-09-28", "2026-10-02", "Fundament Støpepit", 0, 1, 0],
+  ["8302 - Kjeller / Vest", "Betong", "2026-09-28", "2026-10-02", "Fundamenter vegg o", 0, 1, 0],
+  ["8302 - Kjeller / Vest", "Betong", "2026-09-28", "2026-10-09", "Vegg, trafo og yttervegger Del 1", 0, 1, 0],
+  ["8302 - Kjeller / Vest", "Stillas", "2026-09-28", "2026-10-16", "Stillas yttervegg mot ovn", 0, 1, 0],
+  ["8302 - Kjeller / Vest", "Betong", "2026-09-28", "2026-10-02", "Støpe bunnplate stø", 0, 1, 0],
+  ["8302 - Kjeller / Vest", "Grunn (V&S)", "2026-10-05", "2026-10-09", "Meisling for bunnled", 0, 0, 0],
+  ["8302 - Kjeller / Vest", "Grunn (V&S)", "2026-10-05", "2026-10-09", "Tilbakefylling støpep", 0, 0, 0],
+  ["8302 - Kjeller / Vest", "Grunn (V&S)", "2026-10-05", "2026-10-09", "Tilbakefylling W1-W3", 0, 0, 0],
+  ["8302 - Kjeller / Vest", "Betong", "2026-10-12", "2026-10-30", "Fundament Søyler og vegg", 0, 0, 0],
+  ["8302 - Kjeller / Vest", "Grunn (V&S)", "2026-10-12", "2026-10-16", "Grave ringjord og dr", 0, 0, 0],
+  ["8302 - Kjeller / Vest", "Betong", "2026-10-12", "2026-10-30", "Vegger støpepit", 0, 0, 0],
+  ["8302 - Kjeller / Vest", "Betong", "2026-10-12", "2026-11-20", "Yttervegger Vest og sør", 0, 0, 0],
+  ["8302 - Kjeller / Vest", "Betong", "2026-10-26", "2026-10-30", "Pelefundamenter (Ak", 0, 0, 0],
+  ["8302 - Kjeller / Vest", "Betong", "2026-10-26", "2026-11-13", "Pilastere", 0, 0, 0],
+  ["8302 - Kjeller / Vest", "Betong", "2026-11-02", "2026-11-06", "Søyler til pelefundam", 0, 0, 0],
+  ["8302 - Kjeller / Vest", "Betong", "2026-11-09", "2026-11-20", "Innervegg, Søyle og Pilaster B til WA", 0, 0, 0],
+  ["8302 - Kjeller / Vest", "Grunn (V&S)", "2026-11-16", "2026-11-30", "Oppfylling av gulv og grøfter", 0, 0, 1],
+  ["8302 - Kjeller / Vest", "Grunn (V&S)", "2026-11-23", "2026-11-27", "Finavretting", 0, 0, 0],
+  ["8302 - Kjeller / Øst", "Grunn (V&S)", "2026-09-28", "2026-10-02", "Boring fjellbolter", 0, 1, 0],
+  ["8302 - Kjeller / Øst", "Betong", "2026-09-28", "2026-10-02", "Fundamenter Yttervegg Øst og Sør", 0, 1, 0],
+  ["8302 - Kjeller / Øst", "Grunn (V&S)", "2026-09-28", "2026-10-09", "Tilbakefylling og drens (S og Ø)", 0, 1, 0],
+  ["8302 - Kjeller / Øst", "Elektro", "2026-10-19", "2026-10-23", "39-C010 Ringjord tverrforbindelse", 0, 0, 0],
+  ["8302 - Kjeller / Øst", "Grunn (V&S)", "2026-10-19", "2026-10-23", "PE-630 mot WRK3 Grøft Nord", 0, 0, 0],
+  ["8302 - Kjeller / Øst", "Betong", "2026-10-26", "2026-11-13", "Fundament Søyler og Innervegg", 0, 0, 0],
+  ["8302 - Kjeller / Øst", "Betong", "2026-11-02", "2026-11-27", "Yttervegger Sør og Øst", 0, 0, 0],
+  ["8302 - Kjeller / Øst", "Betong", "2026-11-09", "2026-11-20", "Pelefundamenter (Akse WB til B)", 0, 0, 0],
+  ["8302 - Kjeller / Øst", "Grunn (V&S)", "2026-11-16", "2026-11-27", "Oppfylling av gulv og grøfter", 0, 0, 0],
+  ["8302 - Kjeller / Øst", "Betong", "2026-11-23", "2026-11-30", "Pilastere", 0, 0, 1],
+  ["8302 - Trådhall", "Grunn (V&S)", "2026-09-28", "2026-10-02", "Rensk til fjell", 0, 1, 0],
+  ["8302 - Trådhall", "Betong", "2026-09-28", "2026-10-09", "Magring", 0, 1, 0],
+  ["8302 - Trådhall", "Grunn (V&S)", "2026-09-28", "2026-10-09", "Boring fjellbolter", 0, 1, 0],
+  ["8302 - Trådhall", "Betong", "2026-09-28", "2026-10-09", "Mager til punktfundamentering", 0, 1, 0],
+  ["8302 - Trådhall", "Betong", "2026-09-28", "2026-11-20", "Punktfundamenter", 0, 1, 0],
+  ["8302 - Trådhall", "Betong", "2026-10-19", "2026-10-23", "Gewi S1", 0, 0, 0],
+  ["8302 - Trådhall", "Grunn (V&S)", "2026-11-23", "2026-11-30", "Teknisk i grunn", 0, 0, 1],
+  ["8303 - Driftssenter", "Grunn (V&S)", "2026-11-16", "2026-11-20", "Bortgraving av anleggsvei (øst)", 0, 0, 0],
+  ["8303 - Driftssenter", "Grunn (V&S)", "2026-11-23", "2026-11-30", "Rensk fjell", 0, 0, 1],
+  ["8304 - Lagerhall", "Grunn (V&S)", "2026-09-28", "2026-10-09", "Rensk til fjell", 0, 1, 0],
+  ["8304 - Lagerhall", "Grunn (V&S)", "2026-09-28", "2026-10-09", "Sprenging Utomhus Sandfang", 0, 1, 0],
+  ["8304 - Lagerhall", "Betong", "2026-11-09", "2026-11-13", "Magring kjeller", 0, 0, 0],
+  ["8304 - Lagerhall", "Grunn (V&S)", "2026-11-16", "2026-11-20", "Boring fjellbolter kjeller", 0, 0, 0]
+];
+// Team i Sitedrive → firma i WRK2 (første som finnes i firmalisten brukes).
+const SD_TEAM_FIRMA = {
+  'Grunn (V&S)': ['Vassbakk & Stol'], 'Betong': ['Skanska'], 'Vitnepunkt': ['Skanska'],
+  'Stillas': ['Stillasmontasje AS', 'Stillastjenester AS'], 'Boring': ['Boreteknikk AS', 'Entreprenørservice AS'],
+  'Elektro': ['Byggstrøm Elektro AS'], 'Rør/naturgass': ['Rør & VVS AS', 'Nærenergi AS']
+};
+const PLANSETT = 1;
+const sdNorm = s => String(s || '').toLowerCase().replace(/[^a-z0-9æøå]+/g, ' ').trim();
+function sdMetode(team, navn) {
+  const n = navn.toLowerCase();
+  if (team === 'Grunn (V&S)') return '2.1';
+  if (team === 'Boring') return /pel/.test(n) ? '2.3' : '2.2';
+  if (team === 'Betong') return /vegg|søyl|pilast/.test(n) ? '3.2' : '3.1';
+  if (team === 'Stillas') return '1.5';
+  return '';
+}
+function sdFirma(team, matchet) {
+  for (const navn of SD_TEAM_FIRMA[team] || []) { const f = FIRMS.find(x => normFirm(x.navn) === normFirm(navn)); if (f) return f.navn; }
+  const tell = {};
+  matchet.filter(m => m.row[1] === team).forEach(m => { tell[m.a.firma] = (tell[m.a.firma] || 0) + 1; });
+  const best = Object.entries(tell).sort((x, y) => y[1] - x[1])[0];
+  if (best) return best[0];
+  const navn = (SD_TEAM_FIRMA[team] || [team])[0];
+  FIRMS.push({navn, farge: nextFirmColor()});
+  return navn;
+}
+// Kobler Sitedrive-radene til eksisterende aktiviteter (samme sone og samme navn, eller det ene navnet starter med det andre),
+// slik at ID, forutsetninger, metodebeskrivelse og kommentarer beholdes. Nye aktiviteter får ny ID.
+// Kjøres bare én gang per økt: i skymodus kan nye øyeblikksbilder komme før innstillingen «plansett» er skrevet tilbake.
+let plansettKjort = false;
+function applyPlansett(force = false) {
+  if (!force && (plansettKjort || (SETTINGS.plansett || 0) >= PLANSETT)) return false;
+  plansettKjort = true;
+  const brukt = new Set(), treff = new Array(SD_PLAN.length).fill(null);
+  const kandidater = (row, ok) => DATA.filter(a => !brukt.has(a) && a.omrade === row[0] && ok(sdNorm(a.navn), sdNorm(row[4])))
+    .sort((x, y) => Math.abs(daysBetween(x.startdato, row[2])) - Math.abs(daysBetween(y.startdato, row[2])));
+  const pass = ok => SD_PLAN.forEach((row, i) => { if (treff[i]) return; const a = kandidater(row, ok)[0]; if (a) { treff[i] = a; brukt.add(a); } });
+  pass((x, y) => x === y);
+  pass((x, y) => y.length >= 5 && x.length >= 5 && (x.startsWith(y) || y.startsWith(x)));
+  const matchet = treff.map((a, i) => a && {a, row: SD_PLAN[i]}).filter(Boolean);
+  const firmaFor = {};
+  Object.keys(SD_TEAM_FIRMA).concat(SD_PLAN.map(r => r[1])).forEach(t => { if (!(t in firmaFor)) firmaFor[t] = sdFirma(t, matchet); });
+  const tid = new Date().toISOString();
+  let ny = 0, oppdatert = 0;
+  const behold = new Set();
+  SD_PLAN.forEach((row, i) => {
+    const [omrade, team, start0, slutt, pdfNavn, avkortet, startKant, sluttKant] = row;
+    let a = treff[i];
+    const merknad = [];
+    if (a) {
+      const gammel = a.navn;
+      a.navn = sdNorm(gammel).startsWith(sdNorm(pdfNavn)) && gammel.length > pdfNavn.length ? gammel : pdfNavn;
+      const start = startKant && a.startdato < start0 ? a.startdato : start0;
+      if (startKant && a.startdato < start0) merknad.push(`Startet ${fmtNo(a.startdato)} (før eksportens første dag)`);
+      Object.assign(a, {omrade, startdato: start, varighet: daysBetween(start, slutt) + 1, firma: firmaFor[team]});
+      oppdatert++;
+    } else {
+      const start = start0, mb = sdMetode(team, pdfNavn), m = METHODS.find(x => x.nr === mb);
+      a = {id: nextActId(), navn: pdfNavn + (avkortet ? '…' : ''), omrade, startdato: start, varighet: daysBetween(start, slutt) + 1, firma: firmaFor[team],
+        metode: {nr: mb, status: mb ? 'gul' : 'rod', historikk: mb ? `MB ${mb} ${m ? m.navn : ''} – foreslått ut fra Sitedrive-teamet «${team}», må bekreftes.` : 'Importert fra Sitedrive. Metodebeskrivelse ikke koblet.'},
+        forutsetninger: ikkeVurdert(), risikoniva: 'Middels', dodsrisiko: [], kommentar: '', ansvarUtforelse: '', ansvarGodkjenning: ''};
+      DATA.push(a);
+      if (startKant) merknad.push('Kan ha startet før eksportens første dag (28.09)');
+      ny++;
+    }
+    if (avkortet) merknad.push('Navnet er avkortet i Sitedrive-eksporten');
+    if (sluttKant) merknad.push('Fortsetter etter 30.11 – sluttdatoen er ikke med i eksporten');
+    a.status = statusFor(a.startdato, a.varighet);
+    a.kilde = 'Sitedrive';
+    a.sd = {team, plan: SD_PLAN_INFO.plan, eksportert: SD_PLAN_INFO.eksportert, importert: tid, merknad: merknad.join(' · ')};
+    delete a.endretIWRK2;
+    behold.add(a);
+  });
+  // Sitedrive er master: aktiviteter i eksportperioden som ikke finnes i planen, fjernes. Eldre aktiviteter blir liggende i arkivet.
+  const fjernet = DATA.filter(a => !behold.has(a) && endDate(a) >= SD_PLAN_INFO.fra);
+  DATA = DATA.filter(a => !fjernet.includes(a));
+  const ids = new Set(DATA.map(a => a.id));
+  AVH = AVH.filter(d => ids.has(d.fra) && ids.has(d.til));
+  // AT-koblingene fjernes foreløpig; AT-ene blir liggende og kan kobles på nytt under Metodebeskrivelser.
+  ATS.forEach(t => { t.aktiviteter = []; });
+  relink();
+  SETTINGS.plansett = PLANSETT;
+  SETTINGS.planImport = {...SD_PLAN_INFO, importert: tid, ny, oppdatert, fjernet: fjernet.length};
+  logg('Import fra Sitedrive', '', `${SD_PLAN_INFO.plan} (${SD_PLAN_INFO.visning}, eksportert ${fmtNo(SD_PLAN_INFO.eksportert.slice(0, 10))}): ${ny} nye, ${oppdatert} oppdatert, ${fjernet.length} fjernet${fjernet.length ? ' (' + fjernet.map(a => a.id).join(', ') + ')' : ''} · alle AT-koblinger fjernet`);
+  return true;
+}
+
 // ---------- metodebeskrivelser (entreprenør → metodebeskrivelse → AT → aktiviteter) ----------
 // Metodebeskrivelsene i prosjektet (PDF-ene i Dalux), gruppert per entreprenør og fag.
 const METODESETT = 2;
@@ -2758,7 +2939,7 @@ function renderCurrent() {
   else if (currentTab === 'admin') renderAdmin();
 }
 function showTab(tab) {
-  if (!document.getElementById('page-' + tab) || (tab === 'skrastrek' && !SETTINGS.skrastrek) || (tab === 'koordinering' && SETTINGS.atkoord === false)) tab = 'oversikt';
+  if (!document.getElementById('page-' + tab) || (tab === 'skrastrek' && !SETTINGS.skrastrek) || (tab === 'koordinering' && SETTINGS.atkoord === false)) tab = 'statustavle';
   currentTab = tab;
   ui.koord.drawing = null;
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + tab));
@@ -3054,10 +3235,11 @@ document.addEventListener('click', e => {
     save(); renderMetoder(); return;
   }
   if (action === 'reset-data') {
-    if (!confirm(`Tilbakestille alle aktiviteter og AT-er til Excel-dataene?${CLOUD ? ' Dette gjelder for ALLE brukere.' : ''} Alle endringer og plasseringer slettes.`)) return;
+    if (!confirm(`Tilbakestille alle aktiviteter og AT-er til Excel-dataene og Sitedrive-planen?${CLOUD ? ' Dette gjelder for ALLE brukere.' : ''} Alle endringer og plasseringer slettes.`)) return;
     ({acts: DATA, ats: ATS} = freshData()); FIRMS = DEFAULT_FIRMS.map(f => ({...f})); METHODS = DEFAULT_METHODS.map(m => ({...m}));
     SETTINGS.metodesett = 0; applyMetodesett();
     normalizeAll();
+    applyPlansett(true);
     ui.klargjoring.editing.clear(); ui.koord.selected = null;
     save(); alert('Dataene er tilbakestilt.'); renderAdmin(); return;
   }
@@ -3129,7 +3311,7 @@ document.addEventListener('input', e => {
 
 function startApp() {
   renderLegend();
-  showTab((location.hash || '#oversikt').slice(1));
+  showTab((location.hash || '#statustavle').slice(1));
 }
 function showToast(t) {
   const el = document.getElementById('toast');

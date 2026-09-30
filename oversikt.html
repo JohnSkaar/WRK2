@@ -328,6 +328,9 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .fu-chk{display:flex !important;align-items:center;gap:6px;font-weight:400 !important;margin:3px 0 !important}
 .fu-chk input{display:inline !important;width:auto !important;margin:0 !important}
 .ue-kjede{margin-top:2px}
+.at-firma-btn{border:none;background:none;padding:0;cursor:pointer;font:inherit;color:var(--muted)}
+.at-firma-btn:hover .firm-badge{box-shadow:0 0 0 2px var(--accent)}
+.at-firma-sel{padding:4px 6px;border:1px solid var(--accent);border-radius:6px;font-size:12.5px;max-width:220px}
 .ue-kjede i{font-style:normal;font-size:10px;color:var(--muted)}
 .ue-linje{font-size:12px;white-space:nowrap;margin-top:1px}
 .fu-goto{font-size:11.5px;margin-top:3px}
@@ -722,7 +725,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-09-30.13';
+const APP_VERSION = '2026-09-30.14';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1102,7 +1105,8 @@ function commonCells(o, ed, firmaEd, kjede = '') {
     uke: `<td class="c">${isoWeek(o.startdato)}</td>`,
     dato: `<td>${ed ? `<input type="date" class="w-date" data-field="startdato" value="${esc(o.startdato)}">` : fmtNo(o.startdato)}</td>`,
     varighet: `<td class="c">${ed ? `<input type="number" min="1" class="w-num" data-field="varighet" value="${o.varighet}">` : o.varighet}</td>`,
-    firma: `<td class="firma-cell">${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : kjede.includes('ue-kjede') ? '' : firmBadge(o.firma)}${firmaEd && kjede.includes('ue-kjede') ? kjede.replace(/^<div class="ue-kjede"([^>]*)>\s*<span class="badge firm-badge"[^<]*<\/span>/, '<div class="ue-kjede"$1>') : kjede}${ed && DATA.includes(o) ? `<div class="fu-goto"><button class="link-btn" data-action="fu-goto" data-id="${esc(o.id)}">Endre UE-er →</button></div>` : ''}</td>`,
+    // Firmakolonnen viser bare hovedfirmaet (entreprenøren). UE-er vises under «Utførelse av firma» og i Statustavlen.
+    firma: `<td class="firma-cell">${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}${ed && DATA.includes(o) ? `<div class="fu-goto"><button class="link-btn" data-action="fu-goto" data-id="${esc(o.id)}">UE-er →</button></div>` : ''}</td>`,
     lys: FORUTSETNINGER.map(([k]) => `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}</td>`).join(''),
     ansvar: ['ansvarUtforelse', 'ansvarGodkjenning'].map(f => `<td class="c">${ed
       ? `<select data-field="${f}" title="${f === 'ansvarUtforelse' ? 'Ansvarlig for utførelse' : 'Ansvarlig for godkjenning'}"><option value="" ${o[f] ? '' : 'selected'}>–</option>${[...new Set([...PERSONER, o[f]].filter(Boolean))].map(x => `<option value="${esc(x)}" ${x === o[f] ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`
@@ -1128,7 +1132,7 @@ function mainRow(a, page) {
   const editing = isEditing(page, a);
   const ed = editing && canEditAct(a);
   const exp = ui[page].expanded.has(a.id);
-  const c = commonCells(a, ed, editing && isSys(), ueChainHtml(a) + chainHtml(actMbNrs(a)));
+  const c = commonCells(a, ed, editing && isSys());
   const fraAT = [...new Set(a.at.flatMap(t => t.dodsrisiko))];
   let editBtn = '';
   if (page === 'klargjoring') {
@@ -1176,7 +1180,7 @@ function detailRows(a, page) {
   }
   a.at.forEach((t, i) => {
     const ed = editing && canEditAT(a, t);
-    const c = commonCells(t, ed, editing && canEditAct(a), t.metode ? chainHtml([t.metode], false) : '');
+    const c = commonCells(t, ed, editing && canEditAct(a));
     h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(a.id)}-${esc(t.nr)}">
       <td class="col-ctrl">${actEd ? `<button class="icon-btn danger" data-action="del-at" title="Slett ${esc(t.nr)}">🗑</button> ` : ''}<span class="conn">↳</span></td>
       <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(t.navn)}">` : esc(t.navn)}<div class="sub">${esc(t.nr)}${t.metode ? ` · MB ${esc(t.metode)}` : ''}${t.aktiviteter.length > 1 ? ` · også på ${esc(t.aktiviteter.filter(x => x !== a.id).join(', '))}` : ''}</div></td>
@@ -2751,15 +2755,9 @@ function atGyldig(t) {
   if (na < fra) return `<span class="badge st-plan">Godkjent · gjelder fra ${fmtShort(t.fra.slice(0, 10))}</span>`;
   return `<span class="badge st-done">Godkjent · gyldig til ${fmtShort(t.til.slice(0, 10))} ${t.til.slice(11, 16)}</span>`;
 }
-// Firmavelger på AT: firmaene på de koblede aktivitetene (entreprenør og UE-er) foreslås først.
+// Firmavelger på AT: firmaene under «Firma og fargekoder» i Admin.
 function atFirmaVelger(t) {
-  const fraAkt = [...new Set(t.aktiviteter.map(actById).filter(Boolean).flatMap(a => [a.firma, ...(a.ue || []).flatMap(u => [u.navn, ...(u.under || []).map(x => x.navn)])]))];
-  const iBruk = regIBruk().filter(r => !activeFirmFor(r) && !fraAkt.some(n => sammeNavn(n, regNavn(r))));
-  return `<select class="at-firma-sel" data-at-firma="${esc(t.id)}">
-    ${fraAkt.length ? `<optgroup label="Fra de koblede aktivitetene">${fraAkt.map(n => { const r = FIRMS.some(f => f.navn === n) ? null : REGISTER.find(x => sammeNavn(regNavn(x), n)); return `<option value="${esc(r ? 'reg:' + r.id : n)}" ${n === t.firma ? 'selected' : ''}>${esc(n)}</option>`; }).join('')}</optgroup>` : ''}
-    <optgroup label="Firma med farge">${FIRMS.map(f => `<option value="${esc(f.navn)}" ${f.navn === t.firma && !fraAkt.includes(f.navn) ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')}</optgroup>
-    ${iBruk.length ? `<optgroup label="Tatt i bruk (får farge når de står på en AT)">${iBruk.map(r => `<option value="reg:${esc(r.id)}">${esc(regNavn(r))}</option>`).join('')}</optgroup>` : ''}
-  </select> <button class="mb-x" data-action="at-firma-avbryt" title="Avbryt">×</button>`;
+  return `<select class="at-firma-sel" data-at-firma="${esc(t.id)}" title="Velg firma for ${esc(t.nr)}">${FIRMS.map(f => `<option value="${esc(f.navn)}" ${f.navn === t.firma ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')}</select> <button class="mb-x" data-action="at-firma-avbryt" title="Avbryt">×</button>`;
 }
 const addTid = (v, d) => addDays(v.slice(0, 10), d) + v.slice(10);
 function onsdagDenneUken() { return addDays(mondayOf(TODAY), 2); }
@@ -2859,7 +2857,7 @@ function renderMetoder() {
         <span class="at-box-tools">${canT ? `<button class="mb-x" data-action="at-rename" title="Endre navn">✏️</button><button class="mb-x" data-action="at-del" title="Slett AT-en">🗑</button>` : ''}</span>
       </div>
       <div class="at-meta">${t.risikoniva ? `<span class="badge ${RISK_CLS[t.risikoniva] || ''}">${esc(t.risikoniva)} risiko</span> ` : ''}${esc(t.kategori || '')}</div>
-      <div class="at-meta">🗓 ${t.fra ? `${tid(t.fra)} – ${tid(t.til)}` : `${fmtShort(t.startdato)} – ${fmtShort(endDate(t))}`} · ${st.atFirma === t.id ? atFirmaVelger(t) : `${firmBadge(t.firma)}${sys ? ` <button class="mb-x" data-action="at-firma" title="Bytt firma på AT-en">✏️</button>` : ''}`}</div>
+      <div class="at-meta">🗓 ${t.fra ? `${tid(t.fra)} – ${tid(t.til)}` : `${fmtShort(t.startdato)} – ${fmtShort(endDate(t))}`} · ${st.atFirma === t.id ? atFirmaVelger(t) : (sys ? `<button class="at-firma-btn" data-action="at-firma" title="Trykk for å bytte firma på ${esc(t.nr)}">${firmBadge(t.firma)} ▾</button>` : firmBadge(t.firma))}</div>
       <div class="at-meta">${atGyldig(t)}${canT && t.til ? ` <button class="btn small-dark" data-action="at-runde" title="Ny runde: samme AT gjelder én uke til">↻ Ny runde (+1 uke)</button>` : ''}</div>
       <div class="mb-tags">${m ? `<span class="mb-tag" title="${esc(m.navn)}">MB ${esc(m.nr)} ${esc(m.navn)}${canT ? ' <button class="mb-x" data-action="at-mb-unlink" title="Fjern fra metodebeskrivelsen">×</button>' : ''}</span>` : '<span class="mb-tag none">Ingen metodebeskrivelse</span>'}</div>
       <div class="mb-chips" style="margin-top:5px">${linked.length ? linked.map(a => actChip(a, {can: canL, action: 'at-unlink', data: `data-from-at="${esc(t.id)}"`})).join('')
@@ -2996,7 +2994,8 @@ const sammeNavn = (x, y) => !!x && !!y && normFirm(x) === normFirm(y);
 const sammeFirma = (u, r) => (!!u.orgnr && u.orgnr === r.orgnr) || sammeNavn(u.navn, regNavn(r)) || sammeNavn(u.navn, r.navn);
 // Hvor står firmaet allerede på aktiviteten? Et firma kan bare stå én gang per aktivitet.
 function fuRolle(a, r) {
-  if (sammeNavn(a.firma, regNavn(r)) || sammeNavn(a.firma, r.navn)) return 'entreprenør';
+  const hf = FIRMS.find(f => f.navn === a.firma);
+  if (sammeNavn(a.firma, regNavn(r)) || sammeNavn(a.firma, r.navn) || (hf && hf.orgnr && hf.orgnr === r.orgnr)) return 'entreprenør';
   for (const u of a.ue || []) {
     if (sammeFirma(u, r)) return 'UE';
     if ((u.under || []).some(x => sammeFirma(x, r))) return 'UE av UE';
@@ -3006,12 +3005,13 @@ function fuRolle(a, r) {
 // Rydder kjeden: fjerner UE som er lik entreprenøren (UE-ene under den løftes opp), slår sammen doble UE-er og fjerner doble UE av UE.
 function fuRens(a) {
   if (!Array.isArray(a.ue) || !a.ue.length) return false;
-  const før = JSON.stringify(a.ue), ut = [], sett = [a.firma];
-  const har = n => sett.some(x => sammeNavn(x, n));
+  const før = JSON.stringify(a.ue), ut = [], hf = FIRMS.find(f => f.navn === a.firma);
+  const sett = [{navn: a.firma, orgnr: (hf && hf.orgnr) || ''}];
+  const har = x => sett.some(y => sammeNavn(y.navn, x.navn) || (!!x.orgnr && x.orgnr === y.orgnr));
   const leggTil = (u, under) => {
-    if (har(u.navn)) { under.forEach(x => leggTil(x, [])); return; }
-    sett.push(u.navn); const ny = {...u, under: []}; ut.push(ny);
-    under.forEach(x => { if (!har(x.navn)) { sett.push(x.navn); ny.under.push({rid: x.rid, navn: x.navn, orgnr: x.orgnr}); } });
+    if (har(u)) { under.forEach(x => leggTil(x, [])); return; }
+    sett.push(u); const ny = {...u, under: []}; ut.push(ny);
+    under.forEach(x => { if (!har(x)) { sett.push(x); ny.under.push({rid: x.rid, navn: x.navn, orgnr: x.orgnr}); } });
   };
   a.ue.forEach(u => leggTil(u, u.under || []));
   a.ue = ut;
@@ -3265,7 +3265,7 @@ function applyRegistersett() {
   SETTINGS.registersett = REGISTERSETT;
   return true;
 }
-const normFirm = s => String(s || '').toLowerCase().replace(/\./g, '').replace(/\s+as$/, '').replace(/\s+/g, ' ').trim();
+const normFirm = s => String(s || '').normalize('NFC').toLowerCase().replace(/[\u00a0\s]+/g, ' ').replace(/[.,]/g, '').trim().replace(/\s+(as|asa|ans|da|nuf)$/, '').trim();
 // Et registerfirma regnes som «i bruk» når et aktivt firma har samme navn, eller det ene navnet starter med det andre (f.eks. Skanska / Skanska Norge AS).
 function activeFirmFor(r) {
   const n = normFirm(r.navn);
@@ -3557,7 +3557,12 @@ document.addEventListener('click', e => {
     if (!confirm(`Slette ${t.nr} «${t.navn}»?${t.aktiviteter.length ? ` Den fjernes fra ${t.aktiviteter.length} aktivitet(er).` : ''}`)) return;
     ATS = ATS.filter(x => x !== t); relink(); save(); renderMetoder(); return;
   }
-  if (action === 'at-firma') { ui.metoder.atFirma = btn.closest('.at-box').dataset.atid; renderMetoder(); return; }
+  if (action === 'at-firma') {
+    ui.metoder.atFirma = btn.closest('.at-box').dataset.atid; renderMetoder();
+    const sel = document.querySelector(`.at-firma-sel[data-at-firma="${CSS.escape(ui.metoder.atFirma)}"]`);
+    if (sel) { sel.focus(); try { sel.showPicker(); } catch (err) { /* eldre nettlesere: listen er markert */ } }
+    return;
+  }
   if (action === 'at-firma-avbryt') { ui.metoder.atFirma = null; renderMetoder(); return; }
   if (action === 'at-mb-unlink') {
     const t = atById(btn.closest('.at-box').dataset.atid);
@@ -3825,6 +3830,16 @@ function scheduleRender() {
 }
 if (CLOUD) document.body.classList.add('locked');
 else { load(); startApp(); }
+</script>
+<script>
+// Oppdateringssjekk: GitHub Pages lar nettleseren bruke en lagret utgave i opptil 10 minutter. Er det kommet en nyere utgave, lastes siden på nytt én gang.
+if (CLOUD) fetch(location.pathname.replace(/[^/]*$/, '') + 'oversikt.html', {cache: 'no-store'}).then(r => r.text()).then(t => {
+  const m = /const APP_VERSION = '([^']+)'/.exec(t);
+  if (!m || m[1] === APP_VERSION) return;
+  let prøvd = null; try { prøvd = sessionStorage.getItem('wrk2_oppdatert'); } catch (e) {}
+  if (prøvd !== m[1]) { try { sessionStorage.setItem('wrk2_oppdatert', m[1]); } catch (e) {} location.reload(); }
+  else showToast('En nyere utgave av WRK2 er tilgjengelig. Trykk Ctrl+F5 (Cmd+Shift+R på Mac) for å laste den.');
+}).catch(() => {});
 </script>
 <script type="module">if (CLOUD) import('./cloud.js?v=' + APP_VERSION).catch(e => { document.getElementById('login-body').innerHTML = '<p class="login-msg">Kunne ikke laste innloggingen. Sjekk nettforbindelsen og last siden på nytt.</p>'; console.error(e); });</script>
 </body>

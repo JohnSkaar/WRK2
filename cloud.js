@@ -26,6 +26,18 @@ const ERR = {
 const errText = e => ERR[e && e.code] || (e && e.message) || String(e);
 
 // ---------- innloggingsskjerm ----------
+// Hjelp når e-posten fra noreply@wrk2.no ikke kommer frem (søppelpost eller karantene i Microsoft 365).
+const MAIL_HELP = `<details class="sub mail-help" style="margin-top:10px">
+    <summary style="cursor:pointer">Får du ikke e-posten?</summary>
+    <ol style="margin:6px 0 0 18px;line-height:1.5">
+      <li>Vent et par minutter, og sjekk mappen for søppelpost / uønsket e-post.</li>
+      <li>Bruker firmaet Microsoft 365 / Outlook, kan e-posten ligge i karantene. Åpne
+        <a href="https://security.microsoft.com/quarantine" target="_blank" rel="noopener">security.microsoft.com/quarantine</a>,
+        logg inn med jobbkontoen, finn e-posten fra <b>noreply@wrk2.no</b> og velg «Frigi» (Release).</li>
+      <li>Ser du den ikke der, be IT-avdelingen om å frigi den og å godkjenne avsenderen <b>noreply@wrk2.no</b>.</li>
+      <li>Lenken i e-posten er engangs og utløper etter en stund. Be om en ny lenke hvis den ikke virker.</li>
+    </ol>
+  </details>`;
 function lock() { document.body.classList.add('locked'); $('login-screen').hidden = false; }
 function unlock() { document.body.classList.remove('locked'); $('login-screen').hidden = true; }
 function view(state, info = '') {
@@ -43,6 +55,7 @@ function view(state, info = '') {
         </div>
         <p class="login-msg" id="login-msg">${esc(info)}</p>
         <p class="sub">Du må være invitert av en systemadministrator. Første gang velger du «Opprett konto» med e-postadressen du ble invitert med.</p>
+        ${MAIL_HELP}
       </form>`;
     return;
   }
@@ -54,7 +67,7 @@ function view(state, info = '') {
         <button class="btn" data-login="logout">Logg ut</button>
       </div>
       <p class="login-msg" id="login-msg"></p>
-      <p class="sub">Finner du ikke e-posten, sjekk søppelpost.</p>`;
+      ${MAIL_HELP.replace('<details ', '<details open ')}`;
     return;
   }
   if (state === 'noaccess') {
@@ -90,6 +103,7 @@ document.addEventListener('click', async e => {
       if (!email) { msg('Skriv inn e-postadressen din først.'); return; }
       await sendPasswordResetEmail(auth, email);
       msg('Hvis e-postadressen har en konto, er det sendt en lenke for å lage nytt passord.');
+      const h = document.querySelector('#login-body .mail-help'); if (h) h.open = true;
     } else if (act === 'check') {
       await auth.currentUser.reload();
       if (!auth.currentUser.emailVerified) { msg('E-postadressen er ikke bekreftet ennå.'); return; }

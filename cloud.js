@@ -5,7 +5,7 @@ import {
   sendEmailVerification, sendPasswordResetEmail, signOut
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  getFirestore, connectFirestoreEmulator, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc, writeBatch,
+  getFirestore, connectFirestoreEmulator, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc, getDocs, writeBatch,
   addDoc, query, orderBy, limit
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
@@ -330,7 +330,9 @@ async function importPlan() {
 }
 
 async function importAts() {
-  const gamle = ATS.map(t => t.id);
+  // Alle AT-dokumenter i databasen hentes, så også AT-er som ikke er lastet i denne økten blir fjernet.
+  let gamle = ATS.map(t => t.id);
+  try { gamle = [...new Set([...gamle, ...(await getDocs(collection(db, 'at'))).docs.map(d => d.id)])]; } catch (err) { /* bruk lokal liste */ }
   if (!applyAtsett()) return;
   const batch = writeBatch(db), nye = new Set(ATS.map(t => t.id));
   gamle.forEach(id => { if (!nye.has(id)) batch.delete(doc(db, 'at', id)); });

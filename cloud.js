@@ -5,7 +5,8 @@ import {
   sendEmailVerification, sendPasswordResetEmail, signOut
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  getFirestore, connectFirestoreEmulator, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc, writeBatch
+  getFirestore, connectFirestoreEmulator, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc, writeBatch,
+  addDoc, query, orderBy, limit
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const db = getFirestore(app);
@@ -147,6 +148,11 @@ document.addEventListener('click', async e => {
   } catch (err) { msg(errText(err)); }
 });
 window.cloudSignOut = () => signOut(auth);
+// Endringslogg: legges til som nye dokumenter og kan ikke endres eller slettes (se firestore.rules).
+window.cloudLog = e => {
+  if (!started || !myUid) return;
+  addDoc(collection(db, 'endringslogg'), {...e, uid: myUid}).catch(err => console.warn('Endringsloggen kunne ikke skrives:', err.code || err));
+};
 
 // ---------- dataformat ----------
 // Firestore tillater ikke lister i lister, så områdepunktene lagres som {x, y}.
@@ -184,7 +190,7 @@ const codeDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma
 
 // ---------- innlogget bruker ----------
 let unsubs = [], started = false, myUid = null;
-let base = {akt: new Map(), ats: new Map(), firms: '', metoder: '', register: '', settings: '', users: new Map()};
+let base = {akt: new Map(), ats: new Map(), avh: new Map(), firms: '', metoder: '', register: '', settings: '', users: new Map()};
 let readOnly = '';
 
 onAuthStateChanged(auth, user => handleUser(user));
@@ -237,18 +243,24 @@ async function ensureProfile(user) {
 
 function startSync(uid) {
   myUid = uid;
-  const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false};
-  let invitesOn = false, seeding = false, migrating = false;
+  const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false, avh: null};
+  let loggOn = false, invitesOn = false, seeding = false, migrating = false;
   const fail = err => { view('error', 'Mistet kontakten med databasen: ' + errText(err)); };
 
   const apply = async () => {
-    if (!st.users || !st.firms || !st.metoder || !st.register || !st.settings || !st.akt || !st.ats) return;
+    if (!st.users || !st.firms || !st.metoder || !st.register || !st.settings || !st.akt || !st.ats || !st.avh) return;
     const meDoc = st.users.find(u => u.id === uid);
     if (!meDoc) { unsubs.forEach(f => f()); unsubs = []; view('noaccess', auth.currentUser ? auth.currentUser.email : ''); return; }
     const sys = meDoc.rolle === 'systemadmin';
     if (sys && !invitesOn) {
       invitesOn = true;
       unsubs.push(onSnapshot(collection(db, 'invites'), s => { st.invites = s.docs.map(d => d.data()); apply(); }, () => {}));
+    }
+    // Endringsloggen (siste 1000) leses bare av systemadministratorer.
+    if (sys && !loggOn) {
+      loggOn = true;
+      unsubs.push(onSnapshot(query(collection(db, 'endringslogg'), orderBy('tid', 'desc'), limit(1000)),
+        s => { LOGG = s.docs.map(d => d.data()); if (currentTab === 'admin') renderLogg(); }, () => {}));
     }
     if (sys && !seeding && (!st.akt.length || !st.firms.length || !st.metoder.length)) { seeding = true; await seed(st); return; }
 
@@ -261,7 +273,7 @@ function startSync(uid) {
       ({ats} = splitLegacy(migrate(acts)));
       readOnly = st.atsDenied ? 'sikkerhetsreglene i Firebase må oppdateres (se firestore.rules).' : 'en systemadministrator må logge inn én gang for å oppgradere databasen.';
     }
-    DATA = acts; ATS = ats;
+    DATA = acts; ATS = ats; AVH = st.avh.map(d => ({...d}));
     FIRMS = st.firms.length ? st.firms : DEFAULT_FIRMS.map(f => ({...f}));
     METHODS = st.metoder.length ? st.metoder : DEFAULT_METHODS.map(m => ({...m}));
     REGISTER = st.register;
@@ -272,6 +284,7 @@ function startSync(uid) {
     base = {
       akt: new Map(DATA.map(a => [a.id, stable(toDoc(a))])),
       ats: new Map(ATS.map(t => [t.id, stable(toATDoc(t))])),
+      avh: new Map(AVH.map(d => [d.id, stable(d)])),
       firms: stable(FIRMS), metoder: stable(METHODS), register: stable(REGISTER), settings: stable(settingsDoc()),
       users: new Map(USERS.map(u => [u.id, stable(userDoc(u))]))
     };
@@ -287,6 +300,8 @@ function startSync(uid) {
   unsubs.push(onSnapshot(doc(db, 'config', 'settings'), s => { st.settings = s.exists() ? s.data() : {}; apply(); }, fail));
   unsubs.push(onSnapshot(collection(db, 'at'), s => { st.ats = s.docs.map(d => d.data()); st.atsDenied = false; apply(); },
     () => { st.ats = []; st.atsDenied = true; apply(); }));
+  // Avhengigheter: blir tom liste hvis sikkerhetsreglene ikke er oppdatert ennå.
+  unsubs.push(onSnapshot(collection(db, 'avhengigheter'), s => { st.avh = s.docs.map(d => d.data()); apply(); }, () => { st.avh = []; apply(); }));
   unsubs.push(onSnapshot(collection(db, 'aktiviteter'), s => { st.akt = s.docs.map(d => d.data()); apply(); }, fail));
 }
 
@@ -336,6 +351,12 @@ window.cloudSync = () => {
     if (base.ats.get(id) !== s) { base.ats.set(id, s); setDoc(doc(db, 'at', id), d).catch(saveFail); }
   }
   for (const id of [...base.ats.keys()]) if (!curAt.has(id)) { base.ats.delete(id); deleteDoc(doc(db, 'at', id)).catch(saveFail); }
+  const curAvh = new Map(AVH.map(d => [d.id, JSON.parse(JSON.stringify(d))]));
+  for (const [id, d] of curAvh) {
+    const s = stable(d);
+    if (base.avh.get(id) !== s) { base.avh.set(id, s); setDoc(doc(db, 'avhengigheter', id), d).catch(saveFail); }
+  }
+  for (const id of [...base.avh.keys()]) if (!curAvh.has(id)) { base.avh.delete(id); deleteDoc(doc(db, 'avhengigheter', id)).catch(saveFail); }
   if (!isSys()) return;
   if (stable(REGISTER) !== base.register) { base.register = stable(REGISTER); setDoc(doc(db, 'config', 'firmaregister'), {list: REGISTER}).catch(saveFail); }
   if (stable(METHODS) !== base.metoder) { base.metoder = stable(METHODS); setDoc(doc(db, 'config', 'metoder'), {list: METHODS}).catch(saveFail); }

@@ -200,6 +200,40 @@ tr.main-row.flash-main td{animation:flash 1.6s}
 .sv-bar.cut-r{border-top-right-radius:0;border-bottom-right-radius:0}
 .sv-bar.done{opacity:.45}
 .sv-bar .txt{overflow:hidden;text-overflow:ellipsis}
+.sv-switch{display:inline-flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;user-select:none;padding:4px 2px;position:relative}
+.sv-switch input{position:absolute;opacity:0;width:1px;height:1px}
+.sv-switch .sl{position:relative;width:34px;height:19px;border-radius:10px;background:#afb8c1;transition:background .15s;flex:none}
+.sv-switch .sl::after{content:"";position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .15s}
+.sv-switch input:checked+.sl{background:var(--accent)}
+.sv-switch input:checked+.sl::after{left:17px}
+.sv-switch input:focus-visible+.sl{outline:2px solid var(--accent);outline-offset:2px}
+.sv-avh-hint{background:#f3f0ff;border-color:#c5b8f5}
+.sv-panel.deps .sv-bar{overflow:visible}
+.sv-panel.deps .sv-lab{margin-left:12px}
+.sv-h{position:absolute;top:4px;width:13px;height:13px;border-radius:50%;background:#fff;border:2px solid #57606a;box-sizing:border-box;cursor:crosshair;z-index:4;touch-action:none;display:none}
+.sv-panel.deps .sv-h{display:block}
+.sv-h.s{left:-15px}.sv-h.e{right:-15px}.sv-h.s.in{left:2px}
+.sv-h:hover,.sv-h.armed,.sv-h.target{background:#8250df;border-color:#8250df;transform:scale(1.25)}
+.sv-links{position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:2}
+.sv-links .hit{pointer-events:stroke;cursor:pointer}
+.sv-links g:hover .ln{stroke-width:3}
+.sv-links g.brudd:hover .ln{stroke-width:5}
+.sv-pop{position:absolute;z-index:45;background:#fff;border:1px solid #d0d7de;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.22);padding:10px 12px;font-size:12.5px;width:290px;box-sizing:border-box}
+.sv-pop h4{margin:0 0 6px;font-size:13px}
+.sv-pop label{display:block;font-weight:600;margin:6px 0 2px}
+.sv-pop select,.sv-pop input{display:block;width:100%;box-sizing:border-box;margin-top:2px;padding:6px 7px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;font-weight:400}
+.sv-pop .row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.sv-pop .brudd-txt{color:var(--red);font-weight:600;margin-top:6px}
+.sv-pop .brudd-txt:empty{display:none}
+.logg-panel{grid-column:1/-1}
+.logg-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.logg-tools input{flex:1 1 220px;padding:7px 9px;border:1px solid #d0d7de;border-radius:6px;font-size:13px}
+.logg-wrap{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:6px}
+table.logg{width:100%;border-collapse:collapse;font-size:12.5px}
+table.logg th{position:sticky;top:0;background:#f6f8fa;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.logg td{padding:5px 8px;border-bottom:1px solid #f0f2f4;vertical-align:top}
+table.logg td.t{white-space:nowrap;color:var(--muted);font-family:ui-monospace,Menlo,monospace;font-size:11.5px}
+table.logg td.h{white-space:nowrap;font-weight:600}
 .sv-edit-hint{background:#fff8c5;border:1px solid #eac54f;border-radius:6px;padding:7px 10px;font-size:12.5px;margin:4px 0 8px;line-height:1.45}
 .sv-panel.editing .sv-time{cursor:copy}
 .sv-panel.editing .sv-bar.editable{cursor:grab;touch-action:none}
@@ -394,11 +428,13 @@ td.firma-cell{white-space:normal;min-width:130px}
   <section class="page" id="page-statustavle">
     <div class="panel">
       <h2>Statustavle – 8 uker <span class="readonly-tag" id="sv-ro-tag">Kun visning</span></h2>
-      <p class="intro">Aktivitetene de neste 8 ukene, per sone. Fargen på stolpen er firmaet, og trafikklyset er totalstatusen for aktiviteten. Den er satt sammen av metodebeskrivelsen og alle forutsetningene, også på AT-ene. Det dårligste lyset gjelder. Hold over en aktivitet for å se hva som mangler og hva som er kommentert. Trykk for å åpne den i «Klargjøring av aktiviteter». Med «✏️ Rediger tidslinje» kan du flytte startdatoer, endre varighet og legge inn nye aktiviteter.</p>
+      <p class="intro">Aktivitetene de neste 8 ukene, per sone. Fargen på stolpen er firmaet, og trafikklyset er totalstatusen for aktiviteten. Den er satt sammen av metodebeskrivelsen og alle forutsetningene, også på AT-ene. Det dårligste lyset gjelder. Hold over en aktivitet for å se hva som mangler og hva som er kommentert. Slå på «Hyperlink mot aktivitet» for å åpne aktiviteten i «Klargjøring av aktiviteter» med et trykk. Med «✏️ Rediger tidslinje» kan du flytte startdatoer, endre varighet og legge inn nye aktiviteter.</p>
       <div class="toolbar">
         <div class="firm-filter" data-page="statustavle"></div>
         <button class="btn" data-action="ff-mine" data-page="statustavle">Bare mitt firma</button>
         <input type="search" data-search="statustavle" placeholder="Søk aktivitet, ID, AT-nr, område …">
+        <label class="sv-switch" title="Når bryteren er på, åpner et trykk på en aktivitet den i «Klargjøring av aktiviteter»"><input type="checkbox" id="sv-lenke"><span class="sl"></span>Hyperlink mot aktivitet</label>
+        <label class="sv-switch" title="Vis avhengigheter og lag nye ved å koble forsiden eller baksiden av to aktiviteter"><input type="checkbox" id="sv-avh"><span class="sl"></span>Avhengigheter</label>
         <button class="btn" data-action="sv-edit" id="sv-edit-btn" hidden>✏️ Rediger tidslinje</button>
         <button class="btn primary" data-action="sv-new" id="sv-new-btn" hidden>+ Ny aktivitet</button>
         <label id="sv-flytt-lbl" hidden title="AT-er som bare hører til aktiviteten, flyttes like mange dager"><input type="checkbox" id="sv-flytt" checked> Flytt AT-er med</label>
@@ -406,6 +442,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <label>Vis: <select class="week-sel" id="sv-lys"><option value="">Alle</option><option value="avvik">Bare røde og gule</option><option value="rod">Bare røde</option><option value="ikke">Ikke ferdig vurdert</option></select></label>
       </div>
       <div class="sv-edit-hint" id="sv-edit-hint" hidden>✏️ <b>Redigering er på.</b> Dra en stolpe sidelengs for å flytte startdatoen, eller opp og ned for å flytte den til en annen sone. Dra i høyre kant for å endre varigheten. Trykk på en stolpe for å endre detaljer, og trykk i et tomt felt for å legge inn en ny aktivitet der. Endringer merkes med ✎, slik at de kan synkroniseres med Sitedrive eller Tactplan senere.</div>
+      <div class="sv-edit-hint sv-avh-hint" id="sv-avh-hint" hidden>⛓ <b>Avhengigheter er på.</b> Dra fra forsiden (◯ til venstre) eller baksiden (◯ til høyre) av en aktivitet til forsiden eller baksiden av en annen. Du kan også trykke på det ene håndtaket og så på det andre. Kobler du en bakside til en forside, blir det <b>FS</b> (slutt–start), og aktiviteten med baksiden kommer først. Forside mot forside blir <b>SS</b>, og bakside mot bakside blir <b>FF</b>. Da styres rekkefølgen av planen. I menyen som kommer opp, kan du bytte type, også til <b>SF</b> eller <b>Samtidighet</b>. Går du bare videre, beholdes typen. Trykk på en linje for å endre eller slette den. Brutte avhengigheter vises med <b style="color:var(--red)">fet rød linje</b>.</div>
       <div class="stats" id="stats-statustavle"></div>
       <div class="legend" id="sv-legend"></div>
     </div>
@@ -413,6 +450,7 @@ td.firma-cell{white-space:normal;min-width:130px}
       <div class="sv-chart" id="sv-chart"></div>
       <div class="sv-tip" id="sv-tip" hidden></div>
       <div class="sv-drag-info" id="sv-drag-info" hidden></div>
+      <div class="sv-pop" id="sv-pop" hidden></div>
     </div>
     <dialog class="sv-dlg" id="sv-dlg">
       <form id="sv-form" method="dialog">
@@ -493,6 +531,7 @@ td.firma-cell{white-space:normal;min-width:130px}
       <div class="panel reg-panel" id="register-panel"></div>
       <div class="panel" id="modules-panel"></div>
       <div class="panel" id="data-panel"></div>
+      <div class="panel logg-panel" id="logg-panel" hidden></div>
     </div>
   </section>
 </main>
@@ -596,6 +635,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 const CLOUD = location.protocol !== 'file:';
+const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
 const STORAGE_KEY = 'wrk2_v6', FIRMS_KEY = 'wrk2_firms_v6', USERS_KEY = 'wrk2_users_v6', CURRENT_KEY = 'wrk2_current_user',
   MAP_KEY = 'wrk2_sonekart', MAP_RATIO_KEY = 'wrk2_sonekart_ratio';
@@ -721,6 +761,8 @@ function buildData() {
 
 // ---------- lagring ----------
 let DATA = [], ATS = [], FIRMS = [], USERS = [], METHODS = [], currentUserId = null, SETTINGS = {};
+// Avhengigheter mellom aktiviteter ({id, fra, til, type: FS|SS|FF|SF|SAM, lag}) og endringslogg for Statustavlen.
+let AVH = [], LOGG = [];
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
 function readRaw(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -841,6 +883,8 @@ function load() {
   USERS = loadUsers();
   SETTINGS = {skrastrek: false, fuIkkeVurdert: false, metodesett: 0, registersett: 0, ...(readJSON(SETTINGS_KEY) || {})};
   REGISTER = readJSON(REGISTER_KEY) || [];
+  AVH = readJSON(AVH_KEY) || [];
+  LOGG = readJSON(LOGG_KEY) || [];
   if (!SETTINGS.fuIkkeVurdert) {
     // Engangsnullstilling: alle sju forutsetninger starter som «ikke vurdert».
     DATA.forEach(a => { a.forutsetninger = ikkeVurdert(); }); ATS.forEach(t => { t.forutsetninger = ikkeVurdert(); });
@@ -859,6 +903,7 @@ function save() {
   writeRaw(FIRMS_KEY, JSON.stringify(FIRMS));
   writeRaw(METHODS_KEY, JSON.stringify(METHODS));
   writeRaw(REGISTER_KEY, JSON.stringify(REGISTER));
+  writeRaw(AVH_KEY, JSON.stringify(AVH));
   writeRaw(USERS_KEY, JSON.stringify(USERS));
   writeRaw(CURRENT_KEY, currentUserId);
   writeRaw(SETTINGS_KEY, JSON.stringify(SETTINGS));
@@ -923,9 +968,9 @@ const ui = {
   klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set(), showArchive: false},
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
-  statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: []},
+  statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: [], lenke: false, avh: false},
   metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set()},
-  admin: {firmDel: null, firmEdit: null, regSearch: ''},
+  admin: {firmDel: null, firmEdit: null, regSearch: '', loggSearch: ''},
   koord: {week: null, selected: null, drawing: null}
 };
 let currentTab = 'oversikt';
@@ -1610,6 +1655,10 @@ function renderStatustavle() {
   document.getElementById('sv-edit-hint').hidden = !st.edit;
   document.getElementById('sv-undo').hidden = !st.edit || !st.undo.length;
   document.getElementById('sv-panel').classList.toggle('editing', st.edit);
+  document.getElementById('sv-panel').classList.toggle('deps', st.avh);
+  document.getElementById('sv-lenke').checked = st.lenke;
+  document.getElementById('sv-avh').checked = st.avh;
+  document.getElementById('sv-avh-hint').hidden = !st.avh;
   const from = mondayOf(TODAY), to = addDays(from, SV_DAYS - 1);
   const pct = d => (daysBetween(from, d) / SV_DAYS * 100);
 
@@ -1641,7 +1690,7 @@ function renderStatustavle() {
       const edCls = st.edit ? (canEditAct(a) ? ' editable' : ' locked') : '';
       return `<div class="sv-bar${cutL ? ' cut-l' : ''}${cutR ? ' cut-r' : ''}${a.status === 'Utført' ? ' done' : ''}${a.endretIWRK2 ? ' wrk2' : ''}${edCls}" data-i="${i}"
         style="left:${pct(it.x0)}%;width:calc(${(daysBetween(it.x0, it.x1) + 1) / SV_DAYS * 100}% - 2px);top:${SV_PAD + it.k * SV_LANE}px;background:${c};color:${svTextColor(c)}">
-        <span class="sv-lys ${it.s.lys}"></span>${it.ute ? '' : `<span class="txt">${cutL ? '◂ ' : ''}${esc(a.id)} ${esc(a.navn)}</span>`}${st.edit && canEditAct(a) && !cutR ? '<span class="sv-rs" title="Dra for å endre varighet"></span>' : ''}</div>
+        <span class="sv-lys ${it.s.lys}"></span>${it.ute ? '' : `<span class="txt">${cutL ? '◂ ' : ''}${esc(a.id)} ${esc(a.navn)}</span>`}${st.edit && canEditAct(a) && !cutR ? '<span class="sv-rs" title="Dra for å endre varighet"></span>' : ''}${st.avh ? `${cutL ? '' : `<span class="sv-h s${it.x0 === from ? ' in' : ''}" data-end="s" title="Forsiden (start)"></span>`}${cutR ? '' : '<span class="sv-h e" data-end="e" title="Baksiden (slutt)"></span>'}` : ''}</div>
         ${it.ute ? `<div class="sv-lab${a.status === 'Utført' ? ' done' : ''}" data-i="${i}" style="left:calc(${pct(addDays(it.x1, 1))}% + 3px);top:${SV_PAD + it.k * SV_LANE}px">${cutL ? '◂ ' : ''}<b>${esc(a.id)}</b> ${esc(a.navn.length > 34 ? a.navn.slice(0, 33) + '…' : a.navn)}</div>` : ''}`;
     }).join('');
     return `<div class="sv-row" data-zone="${esc(z)}">
@@ -1665,7 +1714,7 @@ function renderStatustavle() {
         <div class="sv-weeks">${weeks.map(w => `<div style="flex:7" class="${w === from ? 'now' : ''}">Uke ${isoWeek(w)}<small>${fmtShort(w)}–${fmtShort(addDays(w, 6))}</small></div>`).join('')}</div>
       </div>
     </div>
-    <div style="position:relative">
+    <div style="position:relative" id="sv-body">
       <div style="position:absolute;top:0;bottom:0;left:var(--svl,200px);right:0;pointer-events:none" class="sv-bgwrap">${bg}<div class="sv-today" style="left:${todayLeft}%" title="I dag"></div></div>
       ${rows}
     </div>
@@ -1685,6 +1734,10 @@ function renderStatustavle() {
     <span class="muted">Blek stolpe = utført · ◂ = startet før denne uken · ✎ = endret i WRK2</span>`;
   const left = document.querySelector('#sv-chart .sv-row .sv-left');
   if (left) document.querySelector('#sv-chart .sv-bgwrap').style.setProperty('--svl', left.offsetWidth + 'px');
+  const brutt = AVH.filter(avhBrudd).length;
+  if (brutt) document.getElementById('stats-statustavle').insertAdjacentHTML('beforeend', `<span style="color:var(--red)"><b>⚠ ${brutt}</b> brutt${brutt === 1 ? '' : 'e'} avhengighet${brutt === 1 ? '' : 'er'}</span>`);
+  else if (AVH.length) document.getElementById('stats-statustavle').insertAdjacentHTML('beforeend', `<span><b>${AVH.length}</b> avhengighet${AVH.length === 1 ? '' : 'er'}, ingen brutt</span>`);
+  svDrawLinks();
 }
 
 function svTipHtml(it) {
@@ -1708,10 +1761,11 @@ function svTipHtml(it) {
     ${avvik.length ? `<div class="sec">Mangler</div><ul>${avvik.map(p => `<li><span class="sv-lys ${p.lys}"></span><span>${p.at ? `<b>${esc(p.at)}</b> ` : ''}${esc(p.hva)} – ${esc(LYS[p.lys].kort.toLowerCase())}</span></li>`).join('')}</ul>` : ''}
     ${ikkeTxt.length ? `<div class="sec">Ikke vurdert</div><ul class="sub">${ikkeTxt.slice(0, 6).join('')}${ikkeTxt.length > 6 ? `<li>… og ${ikkeTxt.length - 6} AT til</li>` : ''}</ul>` : ''}
     ${!avvik.length && !ikkeTxt.length ? '<div class="sub">Alle forutsetninger er avklart.</div>' : ''}
+    ${svAvhTip(a)}
     <div class="sec">Kommentarer</div>
     ${kom.length ? kom.map(([k, v]) => `<div class="kom"><b>${esc(k)}:</b> ${esc(v)}</div>`).join('') : '<div class="sub">Ingen kommentarer registrert.</div>'}
     ${a.endretIWRK2 ? `<div class="sub" style="margin-top:7px">✎ ${a.kilde === 'WRK2' ? 'Lagt inn' : 'Endret'} i WRK2 ${fmtNo(a.endretIWRK2.tid.slice(0, 10))}${a.endretIWRK2.av ? ' av ' + esc(a.endretIWRK2.av) : ''}. Ikke synkronisert med Sitedrive/Tactplan.</div>` : ''}
-    <div class="sub" style="margin-top:7px">${ui.statustavle.edit ? (canEditAct(a) ? 'Dra for å flytte · dra i høyre kant for varighet · trykk for å endre' : `🔒 Bare ${esc(a.firma)} eller systemadministrator kan endre`) : 'Trykk for å åpne i Klargjøring av aktiviteter'}</div>`;
+    <div class="sub" style="margin-top:7px">${ui.statustavle.edit ? (canEditAct(a) ? 'Dra for å flytte · dra i høyre kant for varighet · trykk for å endre' : `🔒 Bare ${esc(a.firma)} eller systemadministrator kan endre`) : ui.statustavle.lenke ? 'Trykk for å åpne i Klargjøring av aktiviteter' : 'Slå på «Hyperlink mot aktivitet» for å åpne aktiviteten med et trykk'}</div>`;
 }
 function svBarOf(el) {
   const x = el && el.closest && el.closest('.sv-bar, .sv-lab');
@@ -1737,13 +1791,14 @@ function svShowTip(bar) {
   tip.style.setProperty('--ax', Math.max(10, Math.min(w - 22, anchor - left - 6)) + 'px');
 }
 document.addEventListener('pointerover', e => {
-  if (currentTab !== 'statustavle' || e.pointerType === 'touch' || svDrag) return;
+  if (currentTab !== 'statustavle' || e.pointerType === 'touch' || svDrag || svLink) return;
   svShowTip(svBarOf(e.target));
 });
 document.addEventListener('scroll', () => { if (currentTab === 'statustavle') svShowTip(null); }, true);
 document.addEventListener('click', e => {
-  if (currentTab !== 'statustavle' || e.target.closest('#sv-dlg')) return;
+  if (currentTab !== 'statustavle' || e.target.closest('#sv-dlg, #sv-pop, .sv-h, .sv-links')) return;
   if (Date.now() - svDragEnd < 350) return;
+  if (svLink) { svLinkCancel(); return; }
   const bar = svBarOf(e.target);
   if (ui.statustavle.edit) {
     if (bar && bar.classList.contains('editable')) { svShowTip(null); svOpenDialog(svItems[Number(bar.dataset.i)].a); return; }
@@ -1754,9 +1809,11 @@ document.addEventListener('click', e => {
       return;
     }
   }
-  // På berøringsskjerm viser første trykk boblen, andre trykk åpner aktiviteten.
+  // På berøringsskjerm viser første trykk boblen, andre trykk åpner aktiviteten (når hyperlinken er slått på).
   if (!bar) { svShowTip(null); svTapped = null; return; }
-  if (e.pointerType === 'touch' || (e.pointerType === undefined && matchMedia('(hover: none)').matches)) {
+  const touch = e.pointerType === 'touch' || (e.pointerType === undefined && matchMedia('(hover: none)').matches);
+  if (!ui.statustavle.lenke) { if (touch) svShowTip(bar); return; }
+  if (touch) {
     if (svTapped !== bar.dataset.i) { svTapped = bar.dataset.i; svShowTip(bar); return; }
   }
   svTapped = null;
@@ -1781,29 +1838,59 @@ function svSnapshot(a) {
   return {id: a.id, act: JSON.parse(JSON.stringify(rest)), ats: a.at.map(t => ({id: t.id, startdato: t.startdato, omrade: t.omrade}))};
 }
 function svPushUndo(u) { const st = ui.statustavle; st.undo.push(u); if (st.undo.length > 30) st.undo.shift(); }
+// Endringslogg: hver endring i Statustavlen skrives med tidspunkt, hvem, handling, aktivitet og hva som ble endret.
+function logg(handling, akt, tekst) {
+  const u = me();
+  const e = {tid: new Date().toISOString(), av: u.name || '', epost: u.email || '', firma: u.firma || '', rolle: u.rolle || '', handling, akt: akt || '', tekst: tekst || '', kilde: 'Statustavle'};
+  if (CLOUD) { if (window.cloudLog) window.cloudLog(e); }
+  else { LOGG.unshift(e); if (LOGG.length > 3000) LOGG.length = 3000; writeRaw(LOGG_KEY, JSON.stringify(LOGG)); }
+  if (currentTab === 'admin') renderLogg();
+}
+const fmtV = (k, v) => k === 'startdato' ? fmtNo(v) : k === 'varighet' ? `${v} d` : k === 'metode' ? (v && v.nr ? 'MB ' + v.nr : 'ingen MB') : `«${v || ''}»`;
+const FELT = {startdato: 'Start', varighet: 'Varighet', omrade: 'Sone', navn: 'Navn', firma: 'Firma', kommentar: 'Kommentar', metode: 'Metodebeskrivelse'};
 function svUndo() {
   const u = ui.statustavle.undo.pop(); if (!u) return;
-  if (u.created) { DATA = DATA.filter(a => a.id !== u.created); relink(); showToast(`${u.created} er fjernet igjen.`); }
-  else if (u.deleted) { DATA.push(u.deleted.act); u.deleted.links.forEach(({id}) => { const t = ATS.find(x => x.id === id); if (t && !t.aktiviteter.includes(u.deleted.act.id)) t.aktiviteter.push(u.deleted.act.id); }); relink(); showToast(`${u.deleted.act.id} er lagt tilbake.`); }
+  if (u.avh) {
+    const {op, before, after} = u.avh;
+    if (op === 'add') AVH = AVH.filter(d => d.id !== after.id);
+    else if (op === 'del') AVH.push(before);
+    else { const d = AVH.find(x => x.id === before.id); if (d) Object.assign(d, before); }
+    logg('Angret', '', `Angret: ${u.label || 'endring i avhengighet'}`);
+    showToast('Endringen i avhengigheten er angret.');
+  }
+  else if (u.created) { DATA = DATA.filter(a => a.id !== u.created); AVH = AVH.filter(d => d.fra !== u.created && d.til !== u.created); relink(); logg('Angret', u.created, 'Angret ny aktivitet (fjernet igjen)'); showToast(`${u.created} er fjernet igjen.`); }
+  else if (u.deleted) { DATA.push(u.deleted.act); (u.deleted.avh || []).forEach(d => AVH.push(d)); u.deleted.links.forEach(({id}) => { const t = ATS.find(x => x.id === id); if (t && !t.aktiviteter.includes(u.deleted.act.id)) t.aktiviteter.push(u.deleted.act.id); }); relink(); logg('Angret', u.deleted.act.id, 'Angret sletting (lagt tilbake)'); showToast(`${u.deleted.act.id} er lagt tilbake.`); }
   else {
     const a = actById(u.id); if (!a) return;
     Object.keys(a).forEach(k => { if (!(k in u.act)) delete a[k]; });
     Object.assign(a, u.act);
     u.ats.forEach(x => { const t = ATS.find(y => y.id === x.id); if (t) { t.startdato = x.startdato; t.omrade = x.omrade; } });
+    logg('Angret', a.id, `Angret: ${u.label || 'endring'}`);
     showToast(`Endringen på ${a.id} er angret.`);
   }
   save(); renderStatustavle();
 }
 // Flytter aktiviteten (og AT-er som bare hører til den) og/eller endrer varighet og sone.
 function svApply(a, ny) {
-  svPushUndo(svSnapshot(a));
+  const snap = svSnapshot(a);
   const delta = ny.startdato ? daysBetween(a.startdato, ny.startdato) : 0, fraSone = a.omrade;
+  const endr = Object.keys(ny).filter(k => FELT[k]).map(k => `${FELT[k]} ${fmtV(k, a[k])} → ${fmtV(k, ny[k])}`);
+  const keys = Object.keys(ny);
+  const handling = keys.length === 1 ? ({startdato: 'Flyttet', varighet: 'Endret varighet', omrade: 'Byttet sone'}[keys[0]] || 'Endret') : keys.every(k => k === 'startdato' || k === 'omrade') ? 'Flyttet' : 'Endret';
+  const brFor = new Set(AVH.filter(avhBrudd).map(d => d.id));
+  const flyttet = [];
   if (ui.statustavle.flyttAT) a.at.forEach(t => {
     if (t.aktiviteter.length !== 1 || !canEditAT(a, t)) return;
     if (delta) t.startdato = addDays(t.startdato, delta);
     if (ny.omrade && ny.omrade !== fraSone && t.omrade === fraSone) t.omrade = ny.omrade;
+    if (delta || (ny.omrade && ny.omrade !== fraSone)) flyttet.push(t.nr);
   });
+  snap.label = `${handling.toLowerCase()} ${a.id} (${endr.join('; ')})`;
+  svPushUndo(snap);
   Object.assign(a, ny);
+  const nyBrudd = AVH.filter(d => (d.fra === a.id || d.til === a.id) && avhBrudd(d) && !brFor.has(d.id));
+  logg(handling, a.id, endr.join('; ') + (flyttet.length ? ` · AT-er flyttet med: ${flyttet.join(', ')}` : '') + (nyBrudd.length ? ` · bryter avhengighet: ${nyBrudd.map(avhNavn).join(', ')}` : ''));
+  if (nyBrudd.length) setTimeout(() => showToast(`⚠ Endringen bryter ${nyBrudd.length === 1 ? 'avhengigheten' : 'avhengighetene'} ${nyBrudd.map(avhNavn).join(', ')}.`), 50);
   svMerk(a);
   save(); renderStatustavle();
   const deler = [];
@@ -1817,6 +1904,7 @@ function svRowAt(y) {
 }
 document.addEventListener('pointerdown', e => {
   if (currentTab !== 'statustavle' || !ui.statustavle.edit || e.button > 0) return;
+  if (e.target.closest('.sv-h')) return;
   const bar = e.target.closest('#sv-chart .sv-bar.editable'); if (!bar) return;
   const it = svItems[Number(bar.dataset.i)];
   svDrag = {bar, it, mode: e.target.closest('.sv-rs') ? 'resize' : 'move', x0: e.clientX, y0: e.clientY,
@@ -1919,6 +2007,7 @@ document.addEventListener('submit', e => {
     svMerk(a);
     DATA.push(a); relink();
     svPushUndo({created: id});
+    logg('Ny aktivitet', id, `«${navn}» · ${omrade} · ${firma} · start ${fmtNo(start)} · ${varighet} d${mb ? ' · MB ' + mb : ''}`);
     save(); $('sv-dlg').close(); renderStatustavle();
     showToast(`${id} ${navn} er lagt inn fra ${fmtNo(start)}. Klargjør forutsetningene i «Klargjøring av aktiviteter».`);
     return;
@@ -1949,12 +2038,283 @@ function svDialogAction(action) {
     if (!confirm(`Slette ${a.id} ${a.navn}?${a.at.length ? ` AT-ene blir liggende, men knyttes fra aktiviteten.` : ''}`)) return;
     const {at, ...rest} = a;
     const links = a.at.map(t => ({id: t.id}));
-    svPushUndo({deleted: {act: JSON.parse(JSON.stringify(rest)), links}});
+    const avh = AVH.filter(d => d.fra === a.id || d.til === a.id);
+    svPushUndo({deleted: {act: JSON.parse(JSON.stringify(rest)), links, avh}});
+    AVH = AVH.filter(d => !avh.includes(d));
+    logg('Slettet', a.id, `«${a.navn}» · ${a.omrade} · ${a.firma} · start ${fmtNo(a.startdato)} · ${a.varighet} d${avh.length ? ` · ${avh.length} avhengighet(er) fjernet` : ''}`);
     ATS.forEach(t => { t.aktiviteter = t.aktiviteter.filter(x => x !== a.id); });
     DATA = DATA.filter(x => x !== a);
     relink(); save(); dlg.close(); renderStatustavle();
     showToast(`${a.id} er slettet. Trykk «↶ Angre» for å legge den tilbake.`);
   }
+}
+
+// ---------- statustavle: avhengigheter mellom aktiviteter ----------
+// fra = forgjenger, til = etterfølger. FS/SS/FF/SF som i fremdriftsplaner, SAM = må pågå samtidig (rekkefølgen er fri).
+const AVH_TYPER = {
+  FS: 'FS – slutt til start', SS: 'SS – start til start', FF: 'FF – slutt til slutt', SF: 'SF – start til slutt',
+  SAM: 'Samtidighet – må pågå samtidig'
+};
+let svLink = null, svPopD = null, svPopTimer = null;
+function avhBrudd(d) {
+  const p = actById(d.fra), q = actById(d.til); if (!p || !q) return false;
+  const lag = Number(d.lag) || 0, ps = p.startdato, pe = endDate(p), qs = q.startdato, qe = endDate(q);
+  if (d.type === 'FS') return qs < addDays(pe, 1 + lag);
+  if (d.type === 'SS') return qs < addDays(ps, lag);
+  if (d.type === 'FF') return qe < addDays(pe, lag);
+  if (d.type === 'SF') return qe < addDays(ps, lag);
+  if (d.type === 'SAM') return !(qs <= pe && ps <= qe);
+  return false;
+}
+function avhBeskriv(d) {
+  const lag = Number(d.lag) || 0, l = lag ? ` + ${lag} dag${Math.abs(lag) === 1 ? '' : 'er'}` : '';
+  return {
+    FS: `${d.til} kan starte når ${d.fra} er ferdig${l}.`, SS: `${d.til} kan starte når ${d.fra} har startet${l}.`,
+    FF: `${d.til} kan bli ferdig når ${d.fra} er ferdig${l}.`, SF: `${d.til} kan bli ferdig når ${d.fra} har startet${l}.`,
+    SAM: `${d.fra} og ${d.til} må pågå samtidig i minst én dag. Rekkefølgen er fri.`
+  }[d.type] || '';
+}
+function avhBruddTekst(d) {
+  const p = actById(d.fra), q = actById(d.til); if (!p || !q || !avhBrudd(d)) return '';
+  if (d.type === 'FS') return `${q.id} starter ${fmtNo(q.startdato)}, men ${p.id} er ikke ferdig før ${fmtNo(endDate(p))}.`;
+  if (d.type === 'SS') return `${q.id} starter ${fmtNo(q.startdato)}, før ${p.id} starter ${fmtNo(p.startdato)}.`;
+  if (d.type === 'FF') return `${q.id} blir ferdig ${fmtNo(endDate(q))}, før ${p.id} blir ferdig ${fmtNo(endDate(p))}.`;
+  if (d.type === 'SF') return `${q.id} blir ferdig ${fmtNo(endDate(q))}, før ${p.id} starter ${fmtNo(p.startdato)}.`;
+  return `${p.id} (${fmtShort(p.startdato)}–${fmtShort(endDate(p))}) og ${q.id} (${fmtShort(q.startdato)}–${fmtShort(endDate(q))}) overlapper ikke.`;
+}
+const avhNavn = d => `${d.fra} → ${d.til} (${d.type === 'SAM' ? 'samtidighet' : d.type}${Number(d.lag) ? ` ${d.lag > 0 ? '+' : ''}${d.lag} d` : ''})`;
+const svKanAvh = d => { const p = actById(d.fra), q = actById(d.til); return !!((p && canEditAct(p)) || (q && canEditAct(q))); };
+
+function svAvhTip(a) {
+  const l = AVH.filter(d => d.fra === a.id || d.til === a.id); if (!l.length) return '';
+  return `<div class="sec">Avhengigheter</div><ul>${l.map(d => {
+    const b = avhBrudd(d), other = d.fra === a.id ? d.til : d.fra, o = actById(other);
+    const rel = d.type === 'SAM' ? 'Samtidig med' : d.fra === a.id ? `Før (${d.type})` : `Etter (${d.type})`;
+    return `<li><span>${b ? '⚠️' : '⛓'}</span><span${b ? ' style="color:var(--red);font-weight:600"' : ''}>${rel} <b>${esc(other)}</b> ${esc(o ? o.navn : '')}${Number(d.lag) ? ` · ${d.lag > 0 ? '+' : ''}${d.lag} d` : ''}${b ? ' – brutt' : ''}</span></li>`;
+  }).join('')}</ul>`;
+}
+
+// Ortogonal linje ut fra forsiden (mot venstre) eller baksiden (mot høyre), inn på målet fra riktig side.
+function svRoute(x1, y1, d1, x2, y2, d2) {
+  const o = 9, a = x1 + d1 * o, b = x2 + d2 * o;
+  let pts;
+  if (d1 === d2) { const xm = d1 > 0 ? Math.max(a, b) : Math.min(a, b); pts = [[x1, y1], [xm, y1], [xm, y2], [x2, y2]]; }
+  else if ((d1 > 0 && a <= b) || (d1 < 0 && a >= b)) { const xm = (a + b) / 2; pts = [[x1, y1], [xm, y1], [xm, y2], [x2, y2]]; }
+  else { const ym = y1 + (y2 >= y1 ? 14 : -14); pts = [[x1, y1], [a, y1], [a, ym], [b, ym], [b, y2], [x2, y2]]; }
+  return 'M' + pts.map(p => p.map(v => Math.round(v * 10) / 10).join(',')).join(' L');
+}
+function svDrawLinks() {
+  const body = document.getElementById('sv-body'); if (!body) return;
+  const old = document.getElementById('sv-links'); if (old) old.remove();
+  if (!ui.statustavle.avh) return;
+  const c = body.getBoundingClientRect(), pos = new Map();
+  document.querySelectorAll('#sv-chart .sv-bar').forEach(b => {
+    const r = b.getBoundingClientRect();
+    pos.set(svItems[Number(b.dataset.i)].a.id, {l: r.left - c.left, r: r.right - c.left, y: r.top - c.top + r.height / 2});
+  });
+  const g = AVH.map(d => {
+    const p = pos.get(d.fra), q = pos.get(d.til); if (!p || !q) return '';
+    const brudd = avhBrudd(d), sam = d.type === 'SAM';
+    const col = brudd ? '#cf222e' : sam ? '#8250df' : '#57606a', w = brudd ? 3.5 : 1.6;
+    let path;
+    if (sam) {
+      const x1 = (p.l + p.r) / 2, x2 = (q.l + q.r) / 2;
+      path = Math.abs(p.y - q.y) < 2 ? `M${x1},${p.y - 11} C${x1},${p.y - 32} ${x2},${q.y - 32} ${x2},${q.y - 11}`
+        : `M${x1},${p.y + (q.y > p.y ? 11 : -11)} C${x1},${(p.y + q.y) / 2} ${x2},${(p.y + q.y) / 2} ${x2},${q.y + (q.y > p.y ? -11 : 11)}`;
+    } else {
+      const fromEnd = d.type === 'FS' || d.type === 'FF', toEnd = d.type === 'FF' || d.type === 'SF';
+      path = svRoute(fromEnd ? p.r : p.l, p.y, fromEnd ? 1 : -1, toEnd ? q.r : q.l, q.y, toEnd ? 1 : -1);
+    }
+    const mk = brudd ? 'b' : sam ? 's' : 'n';
+    return `<g class="${brudd ? 'brudd' : ''}" data-avh="${esc(d.id)}"><title>${esc(avhNavn(d) + (brudd ? ' – BRUTT: ' + avhBruddTekst(d) : ''))}</title>
+      <path class="ln" d="${path}" fill="none" stroke="${col}" stroke-width="${w}" ${sam ? `stroke-dasharray="6 4" marker-start="url(#svm-d${mk})" marker-end="url(#svm-d${mk})"` : `marker-end="url(#svm-a${mk})"`} stroke-linejoin="round"/>
+      <path class="hit" d="${path}" fill="none" stroke="transparent" stroke-width="12"/></g>`;
+  }).join('');
+  const marker = (id, col, dot) => dot
+    ? `<marker id="svm-d${id}" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6"><circle cx="5" cy="5" r="4" fill="${col}"/></marker>`
+    : `<marker id="svm-a${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="${id === 'b' ? 4 : 7}" markerHeight="${id === 'b' ? 4 : 7}" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${col}"/></marker>`;
+  body.insertAdjacentHTML('beforeend', `<svg id="sv-links" class="sv-links" width="${body.scrollWidth}" height="${body.scrollHeight}" xmlns="http://www.w3.org/2000/svg">
+    <defs>${marker('n', '#57606a')}${marker('b', '#cf222e')}${marker('s', '#8250df')}${marker('n', '#57606a', 1)}${marker('b', '#cf222e', 1)}${marker('s', '#8250df', 1)}</defs>
+    ${g}<line id="sv-tmp" x1="0" y1="0" x2="0" y2="0" stroke="#8250df" stroke-width="2" stroke-dasharray="5 4" visibility="hidden"/></svg>`);
+}
+let svResizeT = null;
+window.addEventListener('resize', () => { clearTimeout(svResizeT); svResizeT = setTimeout(() => { if (currentTab === 'statustavle') svDrawLinks(); }, 150); });
+
+// Opprettelse: dra (eller trykk og trykk) fra et håndtak til et håndtak på en annen aktivitet.
+function svAnchor(h) {
+  const c = document.getElementById('sv-body').getBoundingClientRect(), r = h.getBoundingClientRect();
+  return {x: r.left + r.width / 2 - c.left, y: r.top + r.height / 2 - c.top};
+}
+function svLinkCancel() {
+  if (!svLink) return;
+  svLink.h.classList.remove('armed');
+  document.querySelectorAll('#sv-chart .sv-h.target').forEach(x => x.classList.remove('target'));
+  const t = document.getElementById('sv-tmp'); if (t) t.setAttribute('visibility', 'hidden');
+  document.getElementById('sv-drag-info').hidden = true;
+  svLink = null;
+}
+function svHandleAt(x, y) { const el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('#sv-chart .sv-h') : null; }
+document.addEventListener('pointerdown', e => {
+  if (currentTab !== 'statustavle' || !ui.statustavle.avh || e.button > 0) return;
+  const h = e.target.closest('#sv-chart .sv-h');
+  if (svLink && svLink.armed) { if (h) { e.preventDefault(); svLinkFinish(h); svDragEnd = Date.now(); } return; }
+  if (!h) return;
+  e.preventDefault();
+  svPopClose(); svShowTip(null);
+  const bar = h.closest('.sv-bar');
+  svLink = {h, it: svItems[Number(bar.dataset.i)], end: h.dataset.end, ...svAnchor(h), sx: e.clientX, sy: e.clientY, moved: false, armed: false, id: e.pointerId};
+  h.classList.add('armed');
+  try { h.releasePointerCapture(e.pointerId); } catch (err) {}
+});
+document.addEventListener('pointermove', e => {
+  const L = svLink; if (!L || L.armed || e.pointerId !== L.id) return;
+  if (!L.moved && Math.hypot(e.clientX - L.sx, e.clientY - L.sy) < 6) return;
+  L.moved = true; e.preventDefault();
+  const c = document.getElementById('sv-body').getBoundingClientRect(), t = document.getElementById('sv-tmp');
+  if (t) { t.setAttribute('x1', L.x); t.setAttribute('y1', L.y); t.setAttribute('x2', e.clientX - c.left); t.setAttribute('y2', e.clientY - c.top); t.setAttribute('visibility', 'visible'); }
+  document.querySelectorAll('#sv-chart .sv-h.target').forEach(x => x.classList.remove('target'));
+  const h = svHandleAt(e.clientX, e.clientY);
+  if (h && h.closest('.sv-bar') !== L.h.closest('.sv-bar')) h.classList.add('target');
+}, {passive: false});
+document.addEventListener('pointerup', e => {
+  const L = svLink; if (!L || L.armed || e.pointerId !== L.id) return;
+  svDragEnd = Date.now();
+  if (!L.moved) {
+    L.armed = true;
+    const info = document.getElementById('sv-drag-info'), panel = document.getElementById('sv-panel').getBoundingClientRect(), r = L.h.getBoundingClientRect();
+    info.textContent = `${L.end === 's' ? 'Forsiden' : 'Baksiden'} av ${L.it.a.id} er valgt. Trykk på forsiden eller baksiden av aktiviteten den skal kobles til. Esc avbryter.`;
+    info.hidden = false;
+    info.style.left = Math.max(4, Math.min(r.left - panel.left, panel.width - info.offsetWidth - 6)) + 'px';
+    info.style.top = (r.top - panel.top - 36) + 'px';
+    return;
+  }
+  const h = svHandleAt(e.clientX, e.clientY);
+  if (h && h.closest('.sv-bar') !== L.h.closest('.sv-bar')) svLinkFinish(h); else svLinkCancel();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { svLinkCancel(); svPopClose(); } });
+
+function svLinkFinish(t) {
+  const L = svLink; svLinkCancel(); if (!L) return;
+  const A = L.it.a, B = svItems[Number(t.closest('.sv-bar').dataset.i)].a, eA = L.end, eB = t.dataset.end;
+  if (A.id === B.id) return;
+  if (!canEditAct(A) && !canEditAct(B)) { showToast('Du kan bare lage avhengigheter der minst én av aktivitetene tilhører ditt firma.'); return; }
+  const finnes = AVH.find(d => (d.fra === A.id && d.til === B.id) || (d.fra === B.id && d.til === A.id));
+  const r = t.getBoundingClientRect();
+  if (finnes) { showToast(`Det finnes allerede en avhengighet mellom ${A.id} og ${B.id}.`); svPopOpen(finnes, r.left + r.width / 2, r.bottom); return; }
+  // Bakside ↔ forside gir FS der aktiviteten med baksiden er forgjenger. Samme side gir SS/FF, med rekkefølgen fra planen.
+  let fra, til, type;
+  if (eA !== eB) { [fra, til] = eA === 'e' ? [A, B] : [B, A]; type = 'FS'; }
+  else { [fra, til] = A.startdato < B.startdato || (A.startdato === B.startdato && A.id < B.id) ? [A, B] : [B, A]; type = eA === 's' ? 'SS' : 'FF'; }
+  const d = {id: 'd' + uid(), fra: fra.id, til: til.id, type, lag: 0, av: me().name || '', tid: new Date().toISOString()};
+  AVH.push(d);
+  svPushUndo({avh: {op: 'add', after: {...d}}, label: `ny avhengighet ${avhNavn(d)}`});
+  logg('Ny avhengighet', `${d.fra} → ${d.til}`, `${avhNavn(d)}${avhBrudd(d) ? ' · brutt: ' + avhBruddTekst(d) : ''}`);
+  save(); renderStatustavle();
+  svPopOpen(d, r.left + r.width / 2, r.bottom, true);
+}
+
+// Meny for en avhengighet: type, buffer, snu, slett. Den lukkes når en går bort fra den.
+function svPopOpen(d, cx, cy, ny = false) {
+  const pop = document.getElementById('sv-pop'), panel = document.getElementById('sv-panel').getBoundingClientRect();
+  svPopD = d.id;
+  const kan = svKanAvh(d), p = actById(d.fra), q = actById(d.til);
+  pop.innerHTML = `<h4>${ny ? 'Ny avhengighet' : 'Avhengighet'}</h4>
+    <div class="sub"><b>${esc(d.fra)}</b> ${esc(p ? p.navn : '')}<br>→ <b>${esc(d.til)}</b> ${esc(q ? q.navn : '')}</div>
+    <label>Type</label>
+    <select id="svp-type" ${kan ? '' : 'disabled'}>${Object.entries(AVH_TYPER).map(([k, v]) => `<option value="${k}" ${k === d.type ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
+    <label ${d.type === 'SAM' ? 'hidden' : ''} id="svp-lag-l">Buffer (dager)<input type="number" id="svp-lag" value="${Number(d.lag) || 0}" step="1" ${kan ? '' : 'disabled'}></label>
+    <div class="sub" id="svp-besk" style="margin-top:6px">${esc(avhBeskriv(d))}</div>
+    <div class="brudd-txt" id="svp-brudd">${avhBrudd(d) ? '⚠ Brutt: ' + esc(avhBruddTekst(d)) : ''}</div>
+    <div class="row">${kan ? `<button class="btn" data-action="svp-swap" ${d.type === 'SAM' ? 'hidden' : ''} title="Bytt hvem som er forgjenger">⇄ Snu</button><button class="btn danger" data-action="svp-del">🗑 Slett</button>` : `<span class="sub">🔒 Bare firmaene til aktivitetene kan endre</span>`}<span style="flex:1"></span><button class="btn primary" data-action="svp-ok">OK</button></div>`;
+  pop.hidden = false;
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  pop.style.left = Math.max(4, Math.min(cx - panel.left - w / 2, panel.width - w - 4)) + 'px';
+  pop.style.top = Math.max(4, cy - panel.top + 8 + h > panel.height ? cy - panel.top - h - 24 : cy - panel.top + 8) + 'px';
+}
+function svPopClose() { clearTimeout(svPopTimer); svPopTimer = null; svPopD = null; const pop = document.getElementById('sv-pop'); if (pop) pop.hidden = true; }
+function svPopRefresh() {
+  const d = AVH.find(x => x.id === svPopD); if (!d) { svPopClose(); return; }
+  document.getElementById('svp-besk').textContent = avhBeskriv(d);
+  document.getElementById('svp-brudd').textContent = avhBrudd(d) ? '⚠ Brutt: ' + avhBruddTekst(d) : '';
+  document.getElementById('svp-lag-l').hidden = d.type === 'SAM';
+  const sw = document.querySelector('#sv-pop [data-action="svp-swap"]'); if (sw) sw.hidden = d.type === 'SAM';
+  const sub = document.querySelector('#sv-pop .sub'); const p = actById(d.fra), q = actById(d.til);
+  sub.innerHTML = `<b>${esc(d.fra)}</b> ${esc(p ? p.navn : '')}<br>→ <b>${esc(d.til)}</b> ${esc(q ? q.navn : '')}`;
+}
+function svAvhEdit(d, ny, tekst) {
+  if (!svKanAvh(d)) return;
+  const before = {...d};
+  Object.assign(d, ny);
+  svPushUndo({avh: {op: 'edit', before}, label: `endring i avhengighet ${avhNavn(before)}`});
+  logg('Endret avhengighet', `${d.fra} → ${d.til}`, `${tekst} · nå ${avhNavn(d)}${avhBrudd(d) ? ' · brutt' : ''}`);
+  save(); renderStatustavle(); svPopRefresh();
+}
+function svPopAction(action) {
+  const d = AVH.find(x => x.id === svPopD);
+  if (action === 'svp-ok' || !d) { svPopClose(); return; }
+  if (action === 'svp-swap') svAvhEdit(d, {fra: d.til, til: d.fra}, 'Retning snudd');
+  if (action === 'svp-del' && svKanAvh(d)) {
+    AVH = AVH.filter(x => x !== d);
+    svPushUndo({avh: {op: 'del', before: {...d}}, label: `sletting av avhengighet ${avhNavn(d)}`});
+    logg('Slettet avhengighet', `${d.fra} → ${d.til}`, avhNavn(d));
+    svPopClose(); save(); renderStatustavle();
+    showToast(`Avhengigheten ${avhNavn(d)} er slettet. Trykk «↶ Angre» for å få den tilbake.`);
+  }
+}
+document.addEventListener('change', e => {
+  const d = AVH.find(x => x.id === svPopD); if (!d) return;
+  if (e.target.id === 'svp-type' && e.target.value !== d.type) svAvhEdit(d, {type: e.target.value}, `Type ${d.type} → ${e.target.value}`);
+  if (e.target.id === 'svp-lag') { const v = parseInt(e.target.value, 10) || 0; if (v !== (Number(d.lag) || 0)) svAvhEdit(d, {lag: v}, `Buffer ${Number(d.lag) || 0} → ${v} d`); }
+});
+// Går musepekeren mer enn ca. 70 px bort fra menyen, lukkes den og valgt type beholdes.
+document.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse' || !svPopD) return;
+  const pop = document.getElementById('sv-pop'), r = pop.getBoundingClientRect();
+  const dist = Math.max(r.left - e.clientX, e.clientX - r.right, r.top - e.clientY, e.clientY - r.bottom, 0);
+  if (dist < 70 || (document.activeElement && pop.contains(document.activeElement) && document.activeElement.tagName === 'SELECT')) { clearTimeout(svPopTimer); svPopTimer = null; }
+  else if (!svPopTimer) svPopTimer = setTimeout(svPopClose, 450);
+});
+document.addEventListener('pointerdown', e => {
+  if (!svPopD || e.target.closest('#sv-pop')) return;
+  if (e.target.closest('.sv-links .hit')) return;
+  svPopClose();
+}, true);
+document.addEventListener('click', e => {
+  const hit = currentTab === 'statustavle' && e.target.closest && e.target.closest('.sv-links .hit');
+  if (!hit) return;
+  const d = AVH.find(x => x.id === hit.parentElement.dataset.avh);
+  if (d) svPopOpen(d, e.clientX, e.clientY);
+});
+
+// ---------- endringslogg (Admin) ----------
+const fmtTid = t => { const d = new Date(t); if (isNaN(d)) return ''; const z = n => String(n).padStart(2, '0'); return `${z(d.getDate())}.${z(d.getMonth() + 1)}.${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+function loggRader() {
+  const q = ui.admin.loggSearch.trim().toLowerCase();
+  return LOGG.filter(e => !q || [e.av, e.firma, e.handling, e.akt, e.tekst, fmtTid(e.tid)].some(x => String(x || '').toLowerCase().includes(q)));
+}
+function renderLogg() {
+  const el = document.getElementById('logg-panel'); if (!el) return;
+  el.hidden = !isSys(); if (el.hidden) return;
+  if (!el.querySelector('#logg-search')) {
+    el.innerHTML = `<h3>Endringslogg – Statustavle</h3>
+      <p class="intro" style="margin-bottom:8px">Alt som endres i Statustavlen, logges her med tidspunkt, hvem som gjorde det, hva som ble gjort og hva som endret seg. Det gjelder flytting, varighet, sone, detaljer, nye og slettede aktiviteter, avhengigheter og angring. ${CLOUD ? 'De 1000 siste endringene hentes fra databasen, og loggen kan ikke endres i etterkant.' : 'I demomodus lagres loggen bare i denne nettleseren.'}</p>
+      <div class="logg-tools"><input type="search" id="logg-search" placeholder="Søk på person, firma, handling, aktivitet eller dato …"><button class="btn" data-action="logg-csv">⬇ Last ned CSV</button><span class="sub" id="logg-count"></span></div>
+      <div class="logg-wrap"><table class="logg"><thead><tr><th>Tidspunkt</th><th>Hvem</th><th>Handling</th><th>Aktivitet</th><th>Endring</th></tr></thead><tbody id="logg-body"></tbody></table></div>`;
+    el.querySelector('#logg-search').value = ui.admin.loggSearch;
+  }
+  const rows = loggRader(), vis = rows.slice(0, 400);
+  document.getElementById('logg-count').textContent = `${rows.length} endring${rows.length === 1 ? '' : 'er'}${rows.length > vis.length ? `, viser de ${vis.length} nyeste` : ''}`;
+  document.getElementById('logg-body').innerHTML = vis.map(e => `<tr><td class="t">${fmtTid(e.tid)}</td><td>${esc(e.av)}${e.firma ? `<div class="sub">${esc(e.firma)}</div>` : ''}</td><td class="h">${esc(e.handling)}</td><td>${esc(e.akt)}</td><td>${esc(e.tekst)}</td></tr>`).join('')
+    || '<tr><td colspan="5" class="muted" style="padding:12px">Ingen endringer registrert ennå.</td></tr>';
+}
+document.addEventListener('input', e => { if (e.target.id === 'logg-search') { ui.admin.loggSearch = e.target.value; renderLogg(); } });
+function loggCsv() {
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const lines = [['Tidspunkt', 'Hvem', 'E-post', 'Firma', 'Rolle', 'Handling', 'Aktivitet', 'Endring'].map(q).join(';'),
+    ...loggRader().map(e => [fmtTid(e.tid), e.av, e.epost, e.firma, e.rolle, e.handling, e.akt, e.tekst].map(q).join(';'))];
+  const url = URL.createObjectURL(new Blob(['﻿' + lines.join('\r\n')], {type: 'text/csv;charset=utf-8'}));
+  const a = document.createElement('a'); a.href = url; a.download = `wrk2-endringslogg-${TODAY}.csv`; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ---------- metodebeskrivelser (entreprenør → metodebeskrivelse → AT → aktiviteter) ----------
@@ -2347,6 +2707,7 @@ function renderAdmin() {
   }).join('');
 
   renderRegister();
+  renderLogg();
   document.getElementById('modules-panel').innerHTML = `<h3>Moduler i prosjektet</h3>
     <p class="intro" style="margin-bottom:8px">Tilleggsmoduler er skrudd av som standard. En systemadministrator kan gjøre dem tilgjengelige for alle brukerne i prosjektet.</p>
     <label class="module-row"><input type="checkbox" id="mod-skrastrek" ${SETTINGS.skrastrek ? 'checked' : ''} ${sys ? '' : 'disabled'}>
@@ -2436,6 +2797,8 @@ document.addEventListener('click', e => {
   if (action === 'sv-new') { svOpenDialog(null); return; }
   if (action === 'sv-undo') { svUndo(); return; }
   if (['sv-del', 'sv-open', 'sv-cancel'].includes(action)) { svDialogAction(action); return; }
+  if (action.startsWith('svp-')) { svPopAction(action); return; }
+  if (action === 'logg-csv') { loggCsv(); return; }
   if (action === 'ff-mine') { ui[btn.dataset.page].firms = new Set([me().firma]); rerenderPage(btn.dataset.page); return; }
   if (action === 'toggle-archive') { const p = btn.dataset.page; ui[p].showArchive = !ui[p].showArchive; rerenderPage(p); return; }
   if (action === 'expand-all') { const p = btn.dataset.page; DATA.forEach(a => ui[p].expanded.add(a.id)); renderTable(p); return; }
@@ -2679,6 +3042,8 @@ document.addEventListener('change', e => {
     ui.klargjoring.editing.clear(); ui.koord.drawing = null;
     save(); renderCurrent(); return;
   }
+  if (el.id === 'sv-lenke') { ui.statustavle.lenke = el.checked; svShowTip(null); return; }
+  if (el.id === 'sv-avh') { ui.statustavle.avh = el.checked; svLinkCancel(); svPopClose(); renderStatustavle(); return; }
   if (el.id === 'sv-flytt') { ui.statustavle.flyttAT = el.checked; return; }
   if (el.id === 'sv-lys') { ui.statustavle.lys = el.value; renderStatustavle(); return; }
   if (el.id === 'sk-niva' || el.id === 'sk-uker') { ui.skrastrek[el.id === 'sk-niva' ? 'niva' : 'uker'] = el.value; renderSkrastrek(); return; }

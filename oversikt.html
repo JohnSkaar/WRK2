@@ -327,7 +327,10 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .fu-sub .sec{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:8px 0 4px}
 .fu-chk{display:flex !important;align-items:center;gap:6px;font-weight:400 !important;margin:3px 0 !important}
 .fu-chk input{display:inline !important;width:auto !important;margin:0 !important}
+.ue-kjede{margin-top:2px}
 .ue-kjede i{font-style:normal;font-size:10px;color:var(--muted)}
+.ue-linje{font-size:12px;white-space:nowrap;margin-top:1px}
+.fu-goto{font-size:11.5px;margin-top:3px}
 .mb-act.drop-hover{outline:3px dashed var(--accent);outline-offset:-3px;background:#eef4ff}
 .mb-tag .mb-x{font-size:12px;color:inherit;padding:0 0 0 3px}
 .mb-act{display:flex;gap:8px;border:1px solid var(--line);border-left:6px solid #999;border-radius:6px;padding:8px;margin-bottom:8px;background:#fff;cursor:grab;user-select:none;-webkit-user-select:none}
@@ -719,7 +722,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-09-30.12';
+const APP_VERSION = '2026-09-30.13';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -887,7 +890,7 @@ function splitLegacy(data) {
   return {acts: data, ats};
 }
 function normalizeAll() {
-  DATA.forEach(a => { giAnsvar(a, a.id); delete a.at; });
+  DATA.forEach(a => { giAnsvar(a, a.id); delete a.at; fuRens(a); });
   ATS.forEach(t => {
     if (!t.id) t.id = t.nr || uid();
     if (!Array.isArray(t.aktiviteter)) t.aktiviteter = [];
@@ -1065,7 +1068,7 @@ const ui = {
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
   statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: [], lenke: false, avh: false},
-  metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set()},
+  metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set(), atFirma: null},
   firma: {search: '', uten: false},
   admin: {firmDel: null, firmEdit: null, regSearch: '', loggSearch: ''},
   koord: {week: null, selected: null, drawing: null}
@@ -1099,7 +1102,7 @@ function commonCells(o, ed, firmaEd, kjede = '') {
     uke: `<td class="c">${isoWeek(o.startdato)}</td>`,
     dato: `<td>${ed ? `<input type="date" class="w-date" data-field="startdato" value="${esc(o.startdato)}">` : fmtNo(o.startdato)}</td>`,
     varighet: `<td class="c">${ed ? `<input type="number" min="1" class="w-num" data-field="varighet" value="${o.varighet}">` : o.varighet}</td>`,
-    firma: `<td class="firma-cell">${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}${kjede}</td>`,
+    firma: `<td class="firma-cell">${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : kjede.includes('ue-kjede') ? '' : firmBadge(o.firma)}${firmaEd && kjede.includes('ue-kjede') ? kjede.replace(/^<div class="ue-kjede"([^>]*)>\s*<span class="badge firm-badge"[^<]*<\/span>/, '<div class="ue-kjede"$1>') : kjede}${ed && DATA.includes(o) ? `<div class="fu-goto"><button class="link-btn" data-action="fu-goto" data-id="${esc(o.id)}">Endre UE-er →</button></div>` : ''}</td>`,
     lys: FORUTSETNINGER.map(([k]) => `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}</td>`).join(''),
     ansvar: ['ansvarUtforelse', 'ansvarGodkjenning'].map(f => `<td class="c">${ed
       ? `<select data-field="${f}" title="${f === 'ansvarUtforelse' ? 'Ansvarlig for utførelse' : 'Ansvarlig for godkjenning'}"><option value="" ${o[f] ? '' : 'selected'}>–</option>${[...new Set([...PERSONER, o[f]].filter(Boolean))].map(x => `<option value="${esc(x)}" ${x === o[f] ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`
@@ -1851,7 +1854,7 @@ function svTipHtml(it) {
   if (a.kommentar) kom.push(['Aktiviteten', a.kommentar]);
   if (a.metode.historikk) kom.push(['Metodebeskrivelse', a.metode.historikk]);
   a.at.forEach(t => { if (t.kommentar) kom.push([t.nr + ' ' + t.navn, t.kommentar]); });
-  const chain = ueChainHtml(a) + chainHtml(actMbNrs(a));
+  const chain = ueChainHtml(a, false) + chainHtml(actMbNrs(a));
   return `<h4>${esc(a.id)} ${esc(a.navn)}</h4>
     <div class="sub">${esc(a.omrade)} · ${fmtNo(a.startdato)}–${fmtNo(endDate(a))} · ${a.varighet} dager</div>
     <div style="margin-top:5px">${firmBadge(a.firma)} <span class="badge ${STATUS_CLS[a.status] || ''}">${esc(a.status)}</span>${a.at.length ? ` <span class="sub">${a.at.length} AT</span>` : ''}</div>
@@ -2748,6 +2751,16 @@ function atGyldig(t) {
   if (na < fra) return `<span class="badge st-plan">Godkjent · gjelder fra ${fmtShort(t.fra.slice(0, 10))}</span>`;
   return `<span class="badge st-done">Godkjent · gyldig til ${fmtShort(t.til.slice(0, 10))} ${t.til.slice(11, 16)}</span>`;
 }
+// Firmavelger på AT: firmaene på de koblede aktivitetene (entreprenør og UE-er) foreslås først.
+function atFirmaVelger(t) {
+  const fraAkt = [...new Set(t.aktiviteter.map(actById).filter(Boolean).flatMap(a => [a.firma, ...(a.ue || []).flatMap(u => [u.navn, ...(u.under || []).map(x => x.navn)])]))];
+  const iBruk = regIBruk().filter(r => !activeFirmFor(r) && !fraAkt.some(n => sammeNavn(n, regNavn(r))));
+  return `<select class="at-firma-sel" data-at-firma="${esc(t.id)}">
+    ${fraAkt.length ? `<optgroup label="Fra de koblede aktivitetene">${fraAkt.map(n => { const r = FIRMS.some(f => f.navn === n) ? null : REGISTER.find(x => sammeNavn(regNavn(x), n)); return `<option value="${esc(r ? 'reg:' + r.id : n)}" ${n === t.firma ? 'selected' : ''}>${esc(n)}</option>`; }).join('')}</optgroup>` : ''}
+    <optgroup label="Firma med farge">${FIRMS.map(f => `<option value="${esc(f.navn)}" ${f.navn === t.firma && !fraAkt.includes(f.navn) ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')}</optgroup>
+    ${iBruk.length ? `<optgroup label="Tatt i bruk (får farge når de står på en AT)">${iBruk.map(r => `<option value="reg:${esc(r.id)}">${esc(regNavn(r))}</option>`).join('')}</optgroup>` : ''}
+  </select> <button class="mb-x" data-action="at-firma-avbryt" title="Avbryt">×</button>`;
+}
 const addTid = (v, d) => addDays(v.slice(0, 10), d) + v.slice(10);
 function onsdagDenneUken() { return addDays(mondayOf(TODAY), 2); }
 function nextAtNr2() {
@@ -2846,7 +2859,7 @@ function renderMetoder() {
         <span class="at-box-tools">${canT ? `<button class="mb-x" data-action="at-rename" title="Endre navn">✏️</button><button class="mb-x" data-action="at-del" title="Slett AT-en">🗑</button>` : ''}</span>
       </div>
       <div class="at-meta">${t.risikoniva ? `<span class="badge ${RISK_CLS[t.risikoniva] || ''}">${esc(t.risikoniva)} risiko</span> ` : ''}${esc(t.kategori || '')}</div>
-      <div class="at-meta">🗓 ${t.fra ? `${tid(t.fra)} – ${tid(t.til)}` : `${fmtShort(t.startdato)} – ${fmtShort(endDate(t))}`} · ${firmBadge(t.firma)}</div>
+      <div class="at-meta">🗓 ${t.fra ? `${tid(t.fra)} – ${tid(t.til)}` : `${fmtShort(t.startdato)} – ${fmtShort(endDate(t))}`} · ${st.atFirma === t.id ? atFirmaVelger(t) : `${firmBadge(t.firma)}${sys ? ` <button class="mb-x" data-action="at-firma" title="Bytt firma på AT-en">✏️</button>` : ''}`}</div>
       <div class="at-meta">${atGyldig(t)}${canT && t.til ? ` <button class="btn small-dark" data-action="at-runde" title="Ny runde: samme AT gjelder én uke til">↻ Ny runde (+1 uke)</button>` : ''}</div>
       <div class="mb-tags">${m ? `<span class="mb-tag" title="${esc(m.navn)}">MB ${esc(m.nr)} ${esc(m.navn)}${canT ? ' <button class="mb-x" data-action="at-mb-unlink" title="Fjern fra metodebeskrivelsen">×</button>' : ''}</span>` : '<span class="mb-tag none">Ingen metodebeskrivelse</span>'}</div>
       <div class="mb-chips" style="margin-top:5px">${linked.length ? linked.map(a => actChip(a, {can: canL, action: 'at-unlink', data: `data-from-at="${esc(t.id)}"`})).join('')
@@ -2867,7 +2880,7 @@ function renderMetoder() {
       <div class="at-card-body">
         <div><b>${esc(a.id)}</b> ${esc(a.navn)}</div>
         <div class="sub">${esc(a.omrade)} · uke ${isoWeek(a.startdato)} · ${firmBadge(a.firma)}</div>
-        ${ueChainHtml(a)}${chainHtml(nrs)}
+        ${ueChainHtml(a, false)}${chainHtml(nrs)}
         <div class="mb-tags">${a.at.map(t => `<span class="mb-tag at">${esc(t.nr)}</span>`).join('')}${nrs.map(n => `<span class="mb-tag">MB ${esc(n)}</span>`).join('')}${a.at.length ? '' : '<span class="mb-tag none">Ingen AT</span>'}</div>
       </div>
     </div>`;
@@ -2978,10 +2991,37 @@ function regIBruk() {
 }
 const regBarn = r => REGISTER.filter(x => x.overordnet === r.orgnr && x.niva > r.niva);
 const ueRef = r => ({rid: r.id, navn: regNavn(r), orgnr: r.orgnr});
-const sammeFirma = (u, r) => u.orgnr === r.orgnr && normFirm(u.navn) === normFirm(regNavn(r));
-function ueChainHtml(a) {
+const sammeNavn = (x, y) => !!x && !!y && normFirm(x) === normFirm(y);
+// Samme firma: samme org.nr, eller samme navn uten «AS» og punktum (Entreprenørservice = Entreprenørservice AS).
+const sammeFirma = (u, r) => (!!u.orgnr && u.orgnr === r.orgnr) || sammeNavn(u.navn, regNavn(r)) || sammeNavn(u.navn, r.navn);
+// Hvor står firmaet allerede på aktiviteten? Et firma kan bare stå én gang per aktivitet.
+function fuRolle(a, r) {
+  if (sammeNavn(a.firma, regNavn(r)) || sammeNavn(a.firma, r.navn)) return 'entreprenør';
+  for (const u of a.ue || []) {
+    if (sammeFirma(u, r)) return 'UE';
+    if ((u.under || []).some(x => sammeFirma(x, r))) return 'UE av UE';
+  }
+  return '';
+}
+// Rydder kjeden: fjerner UE som er lik entreprenøren (UE-ene under den løftes opp), slår sammen doble UE-er og fjerner doble UE av UE.
+function fuRens(a) {
+  if (!Array.isArray(a.ue) || !a.ue.length) return false;
+  const før = JSON.stringify(a.ue), ut = [], sett = [a.firma];
+  const har = n => sett.some(x => sammeNavn(x, n));
+  const leggTil = (u, under) => {
+    if (har(u.navn)) { under.forEach(x => leggTil(x, [])); return; }
+    sett.push(u.navn); const ny = {...u, under: []}; ut.push(ny);
+    under.forEach(x => { if (!har(x.navn)) { sett.push(x.navn); ny.under.push({rid: x.rid, navn: x.navn, orgnr: x.orgnr}); } });
+  };
+  a.ue.forEach(u => leggTil(u, u.under || []));
+  a.ue = ut;
+  return JSON.stringify(a.ue) !== før;
+}
+// Kjeden vises én gang: entreprenøren (med farge) øverst, hver UE på egen linje med sine UE av UE.
+function ueChainHtml(a, medEntreprenor = true) {
   if (!a.ue || !a.ue.length) return '';
-  return a.ue.map(u => `<div class="kjede ue-kjede" title="Utførelse: entreprenør › UE › UE av UE"><span class="kjede-ledd" style="border-color:${firmColor(a.firma)}"><b>${esc(a.firma)}</b></span><span class="kjede-pil">›</span><span class="kjede-ledd">${esc(u.navn)} <i>UE</i></span>${(u.under || []).length ? `<span class="kjede-pil">›</span><span class="kjede-ledd">${u.under.map(x => esc(x.navn)).join(', ')} <i>UE av UE</i></span>` : ''}</div>`).join('');
+  return `<div class="ue-kjede" title="Utførelse: entreprenør › UE › UE av UE">${medEntreprenor ? firmBadge(a.firma) : ''}
+    ${a.ue.map(u => `<div class="ue-linje"><span class="kjede-pil">›</span> ${esc(u.navn)} <i>UE</i>${(u.under || []).length ? ` <span class="kjede-pil">›</span> ${u.under.map(x => esc(x.navn)).join(', ')} <i>UE av UE</i>` : ''}</div>`).join('')}</div>`;
 }
 function fuBruk(r) {
   let hoved = 0, ue = 0, uue = 0;
@@ -2995,7 +3035,9 @@ function fuBruk(r) {
 function renderFirma() {
   const st = ui.firma, q = st.search.trim().toLowerCase();
   document.getElementById('fu-uten').checked = st.uten;
-  const firms = regIBruk().filter(r => !q || [r.navn, regNavn(r), r.orgnr, r.beskrivelse].some(x => String(x).toLowerCase().includes(q)));
+  // Søket filtrerer firmakolonnen bare når det treffer et firma; et søk på en aktivitet viser alle firmaene.
+  const treff = regIBruk().filter(r => !q || [r.navn, regNavn(r), r.orgnr, r.beskrivelse].some(x => String(x).toLowerCase().includes(q)));
+  const firms = treff.length ? treff : regIBruk();
   const groups = [1, 2, 3, 0].map(n => ({n, list: firms.filter(r => r.niva === n)})).filter(g => g.list.length);
   document.getElementById('fu-firms').innerHTML = `<h3 class="mb-colhead">Firma tatt i bruk <span class="sub">${regIBruk().length} firma</span></h3>`
     + (groups.length ? groups.map(g => `<div class="mb-fag">${NIVA_TXT[g.n]}</div>` + g.list.map(r => {
@@ -3066,6 +3108,8 @@ function fuEnd(e, cancel) {
   const t = fuTarget(e); if (!t) return;
   const a = actById(t.dataset.id), r = regById(d.rid); if (!a || !r) return;
   if (!canEditAct(a)) { showToast(`Bare ${a.firma} eller systemadministrator kan endre utførelsen av ${a.id}.`); return; }
+  const rolle = fuRolle(a, r);
+  if (rolle) { showToast(`${regNavn(r)} står allerede på ${a.id} som ${rolle}. Et firma kan bare stå én gang per aktivitet.`); return; }
   if (t.classList.contains('fu-ue')) fuAddUnder(a, Number(t.dataset.ui), [r]);
   else fuOpen(a, r, 'drop');
 }
@@ -3075,8 +3119,8 @@ document.addEventListener('pointercancel', e => fuEnd(e, true));
 function fuAddUnder(a, i, rs) {
   const u = a.ue[i]; if (!u) return;
   u.under = u.under || [];
-  const nye = rs.filter(r => !sammeFirma(u, r) && !u.under.some(x => sammeFirma(x, r)));
-  if (!nye.length) { showToast('Firmaet står allerede i rekken.'); return; }
+  const nye = rs.filter((r, i) => !fuRolle(a, r) && rs.findIndex(x => sammeFirma(ueRef(x), r)) === i);
+  if (!nye.length) { showToast('Firmaet står allerede på aktiviteten. Et firma kan bare stå én gang per aktivitet.'); return; }
   nye.forEach(r => { r.iBruk = true; u.under.push(ueRef(r)); });
   logg('UE av UE lagt til', a.id, `${nye.map(regNavn).join(', ')} som UE av UE under ${u.navn} (${a.firma} › ${u.navn})`);
   save(); renderFirma();
@@ -3092,9 +3136,9 @@ function fuOpen(a, r, mode, ui0 = null) {
   $('fu-role').innerHTML = `<label><input type="radio" name="fu-rolle" value="ue" checked> <b>UE under ${esc(a.firma)}</b><br><span class="sub">Aktiviteten beholder fargen til ${esc(a.firma)}. ${esc(regNavn(r || base))} står nevnt bak entreprenøren.</span></label>
     <label><input type="radio" name="fu-rolle" value="hoved" ${isSys() ? '' : 'disabled'}> <b>Entreprenør – står først i rekken</b><br><span class="sub">Tar over aktiviteten fra ${esc(a.firma)} og får egen farge.${isSys() ? '' : ' Bare systemadministrator.'}</span></label>`;
   const barn = base ? regBarn(base) : [];
-  const andre = regIBruk().filter(x => x !== base && !barn.includes(x));
+  const andre = regIBruk().filter(x => x !== base && !barn.includes(x) && !fuRolle(a, x) && !(r && sammeFirma(ueRef(x), r)));
   $('fu-sub').innerHTML = `<div class="sec">Legg til UE av UE?</div>
-    ${barn.length ? `<div class="sub" style="margin-bottom:4px">Under ${esc(regNavn(base))} i firmaregisteret:</div>${barn.map(x => `<label class="fu-chk"><input type="checkbox" value="${esc(x.id)}"> ${esc(regNavn(x))} <span class="sub">${esc(x.beskrivelse || '')}${x.iBruk || activeFirmFor(x) ? '' : ' · tas i bruk'}</span></label>`).join('')}` : `<div class="sub">${esc(regNavn(base || r))} har ingen UE under seg i firmaregisteret.</div>`}
+    ${barn.length ? `<div class="sub" style="margin-bottom:4px">Under ${esc(regNavn(base))} i firmaregisteret:</div>${barn.map(x => { const rl = fuRolle(a, x); return `<label class="fu-chk"><input type="checkbox" value="${esc(x.id)}" ${rl ? 'disabled' : ''}> ${esc(regNavn(x))} <span class="sub">${rl ? `står allerede som ${rl}` : esc(x.beskrivelse || '') + (x.iBruk || activeFirmFor(x) ? '' : ' · tas i bruk')}</span></label>`; }).join('')}` : `<div class="sub">${esc(regNavn(base || r))} har ingen UE under seg i firmaregisteret.</div>`}
     <label style="margin-top:6px">Annet firma som er tatt i bruk<select id="fu-annen"><option value="">Ingen</option>${andre.map(x => `<option value="${esc(x.id)}">${esc(regNavn(x))}</option>`).join('')}</select></label>`;
   $('fu-sub').hidden = false;
   $('fu-ok').textContent = mode === 'sub' ? 'Legg til' : 'Legg til';
@@ -3113,7 +3157,7 @@ document.addEventListener('submit', e => {
   const r = regById(d.rid), rolle = (document.querySelector('input[name=fu-rolle]:checked') || {}).value;
   if (rolle === 'hoved' && isSys()) {
     const gammel = a.firma, navn = addFirmFromRegister(r);
-    a.firma = navn; a.ue = (a.ue || []).filter(u => !sammeFirma(u, r));
+    a.firma = navn; fuRens(a);
     logg('Entreprenør byttet', a.id, `${gammel} → ${navn} (står først og har egen farge)`);
     save(); renderFirma(); showToast(`${navn} er nå entreprenør på ${a.id} og har egen farge.`);
     return;
@@ -3126,6 +3170,7 @@ document.addEventListener('submit', e => {
 function fuAction(action, btn) {
   const row = btn.closest('.fu-ue'), a = row && actById(row.dataset.id), i = row ? Number(row.dataset.ui) : -1;
   if (action === 'fu-cancel') { document.getElementById('fu-dlg').close(); return; }
+  if (action === 'fu-goto') { ui.firma.search = btn.dataset.id; showTab('firma'); const s = document.querySelector('[data-search="firma"]'); if (s) s.value = btn.dataset.id; return; }
   if (!a || !a.ue || !a.ue[i]) return;
   const u = a.ue[i];
   if (action === 'fu-sub' && canEditAct(a)) { fuOpen(a, null, 'sub', i); return; }
@@ -3143,6 +3188,7 @@ function fuAction(action, btn) {
     const gammel = a.firma, navn = addFirmFromRegister(r);
     a.firma = navn;
     a.ue = [...(u.under || []).map(x => ({...x, under: []})), ...a.ue.filter((_, k) => k !== i)];
+    fuRens(a);
     logg('Entreprenør byttet', a.id, `${u.navn} løftet fram foran ${gammel}: ${navn} er entreprenør og har egen farge${(u.under || []).length ? ', ' + u.under.map(x => x.navn).join(', ') + ' er nå UE' : ''}`);
     save(); renderFirma(); showToast(`${navn} står nå først på ${a.id} og har fått egen farge.`);
   }
@@ -3511,6 +3557,8 @@ document.addEventListener('click', e => {
     if (!confirm(`Slette ${t.nr} «${t.navn}»?${t.aktiviteter.length ? ` Den fjernes fra ${t.aktiviteter.length} aktivitet(er).` : ''}`)) return;
     ATS = ATS.filter(x => x !== t); relink(); save(); renderMetoder(); return;
   }
+  if (action === 'at-firma') { ui.metoder.atFirma = btn.closest('.at-box').dataset.atid; renderMetoder(); return; }
+  if (action === 'at-firma-avbryt') { ui.metoder.atFirma = null; renderMetoder(); return; }
   if (action === 'at-mb-unlink') {
     const t = atById(btn.closest('.at-box').dataset.atid);
     if (t && canEditFirm(t.firma)) { t.metode = ''; save(); renderMetoder(); }
@@ -3701,6 +3749,12 @@ document.addEventListener('change', e => {
   if (el.id === 'sk-niva' || el.id === 'sk-uker') { ui.skrastrek[el.id === 'sk-niva' ? 'niva' : 'uker'] = el.value; renderSkrastrek(); return; }
   if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; renderKoord(); return; }
   if (el.id === 'map-upload') { if (el.files[0]) uploadMap(el.files[0]); el.value = ''; return; }
+  if (el.dataset.atFirma) {
+    const t = atById(el.dataset.atFirma); if (!t || !isSys()) return;
+    const gammel = t.firma, navn = resolveFirmChoice(el.value);
+    if (navn && navn !== gammel) { t.firma = navn; logg('AT byttet firma', t.nr, `${gammel} → ${navn}`); showToast(`${t.nr} tilhører nå ${navn}.`); }
+    ui.metoder.atFirma = null; save(); renderCurrent(); return;
+  }
   if (el.id === 'fu-uten') { ui.firma.uten = el.checked; renderFirma(); return; }
   if (el.id === 'mb-unlinked') { ui.metoder.bareUkoblede = el.checked; renderMetoder(); return; }
   if (el.id === 'mod-atkoord') { if (isSys()) { SETTINGS.atkoord = el.checked; save(); } renderCurrent(); return; }

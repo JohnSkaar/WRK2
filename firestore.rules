@@ -68,6 +68,23 @@ service cloud.firestore {
       allow delete: if sys() || (member() && me().rolle == 'firmaadmin' && atOwner(resource.data));
     }
 
+    // Avhengigheter mellom aktiviteter: firma-admin kan lage og endre dem når minst én av aktivitetene tilhører eget firma.
+    function actFirma(id) { return get(/databases/$(database)/documents/aktiviteter/$(id)).data.firma; }
+    function avhOwner(d) { return actFirma(d.fra) == me().firma || actFirma(d.til) == me().firma; }
+    match /avhengigheter/{id} {
+      allow read: if member();
+      allow create: if sys() || (member() && me().rolle == 'firmaadmin' && avhOwner(request.resource.data));
+      allow update: if sys() || (member() && me().rolle == 'firmaadmin' && avhOwner(resource.data) && avhOwner(request.resource.data));
+      allow delete: if sys() || (member() && me().rolle == 'firmaadmin' && avhOwner(resource.data));
+    }
+
+    // Endringslogg: alle som kan endre, skriver nye innslag i eget navn. Innslag kan ikke endres eller slettes. Bare systemadministratorer kan lese.
+    match /endringslogg/{id} {
+      allow read: if sys();
+      allow create: if member() && me().rolle in ['systemadmin', 'firmaadmin'] && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
     match /aktiviteter/{id} {
       allow read: if member();
       // Firma-admin kan legge inn nye aktiviteter for eget firma (Statustavlen), og slette dem igjen.

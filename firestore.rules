@@ -3,36 +3,54 @@ rules_version = '2';
 // Bytt BYTT_TIL_DIN_EPOST med e-postadressen den første systemadministratoren logger inn med, med små bokstaver.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function authed() { return request.auth != null && request.auth.token.email is string; }
+    function signedIn() { return authed() && request.auth.token.email_verified == true; }
     function email() { return request.auth.token.email.lower(); }
     function userPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
-    function member() { return signedIn() && exists(userPath()); }
+    // Medlem = har profil. Profilen kan bare lages med bekreftet e-post eller med en hemmelig invitasjonskode.
+    function member() { return authed() && exists(userPath()); }
     function me() { return get(userPath()).data; }
     function sys() { return member() && me().rolle == 'systemadmin'; }
     function validUser(d) {
-      return d.keys().hasOnly(['name', 'email', 'firma', 'rolle'])
+      return d.keys().hasOnly(['name', 'email', 'firma', 'rolle', 'kode'])
         && d.name is string && d.email is string && d.firma is string
         && d.rolle in ['systemadmin', 'firmaadmin', 'leser'];
     }
     function invitePath() { return /databases/$(database)/documents/invites/$(email()); }
+    function codePath(k) { return /databases/$(database)/documents/invitekoder/$(k); }
+    function byCode(d) {
+      return d.get('kode', '') is string && d.get('kode', '').size() >= 12 && exists(codePath(d.kode))
+        && get(codePath(d.kode)).data.email == email()
+        && get(codePath(d.kode)).data.rolle == d.rolle
+        && get(codePath(d.kode)).data.firma == d.firma;
+    }
 
     match /users/{uid} {
-      allow get: if signedIn() && request.auth.uid == uid;
+      allow get: if authed() && request.auth.uid == uid;
       allow read: if member();
-      // Første innlogging: profilen kopieres fra invitasjonen, eller oppstart av første systemadministrator.
-      allow create: if signedIn() && request.auth.uid == uid && validUser(request.resource.data)
+      // Første innlogging: profilen kopieres fra invitasjonen (bekreftet e-post eller invitasjonskode), eller oppstart av første systemadministrator.
+      allow create: if authed() && request.auth.uid == uid && validUser(request.resource.data)
         && request.resource.data.email == email()
-        && ((exists(invitePath())
+        && ((signedIn() && exists(invitePath())
               && request.resource.data.rolle == get(invitePath()).data.rolle
               && request.resource.data.firma == get(invitePath()).data.firma)
-            || (email() == 'BYTT_TIL_DIN_EPOST' && request.resource.data.rolle == 'systemadmin'));
+            || byCode(request.resource.data)
+            || (signedIn() && email() == 'BYTT_TIL_DIN_EPOST' && request.resource.data.rolle == 'systemadmin'));
       allow update: if sys() && validUser(request.resource.data);
       allow delete: if sys() && request.auth.uid != uid;
     }
 
     match /invites/{inviteEmail} {
-      allow get, delete: if signedIn() && inviteEmail == email();
+      allow get: if signedIn() && inviteEmail == email();
+      allow delete: if (signedIn() || member()) && inviteEmail == email();
       allow read, write: if sys();
+    }
+
+    // Invitasjonskoder: dokument-id-en er selve koden og fungerer som et hemmelig passord. Kan hentes med koden, men ikke listes.
+    match /invitekoder/{kode} {
+      allow get: if authed();
+      allow delete: if sys() || (authed() && resource.data.email == email());
+      allow list, create, update: if sys();
     }
 
     match /config/{docId} {

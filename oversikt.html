@@ -758,6 +758,29 @@ function findAT(nr) { const t = ATS.find(x => x.nr === nr); return t ? {a: actBy
 // Demo-innlogging i nettleseren: styrer hva brukergrensesnittet tillater, men er ingen sikker tilgangskontroll.
 function me() { return USERS.find(u => u.id === currentUserId) || USERS[0]; }
 function isSys() { return me().rolle === 'systemadmin'; }
+// Invitasjonskode: 16 tilfeldige tegn (ca. 80 bit), uten tegn som er lette å forveksle.
+function newInviteCode() {
+  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = new Uint8Array(16);
+  crypto.getRandomValues(r);
+  return Array.from(r, b => abc[b % abc.length]).join('');
+}
+const fmtKode = k => String(k).replace(/(.{4})(?=.)/g, '$1-');
+const appLink = () => location.origin + location.pathname.replace(/[^/]*$/, '');
+function inviteText(u) {
+  return `Hei ${u.name}
+
+Du er invitert til WRK2 – produksjonsplanlegging for byggeplassen (${u.firma}, ${ROLLER[u.rolle]}).
+
+1. Åpne lenken: ${appLink()}?kode=${u.kode}
+2. Skriv inn e-postadressen ${u.email} og velg et passord.
+3. Trykk «Opprett konto». Invitasjonskoden er fylt inn fra lenken.
+
+Virker ikke lenken, bruker du koden: ${fmtKode(u.kode)}
+Koden er personlig, kan bare brukes én gang og gjelder bare for ${u.email}.
+
+Hilsen ${me().name || ''}`;
+}
+const inviteMailto = u => 'mailto:' + encodeURIComponent(u.email) + '?subject=' + encodeURIComponent('Invitasjon til WRK2') + '&body=' + encodeURIComponent(inviteText(u));
 function canEditFirm(f) { const u = me(); return u.rolle === 'systemadmin' || (u.rolle === 'firmaadmin' && u.firma === f); }
 function canEditAct(a) { return canEditFirm(a.firma); }
 function canEditAT(a, t) { return canEditFirm(a.firma) || canEditFirm(t.firma); }
@@ -1786,7 +1809,7 @@ function renderAdmin() {
     </ul>
     <p class="intro">${esc(accessText())}${sys ? '' : ' Brukere, firma og data kan bare endres av en systemadministrator.'}</p>`;
 
-  document.getElementById('user-form').innerHTML = sys ? `${CLOUD ? '<p class="intro" style="margin-bottom:8px">Legg til en bruker med e-post, firma og rolle. Personen går deretter til wrk2.netlify.app, velger «Opprett konto» med samme e-postadresse og bekrefter e-posten.</p>' : ''}<div class="form-row">
+  document.getElementById('user-form').innerHTML = sys ? `${CLOUD ? '<p class="intro" style="margin-bottom:8px">Legg til en bruker med e-post, firma og rolle. Send så invitasjonen med «✉️ Send fra egen e-post» eller «📋 Kopier invitasjon» (Teams/SMS). Invitasjonen har en lenke og en engangskode, så personen kommer inn uten å vente på e-post fra WRK2. Det er den e-posten som ofte blir stoppet av spamfiltre.</p>' : ''}<div class="form-row">
       <input type="text" id="u-name" placeholder="Navn">
       <input type="email" id="u-email" placeholder="E-post">
       <select id="u-firm">${firmOpts('Skanska')}</select>
@@ -1797,6 +1820,9 @@ function renderAdmin() {
       <div class="grow"><b>${esc(u.name)}</b>${u.id === currentUserId ? ' <span class="badge st-done">innlogget</span>' : ''}${u.pending ? ' <span class="badge st-go" title="Må opprette konto med denne e-postadressen">invitert</span>' : ''}<div class="sub">${esc(u.email || 'ingen e-post')}</div></div>
       ${sys ? `<select data-user-field="firma" data-uid="${esc(u.id)}">${firmOpts(u.firma)}</select>
         <select data-user-field="rolle" data-uid="${esc(u.id)}">${roleOpts(u.rolle)}</select>
+        ${u.pending && CLOUD ? (u.kode
+          ? `<button class="btn" data-action="invite-copy" data-uid="${esc(u.id)}" title="Kode: ${esc(fmtKode(u.kode))}">📋 Kopier invitasjon</button><a class="btn" href="${esc(inviteMailto(u))}">✉️ Send fra egen e-post</a>`
+          : `<button class="btn" data-action="invite-code" data-uid="${esc(u.id)}">Lag invitasjonskode</button>`) : ''}
         <button class="btn danger" data-action="del-user" data-uid="${esc(u.id)}">Fjern</button>`
       : `${firmBadge(u.firma)} <span class="badge st-plan">${esc(ROLLER[u.rolle])}</span>`}
     </div>`).join('');
@@ -2014,7 +2040,7 @@ document.addEventListener('click', e => {
   }
 
   // admin (kun systemadministrator)
-  if (!isSys() && ['add-user', 'del-user', 'add-firm', 'del-firm', 'firm-move-del', 'firm-rename-save', 'reg-use', 'reset-data', 'mb-add', 'mb-del'].includes(action)) return;
+  if (!isSys() && ['add-user', 'del-user', 'invite-copy', 'invite-code', 'add-firm', 'del-firm', 'firm-move-del', 'firm-rename-save', 'reg-use', 'reset-data', 'mb-add', 'mb-del'].includes(action)) return;
   if (action === 'add-user') {
     const name = document.getElementById('u-name').value.trim(), email = document.getElementById('u-email').value.trim().toLowerCase();
     if (!name) { alert('Skriv inn navn.'); return; }
@@ -2022,9 +2048,22 @@ document.addEventListener('click', e => {
     if (CLOUD) {
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Skriv inn en gyldig e-postadresse. Den brukes til innlogging.'); return; }
       if (USERS.some(u => (u.email || '').toLowerCase() === email)) { alert('Denne e-postadressen er allerede lagt til.'); return; }
-      USERS.push({id: 'invite:' + email, pending: true, name, email, firma, rolle});
+      USERS.push({id: 'invite:' + email, pending: true, name, email, firma, rolle, kode: newInviteCode()});
     } else USERS.push({id: uid(), name, email, firma, rolle});
     save(); renderCurrent(); return;
+  }
+  if (action === 'invite-code') {
+    const u = USERS.find(x => x.id === btn.dataset.uid);
+    if (u && u.pending) { u.kode = newInviteCode(); save(); renderCurrent(); }
+    return;
+  }
+  if (action === 'invite-copy') {
+    const u = USERS.find(x => x.id === btn.dataset.uid);
+    if (!u || !u.kode) return;
+    const t = inviteText(u);
+    const done = () => showToast(`Invitasjonen til ${u.email} er kopiert. Lim den inn i en e-post fra din egen innboks, Teams eller SMS.`);
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(done, () => prompt('Kopier invitasjonen:', t));
+    return;
   }
   if (action === 'del-user') {
     const u = USERS.find(x => x.id === btn.dataset.uid);

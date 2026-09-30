@@ -48,13 +48,14 @@ function view(state, info = '') {
     body.innerHTML = `<form id="login-form" autocomplete="on">
         <label>E-post<input type="email" id="li-email" autocomplete="username" required></label>
         <label>Passord<input type="password" id="li-pass" autocomplete="current-password" required minlength="6"></label>
+        <label>Invitasjonskode <span class="muted" style="font-weight:400">(bare første gang)</span><input type="text" id="li-kode" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX" value="${esc(getKode())}"></label>
         <div class="login-actions">
           <button class="btn primary" type="submit">Logg inn</button>
           <button class="btn" type="button" data-login="register">Opprett konto</button>
           <button class="link-btn" type="button" data-login="reset">Glemt passord?</button>
         </div>
         <p class="login-msg" id="login-msg">${esc(info)}</p>
-        <p class="sub">Du må være invitert av en systemadministrator. Første gang velger du «Opprett konto» med e-postadressen du ble invitert med.</p>
+        <p class="sub">Du må være invitert av en systemadministrator. Første gang skriver du inn e-postadressen du ble invitert med, velger et passord, limer inn invitasjonskoden og trykker «Opprett konto». Med koden trenger du ikke vente på e-post.</p>
         ${MAIL_HELP}
       </form>`;
     return;
@@ -67,7 +68,11 @@ function view(state, info = '') {
         <button class="btn" data-login="logout">Logg ut</button>
       </div>
       <p class="login-msg" id="login-msg"></p>
-      ${MAIL_HELP.replace('<details ', '<details open ')}`;
+      <form id="kode-form" style="margin-top:12px">
+        <label>Har du fått en invitasjonskode? Da slipper du e-posten.<input type="text" id="li-kode" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX" value="${esc(getKode())}"></label>
+        <div class="login-actions"><button class="btn primary" type="submit">Bruk koden</button></div>
+      </form>
+      ${MAIL_HELP}`;
     return;
   }
   if (state === 'noaccess') {
@@ -80,9 +85,31 @@ function view(state, info = '') {
 }
 function msg(t) { const m = $('login-msg'); if (m) m.textContent = t; }
 
+// Invitasjonskoden kan komme i lenken (?kode=…) og huskes i fanen til kontoen er opprettet.
+const normKode = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+function getKode() { try { return sessionStorage.getItem('wrk2_kode') || ''; } catch (e) { return ''; } }
+function setKode(k) { try { k ? sessionStorage.setItem('wrk2_kode', k) : sessionStorage.removeItem('wrk2_kode'); } catch (e) { /* privat modus */ } }
+{
+  const q = new URLSearchParams(location.search);
+  if (q.has('kode')) {
+    setKode(normKode(q.get('kode')));
+    const rest = location.search.slice(1).split('&').filter(x => x && !/^kode(=|$)/.test(x)).join('&');
+    history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
+  }
+}
+const kodeInput = () => { const el = $('li-kode'); const k = normKode(el && el.value); setKode(k); return k; };
+
 document.addEventListener('submit', async e => {
+  if (e.target.id === 'kode-form') {
+    e.preventDefault();
+    if (!kodeInput()) { msg('Lim inn invitasjonskoden først.'); return; }
+    msg('Sjekker koden …');
+    handleUser(auth.currentUser);
+    return;
+  }
   if (e.target.id !== 'login-form') return;
   e.preventDefault();
+  kodeInput();
   msg('Logger inn …');
   try { await signInWithEmailAndPassword(auth, $('li-email').value.trim(), $('li-pass').value); }
   catch (err) { msg(errText(err)); }
@@ -95,9 +122,11 @@ document.addEventListener('click', async e => {
     if (act === 'register') {
       const email = $('li-email').value.trim(), pass = $('li-pass').value;
       if (!email || !pass) { msg('Skriv inn e-post og et passord (minst 6 tegn) først.'); return; }
+      const kode = kodeInput();
       msg('Oppretter konto …');
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
-      await sendEmailVerification(cred.user);
+      // Med invitasjonskode sendes ingen e-post; koden beviser at invitasjonen er din.
+      if (!kode) await sendEmailVerification(cred.user);
     } else if (act === 'reset') {
       const email = $('li-email').value.trim();
       if (!email) { msg('Skriv inn e-postadressen din først.'); return; }
@@ -150,7 +179,8 @@ function stable(v) {
   return JSON.stringify(v);
 }
 const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0});
-const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
+const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle, ...(u.pending && u.kode ? {kode: u.kode} : {})});
+const codeDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
 
 // ---------- innlogget bruker ----------
 let unsubs = [], started = false, myUid = null;
@@ -162,11 +192,11 @@ onAuthStateChanged(auth, user => handleUser(user));
 async function handleUser(user) {
   unsubs.forEach(f => f()); unsubs = []; started = false; myUid = null;
   if (!user) { view('signin'); return; }
-  if (!user.emailVerified) { view('verify', user.email); return; }
   view('loading');
   try {
     const profile = await ensureProfile(user);
-    if (!profile) { view('noaccess', user.email); return; }
+    if (profile === 'shown') return;
+    if (!profile) { user.emailVerified ? view('noaccess', user.email) : view('verify', user.email); return; }
     startSync(user.uid);
   } catch (err) { view('error', 'Kunne ikke logge inn: ' + errText(err)); }
 }
@@ -176,6 +206,23 @@ async function ensureProfile(user) {
   const ref = doc(db, 'users', user.uid);
   const snap = await getDoc(ref);
   if (snap.exists()) return snap.data();
+  const kode = getKode();
+  if (kode) {
+    const ks = await getDoc(doc(db, 'invitekoder', kode)).catch(() => null);
+    const k = ks && ks.exists() ? ks.data() : null;
+    if (!k || k.email !== email) {
+      setKode('');
+      if (!user.emailVerified) { view('verify', user.email); msg(k ? `Koden gjelder en annen e-postadresse enn ${email}.` : 'Invitasjonskoden er ugyldig eller allerede brukt. Sjekk at du har limt inn hele koden.'); return 'shown'; }
+    } else {
+      const profile = {name: k.name || email.split('@')[0], email, firma: k.firma, rolle: k.rolle, kode};
+      await setDoc(ref, profile);
+      setKode('');
+      await deleteDoc(doc(db, 'invitekoder', kode)).catch(() => {});
+      await deleteDoc(doc(db, 'invites', email)).catch(() => {});
+      return profile;
+    }
+  }
+  if (!user.emailVerified) return null;
   let inv = null;
   try { const s = await getDoc(doc(db, 'invites', email)); if (s.exists()) inv = s.data(); } catch (e) { /* ingen invitasjon */ }
   // Uten invitasjon forsøkes oppstart som første systemadministrator; sikkerhetsreglene tillater det bare for én e-postadresse.
@@ -299,10 +346,16 @@ window.cloudSync = () => {
   const now = new Map(USERS.map(u => [u.id, u]));
   for (const [id, u] of now) {
     const s = stable(userDoc(u));
-    if (base.users.get(id) !== s) { base.users.set(id, s); setDoc(ref(u), userDoc(u)).catch(saveFail); }
+    if (base.users.get(id) !== s) {
+      base.users.set(id, s);
+      setDoc(ref(u), userDoc(u)).catch(saveFail);
+      if (u.pending && u.kode) setDoc(doc(db, 'invitekoder', u.kode), codeDoc(u)).catch(saveFail);
+    }
   }
   for (const id of [...base.users.keys()]) if (!now.has(id)) {
+    const old = JSON.parse(base.users.get(id) || '{}');
     base.users.delete(id);
     deleteDoc(id.startsWith('invite:') ? doc(db, 'invites', id.slice(7)) : doc(db, 'users', id)).catch(saveFail);
+    if (id.startsWith('invite:') && old.kode) deleteDoc(doc(db, 'invitekoder', old.kode)).catch(() => {});
   }
 };

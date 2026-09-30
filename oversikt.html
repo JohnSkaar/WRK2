@@ -311,6 +311,22 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .at-card3 .at-meta{font-size:12px;color:var(--muted);margin:2px 0}
 .at-dot{display:inline-block;width:11px;height:11px;border-radius:50%;flex:none}
 .at-dot.godkjent{background:#2da44e}.at-dot.behandling{background:#f0883e}
+.fu-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr)}
+@media(max-width:900px){.fu-grid{grid-template-columns:1fr}}
+.fu-firm{display:flex;gap:8px;border:1px solid var(--line);border-left:6px solid #d0d7de;border-radius:6px;padding:8px;margin-bottom:8px;background:#fff;cursor:grab;user-select:none;-webkit-user-select:none}
+.fu-handle{touch-action:none}
+.fu-nocolor{font-style:italic}
+.fu-act{border:1px solid var(--line);border-left:6px solid #999;border-radius:6px;padding:8px;margin-bottom:8px;background:#fff}
+.fu-act.locked{background:#fafafa}
+.fu-act.drop-hover,.fu-ue.drop-hover{outline:3px dashed var(--accent);outline-offset:-3px;background:#eef4ff}
+.fu-ue{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:5px 0 0 6px;padding:4px 6px;border-radius:5px;background:#f6f8fa;font-size:13px}
+.fu-uue{flex-basis:100%;margin-left:14px;font-size:12.5px}
+.fu-role label{display:block;border:1px solid var(--line);border-radius:6px;padding:8px;margin-bottom:6px;font-weight:400;cursor:pointer}
+.fu-role input{display:inline;width:auto;margin:0 6px 0 0}
+.fu-sub .sec{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:8px 0 4px}
+.fu-chk{display:flex !important;align-items:center;gap:6px;font-weight:400 !important;margin:3px 0 !important}
+.fu-chk input{display:inline !important;width:auto !important;margin:0 !important}
+.ue-kjede i{font-style:normal;font-size:10px;color:var(--muted)}
 .mb-act.drop-hover{outline:3px dashed var(--accent);outline-offset:-3px;background:#eef4ff}
 .mb-tag .mb-x{font-size:12px;color:inherit;padding:0 0 0 3px}
 .mb-act{display:flex;gap:8px;border:1px solid var(--line);border-left:6px solid #999;border-radius:6px;padding:8px;margin-bottom:8px;background:#fff;cursor:grab;user-select:none;-webkit-user-select:none}
@@ -375,6 +391,7 @@ td.firma-cell{white-space:normal;min-width:130px}
 <nav class="tabs">
   <button data-tab="statustavle">Statustavle</button>
   <button data-tab="metoder">Metodebeskrivelser</button>
+  <button data-tab="firma">Utførelse av firma</button>
   <button data-tab="klargjoring">Klargjøring av aktiviteter</button>
   <button data-tab="oversikt">Totaloversikt</button>
   <button data-tab="koordinering">AT-koordinering</button>
@@ -438,6 +455,32 @@ td.firma-cell{white-space:normal;min-width:130px}
       <div class="panel mb-col" id="mb-ats"></div>
       <div class="panel mb-col mb-acts" id="mb-acts"></div>
     </div>
+  </section>
+
+  <section class="page" id="page-firma">
+    <div class="panel">
+      <h2>Utførelse av firma</h2>
+      <p class="intro">Hvem som utfører aktivitetene: entreprenør › UE › UE av UE. Til venstre står firmaene som er tatt i bruk under Admin → Firmaregister. Til høyre står aktivitetene.
+        <br>• Dra et firma til en aktivitet. Velg om det skal være <b>UE under entreprenøren</b> eller <b>entreprenør</b> (står først i rekken). Legges det til som UE, kan du samtidig legge til UE av UE fra firmaregisteret.
+        <br>• Dra et firma til en UE på en aktivitet for å legge det til som UE av UE. Samme firma kan brukes på så mange aktiviteter du vil.
+        <br>• Et firma får <b>egen farge</b> først når det står først på en aktivitet. Så lenge det er UE, beholder aktiviteten fargen til entreprenøren, og firmaet står nevnt bak entreprenøren. ⬆ løfter en UE fram som entreprenør.</p>
+      <div class="toolbar">
+        <input type="search" data-search="firma" placeholder="Søk aktivitet, firma, org.nr, sone …">
+        <label class="btn"><input type="checkbox" id="fu-uten"> Bare aktiviteter uten UE</label>
+      </div>
+    </div>
+    <div class="mb-grid fu-grid">
+      <div class="panel mb-col" id="fu-firms"></div>
+      <div class="panel mb-col" id="fu-acts"></div>
+    </div>
+    <dialog class="sv-dlg" id="fu-dlg">
+      <form id="fu-form" method="dialog">
+        <h3 id="fu-title">Legg til firma</h3>
+        <div id="fu-role" class="fu-role"></div>
+        <div id="fu-sub" class="fu-sub"></div>
+        <div class="sv-dlg-actions"><span style="flex:1"></span><button type="button" class="btn" data-action="fu-cancel">Avbryt</button><button type="submit" class="btn primary" id="fu-ok">Legg til</button></div>
+      </form>
+    </dialog>
   </section>
 
   <section class="page" id="page-statustavle">
@@ -652,7 +695,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-09-30.9';
+const APP_VERSION = '2026-09-30.10';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -998,6 +1041,7 @@ const ui = {
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
   statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: [], lenke: false, avh: false},
   metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set()},
+  firma: {search: '', uten: false},
   admin: {firmDel: null, firmEdit: null, regSearch: '', loggSearch: ''},
   koord: {week: null, selected: null, drawing: null}
 };
@@ -1056,7 +1100,7 @@ function mainRow(a, page) {
   const editing = isEditing(page, a);
   const ed = editing && canEditAct(a);
   const exp = ui[page].expanded.has(a.id);
-  const c = commonCells(a, ed, editing && isSys(), chainHtml(actMbNrs(a)));
+  const c = commonCells(a, ed, editing && isSys(), ueChainHtml(a) + chainHtml(actMbNrs(a)));
   const fraAT = [...new Set(a.at.flatMap(t => t.dodsrisiko))];
   let editBtn = '';
   if (page === 'klargjoring') {
@@ -1144,7 +1188,7 @@ function matches(a, st) {
   if (st.firms && !st.firms.has(a.firma) && !a.at.some(t => st.firms.has(t.firma)) && !chainsFor(actMbNrs(a)).some(c => c.ch.some(f => st.firms.has(f)))) return false;
   const q = st.search.trim().toLowerCase();
   if (!q) return true;
-  return [a.id, a.navn, a.omrade, a.firma, a.kommentar, a.ansvarUtforelse, a.ansvarGodkjenning, ...a.at.flatMap(t => [t.nr, t.navn, t.firma, t.ansvarUtforelse, t.ansvarGodkjenning])].some(s => String(s).toLowerCase().includes(q));
+  return [a.id, a.navn, a.omrade, a.firma, a.kommentar, a.ansvarUtforelse, a.ansvarGodkjenning, ...(a.ue || []).flatMap(u => [u.navn, ...(u.under || []).map(x => x.navn)]), ...a.at.flatMap(t => [t.nr, t.navn, t.firma, t.ansvarUtforelse, t.ansvarGodkjenning])].some(s => String(s).toLowerCase().includes(q));
 }
 
 function renderTable(page) {
@@ -1782,7 +1826,7 @@ function svTipHtml(it) {
   if (a.kommentar) kom.push(['Aktiviteten', a.kommentar]);
   if (a.metode.historikk) kom.push(['Metodebeskrivelse', a.metode.historikk]);
   a.at.forEach(t => { if (t.kommentar) kom.push([t.nr + ' ' + t.navn, t.kommentar]); });
-  const chain = chainHtml(actMbNrs(a));
+  const chain = ueChainHtml(a) + chainHtml(actMbNrs(a));
   return `<h4>${esc(a.id)} ${esc(a.navn)}</h4>
     <div class="sub">${esc(a.omrade)} · ${fmtNo(a.startdato)}–${fmtNo(endDate(a))} · ${a.varighet} dager</div>
     <div style="margin-top:5px">${firmBadge(a.firma)} <span class="badge ${STATUS_CLS[a.status] || ''}">${esc(a.status)}</span>${a.at.length ? ` <span class="sub">${a.at.length} AT</span>` : ''}</div>
@@ -2727,7 +2771,7 @@ function renderMetoder() {
       <div class="at-card-body">
         <div><b>${esc(a.id)}</b> ${esc(a.navn)}</div>
         <div class="sub">${esc(a.omrade)} · uke ${isoWeek(a.startdato)} · ${firmBadge(a.firma)}</div>
-        ${chainHtml(nrs)}
+        ${ueChainHtml(a)}${chainHtml(nrs)}
         <div class="mb-tags">${a.at.map(t => `<span class="mb-tag at">${esc(t.nr)}</span>`).join('')}${nrs.map(n => `<span class="mb-tag">MB ${esc(n)}</span>`).join('')}${a.at.length ? '' : '<span class="mb-tag none">Ingen AT</span>'}</div>
       </div>
     </div>`;
@@ -2823,6 +2867,190 @@ function mbEnd(e, cancelled) {
 }
 document.addEventListener('pointerup', e => mbEnd(e, false));
 document.addEventListener('pointercancel', e => mbEnd(e, true));
+
+// ---------- utførelse av firma: entreprenør › UE › UE av UE per aktivitet ----------
+// Firma som er «tatt i bruk» i firmaregisteret kan legges på aktiviteter. De får egen farge først når de står først (som entreprenør).
+// a.ue = [{rid, navn, orgnr, under: [{rid, navn, orgnr}]}]
+const NIVA_TXT = ['Byggherre', 'Hovedentreprenør', 'UE', 'UE av UE'];
+let fuDrag = null, fuDlg = null;
+const regById = id => REGISTER.find(r => r.id === id);
+const regNavn = r => { const f = activeFirmFor(r); return f ? f.navn : prettyFirm(r.navn); };
+const regKey = r => r.orgnr + '|' + normFirm(r.navn);
+function regIBruk() {
+  const seen = new Set();
+  return REGISTER.filter(r => (r.iBruk || activeFirmFor(r)) && !seen.has(regKey(r)) && seen.add(regKey(r)));
+}
+const regBarn = r => REGISTER.filter(x => x.overordnet === r.orgnr && x.niva > r.niva);
+const ueRef = r => ({rid: r.id, navn: regNavn(r), orgnr: r.orgnr});
+const sammeFirma = (u, r) => u.orgnr === r.orgnr && normFirm(u.navn) === normFirm(regNavn(r));
+function ueChainHtml(a) {
+  if (!a.ue || !a.ue.length) return '';
+  return a.ue.map(u => `<div class="kjede ue-kjede" title="Utførelse: entreprenør › UE › UE av UE"><span class="kjede-ledd" style="border-color:${firmColor(a.firma)}"><b>${esc(a.firma)}</b></span><span class="kjede-pil">›</span><span class="kjede-ledd">${esc(u.navn)} <i>UE</i></span>${(u.under || []).length ? `<span class="kjede-pil">›</span><span class="kjede-ledd">${u.under.map(x => esc(x.navn)).join(', ')} <i>UE av UE</i></span>` : ''}</div>`).join('');
+}
+function fuBruk(r) {
+  let hoved = 0, ue = 0, uue = 0;
+  DATA.forEach(a => {
+    if (activeFirmFor(r) && a.firma === activeFirmFor(r).navn) hoved++;
+    (a.ue || []).forEach(u => { if (sammeFirma(u, r)) ue++; (u.under || []).forEach(x => { if (sammeFirma(x, r)) uue++; }); });
+  });
+  return {hoved, ue, uue};
+}
+
+function renderFirma() {
+  const st = ui.firma, q = st.search.trim().toLowerCase();
+  document.getElementById('fu-uten').checked = st.uten;
+  const firms = regIBruk().filter(r => !q || [r.navn, regNavn(r), r.orgnr, r.beskrivelse].some(x => String(x).toLowerCase().includes(q)));
+  const groups = [1, 2, 3, 0].map(n => ({n, list: firms.filter(r => r.niva === n)})).filter(g => g.list.length);
+  document.getElementById('fu-firms').innerHTML = `<h3 class="mb-colhead">Firma tatt i bruk <span class="sub">${regIBruk().length} firma</span></h3>`
+    + (groups.length ? groups.map(g => `<div class="mb-fag">${NIVA_TXT[g.n]}</div>` + g.list.map(r => {
+      const f = activeFirmFor(r), b = fuBruk(r), barn = regBarn(r);
+      return `<div class="fu-firm" data-rid="${esc(r.id)}" style="border-left-color:${f ? firmColor(f.navn) : '#d0d7de'}">
+        <span class="drag-handle fu-handle" title="Dra firmaet til en aktivitet">⠿</span>
+        <div class="at-card-body">
+          <div><b>${esc(regNavn(r))}</b> <span class="sub">org.nr ${esc(r.orgnr)}</span></div>
+          <div class="sub">${f ? `${firmBadge(f.navn)} egen farge` : '<span class="fu-nocolor">ingen egen farge ennå</span>'}${r.beskrivelse ? ' · ' + esc(r.beskrivelse) : ''}</div>
+          <div class="mb-tags">${b.hoved ? `<span class="mb-tag at">entreprenør på ${b.hoved}</span>` : ''}${b.ue ? `<span class="mb-tag">UE på ${b.ue}</span>` : ''}${b.uue ? `<span class="mb-tag">UE av UE på ${b.uue}</span>` : ''}${barn.length ? `<span class="mb-tag none" style="background:#eef1f4;color:#57606a" title="${esc(barn.map(regNavn).join(', '))}">${barn.length} UE under seg i registeret</span>` : ''}</div>
+        </div></div>`;
+    }).join('')).join('')
+    : `<p class="muted">Ingen firma er tatt i bruk ennå. Merk firma med «Ta i bruk» under Admin → Firmaregister for prosjektet.</p>`);
+
+  const acts = DATA.filter(a => !erArkiv(a) && matches(a, {firms: null, search: st.search}) && (!st.uten || !(a.ue || []).length))
+    .sort((x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
+  document.getElementById('fu-acts').innerHTML = `<h3 class="mb-colhead">Aktiviteter <span class="sub">${acts.length} stk. · ${acts.filter(a => (a.ue || []).length).length} med UE</span></h3>`
+    + (acts.length ? acts.map(a => {
+      const can = canEditAct(a), sys = isSys();
+      return `<div class="fu-act${can ? '' : ' locked'}" data-id="${esc(a.id)}" style="border-left-color:${firmColor(a.firma)}">
+        <div><b>${esc(a.id)}</b> ${esc(a.navn)}</div>
+        <div class="sub">${esc(a.omrade)} · uke ${isoWeek(a.startdato)}${isoWeek(endDate(a)) !== isoWeek(a.startdato) ? '–' + isoWeek(endDate(a)) : ''} · entreprenør ${firmBadge(a.firma)}${can ? '' : ' 🔒'}</div>
+        ${(a.ue || []).map((u, i) => `<div class="fu-ue" data-id="${esc(a.id)}" data-ui="${i}">
+            <span class="kjede-pil">›</span> <b>${esc(u.navn)}</b> <span class="badge st-plan">UE</span>
+            <span class="at-box-tools">${sys ? `<button class="mb-x" data-action="fu-promote" title="Sett først i rekken: blir entreprenør og får egen farge">⬆</button>` : ''}${can ? `<button class="mb-x" data-action="fu-sub" title="Legg til UE av UE">＋UE</button><button class="mb-x" data-action="fu-del" title="Fjern UE-en">×</button>` : ''}</span>
+            ${(u.under || []).map((x, j) => `<div class="fu-uue"><span class="kjede-pil">››</span> ${esc(x.navn)} <span class="badge rk-l">UE av UE</span>${can ? ` <button class="mb-x" data-action="fu-del-sub" data-j="${j}" title="Fjern">×</button>` : ''}</div>`).join('')}
+          </div>`).join('')}
+        ${can && !(a.ue || []).length ? '<div class="muted sub" style="margin-top:3px">Dra et firma hit for å legge det til som UE</div>' : ''}
+      </div>`;
+    }).join('') : '<p class="muted">Ingen aktiviteter passer med filteret.</p>');
+}
+
+// Dra firma → aktivitet (åpner valg av rolle) eller → en UE på en aktivitet (blir UE av UE).
+document.addEventListener('pointerdown', e => {
+  if (currentTab !== 'firma' || e.button > 0 || e.target.closest('button')) return;
+  const card = e.target.closest('.fu-firm'); if (!card) return;
+  if (e.pointerType !== 'mouse' && !e.target.closest('.fu-handle')) return;
+  fuDrag = {rid: card.dataset.rid, x0: e.clientX, y0: e.clientY, moved: false};
+  e.preventDefault();
+});
+function fuTarget(e) {
+  const over = document.elementFromPoint(e.clientX, e.clientY); if (!over) return null;
+  return over.closest('.fu-ue') || over.closest('.fu-act');
+}
+document.addEventListener('pointermove', e => {
+  if (!fuDrag) return;
+  if (!fuDrag.moved && Math.hypot(e.clientX - fuDrag.x0, e.clientY - fuDrag.y0) < 5) return;
+  fuDrag.moved = true;
+  if (!fuDrag.ghost) {
+    const r = regById(fuDrag.rid), f = r && activeFirmFor(r);
+    fuDrag.ghost = document.createElement('div'); fuDrag.ghost.className = 'drag-ghost';
+    fuDrag.ghost.textContent = r ? regNavn(r) : '';
+    fuDrag.ghost.style.background = f ? firmColor(f.navn) : '#57606a'; fuDrag.ghost.style.color = f ? textOn(firmColor(f.navn)) : '#fff';
+    document.body.appendChild(fuDrag.ghost);
+  }
+  fuDrag.ghost.style.left = e.clientX + 'px'; fuDrag.ghost.style.top = e.clientY + 'px';
+  const col = document.elementsFromPoint(e.clientX, e.clientY).find(x => x.classList && x.classList.contains('mb-col'));
+  if (col) { const r = col.getBoundingClientRect(); if (e.clientY < r.top + 50) col.scrollTop -= 16; else if (e.clientY > r.bottom - 50) col.scrollTop += 16; }
+  const t = fuTarget(e);
+  document.querySelectorAll('#page-firma .drop-hover').forEach(x => x !== t && x.classList.remove('drop-hover'));
+  if (t) t.classList.add('drop-hover');
+});
+function fuEnd(e, cancel) {
+  const d = fuDrag; if (!d) return;
+  fuDrag = null; if (d.ghost) d.ghost.remove();
+  document.querySelectorAll('#page-firma .drop-hover').forEach(x => x.classList.remove('drop-hover'));
+  if (cancel || !d.moved) return;
+  const t = fuTarget(e); if (!t) return;
+  const a = actById(t.dataset.id), r = regById(d.rid); if (!a || !r) return;
+  if (!canEditAct(a)) { showToast(`Bare ${a.firma} eller systemadministrator kan endre utførelsen av ${a.id}.`); return; }
+  if (t.classList.contains('fu-ue')) fuAddUnder(a, Number(t.dataset.ui), [r]);
+  else fuOpen(a, r, 'drop');
+}
+document.addEventListener('pointerup', e => fuEnd(e, false));
+document.addEventListener('pointercancel', e => fuEnd(e, true));
+
+function fuAddUnder(a, i, rs) {
+  const u = a.ue[i]; if (!u) return;
+  u.under = u.under || [];
+  const nye = rs.filter(r => !sammeFirma(u, r) && !u.under.some(x => sammeFirma(x, r)));
+  if (!nye.length) { showToast('Firmaet står allerede i rekken.'); return; }
+  nye.forEach(r => { r.iBruk = true; u.under.push(ueRef(r)); });
+  logg('UE av UE lagt til', a.id, `${nye.map(regNavn).join(', ')} som UE av UE under ${u.navn} (${a.firma} › ${u.navn})`);
+  save(); renderFirma();
+  showToast(`${nye.map(regNavn).join(', ')} er lagt til som UE av UE under ${u.navn} på ${a.id}.`);
+}
+// Valg av rolle ved slipp, og av UE av UE fra registeret (firmaets underleverandører) eller andre firma som er tatt i bruk.
+function fuOpen(a, r, mode, ui0 = null) {
+  fuDlg = {aid: a.id, rid: r ? r.id : null, mode, ui: ui0};
+  const $ = id => document.getElementById(id);
+  const u = mode === 'sub' ? a.ue[ui0] : null, base = u ? regById(u.rid) || REGISTER.find(x => sammeFirma(u, x)) : r;
+  $('fu-title').textContent = mode === 'sub' ? `UE av UE under ${u.navn} på ${a.id}` : `${regNavn(r)} på ${a.id} ${a.navn}`;
+  $('fu-role').hidden = mode === 'sub';
+  $('fu-role').innerHTML = `<label><input type="radio" name="fu-rolle" value="ue" checked> <b>UE under ${esc(a.firma)}</b><br><span class="sub">Aktiviteten beholder fargen til ${esc(a.firma)}. ${esc(regNavn(r || base))} står nevnt bak entreprenøren.</span></label>
+    <label><input type="radio" name="fu-rolle" value="hoved" ${isSys() ? '' : 'disabled'}> <b>Entreprenør – står først i rekken</b><br><span class="sub">Tar over aktiviteten fra ${esc(a.firma)} og får egen farge.${isSys() ? '' : ' Bare systemadministrator.'}</span></label>`;
+  const barn = base ? regBarn(base) : [];
+  const andre = regIBruk().filter(x => x !== base && !barn.includes(x));
+  $('fu-sub').innerHTML = `<div class="sec">Legg til UE av UE?</div>
+    ${barn.length ? `<div class="sub" style="margin-bottom:4px">Under ${esc(regNavn(base))} i firmaregisteret:</div>${barn.map(x => `<label class="fu-chk"><input type="checkbox" value="${esc(x.id)}"> ${esc(regNavn(x))} <span class="sub">${esc(x.beskrivelse || '')}${x.iBruk || activeFirmFor(x) ? '' : ' · tas i bruk'}</span></label>`).join('')}` : `<div class="sub">${esc(regNavn(base || r))} har ingen UE under seg i firmaregisteret.</div>`}
+    <label style="margin-top:6px">Annet firma som er tatt i bruk<select id="fu-annen"><option value="">Ingen</option>${andre.map(x => `<option value="${esc(x.id)}">${esc(regNavn(x))}</option>`).join('')}</select></label>`;
+  $('fu-sub').hidden = false;
+  $('fu-ok').textContent = mode === 'sub' ? 'Legg til' : 'Legg til';
+  $('fu-dlg').showModal();
+}
+document.addEventListener('change', e => { if (e.target.name === 'fu-rolle') document.getElementById('fu-sub').hidden = e.target.value !== 'ue'; });
+document.addEventListener('submit', e => {
+  if (e.target.id !== 'fu-form') return;
+  e.preventDefault();
+  const d = fuDlg; if (!d) return;
+  const a = actById(d.aid); if (!a || !canEditAct(a)) return;
+  const valgt = [...document.querySelectorAll('#fu-sub input[type=checkbox]:checked')].map(x => regById(x.value));
+  const annen = regById(document.getElementById('fu-annen').value); if (annen) valgt.push(annen);
+  document.getElementById('fu-dlg').close();
+  if (d.mode === 'sub') { if (valgt.length) fuAddUnder(a, d.ui, valgt); return; }
+  const r = regById(d.rid), rolle = (document.querySelector('input[name=fu-rolle]:checked') || {}).value;
+  if (rolle === 'hoved' && isSys()) {
+    const gammel = a.firma, navn = addFirmFromRegister(r);
+    a.firma = navn; a.ue = (a.ue || []).filter(u => !sammeFirma(u, r));
+    logg('Entreprenør byttet', a.id, `${gammel} → ${navn} (står først og har egen farge)`);
+    save(); renderFirma(); showToast(`${navn} er nå entreprenør på ${a.id} og har egen farge.`);
+    return;
+  }
+  a.ue = a.ue || [];
+  let i = a.ue.findIndex(u => sammeFirma(u, r));
+  if (i < 0) { r.iBruk = true; a.ue.push({...ueRef(r), under: []}); i = a.ue.length - 1; logg('UE lagt til', a.id, `${regNavn(r)} som UE under ${a.firma}`); }
+  if (valgt.length) fuAddUnder(a, i, valgt); else { save(); renderFirma(); showToast(`${regNavn(r)} er lagt til som UE under ${a.firma} på ${a.id}.`); }
+});
+function fuAction(action, btn) {
+  const row = btn.closest('.fu-ue'), a = row && actById(row.dataset.id), i = row ? Number(row.dataset.ui) : -1;
+  if (action === 'fu-cancel') { document.getElementById('fu-dlg').close(); return; }
+  if (!a || !a.ue || !a.ue[i]) return;
+  const u = a.ue[i];
+  if (action === 'fu-sub' && canEditAct(a)) { fuOpen(a, null, 'sub', i); return; }
+  if (action === 'fu-del' && canEditAct(a)) {
+    if (!confirm(`Fjerne ${u.navn}${(u.under || []).length ? ' og UE-ene under' : ''} fra ${a.id}?`)) return;
+    a.ue.splice(i, 1); logg('UE fjernet', a.id, `${u.navn} fjernet fra ${a.firma}`); save(); renderFirma(); return;
+  }
+  if (action === 'fu-del-sub' && canEditAct(a)) {
+    const j = Number(btn.dataset.j), x = u.under[j]; if (!x) return;
+    u.under.splice(j, 1); logg('UE av UE fjernet', a.id, `${x.navn} fjernet under ${u.navn}`); save(); renderFirma(); return;
+  }
+  // Løftes fram: UE-en blir entreprenør (egen farge), dens UE-er blir UE under den nye entreprenøren.
+  if (action === 'fu-promote' && isSys()) {
+    const r = regById(u.rid) || REGISTER.find(x => sammeFirma(u, x)) || {navn: u.navn, orgnr: u.orgnr};
+    const gammel = a.firma, navn = addFirmFromRegister(r);
+    a.firma = navn;
+    a.ue = [...(u.under || []).map(x => ({...x, under: []})), ...a.ue.filter((_, k) => k !== i)];
+    logg('Entreprenør byttet', a.id, `${u.navn} løftet fram foran ${gammel}: ${navn} er entreprenør og har egen farge${(u.under || []).length ? ', ' + u.under.map(x => x.navn).join(', ') + ' er nå UE' : ''}`);
+    save(); renderFirma(); showToast(`${navn} står nå først på ${a.id} og har fått egen farge.`);
+  }
+}
 
 // ---------- firmaregister ----------
 // Firma i prosjektet (fra HMSreg-oversikten). Nivå 0 = byggherre, 1 = hovedentreprenør, 2 = UE, 3 = UE-ens UE.
@@ -2921,7 +3149,7 @@ function renderRegister() {
   const el = document.getElementById('register-panel'); if (!el) return;
   const unik = new Set(REGISTER.map(r => r.orgnr)).size;
   el.innerHTML = `<h3>Firmaregister for prosjektet</h3>
-    <p class="intro" style="margin-bottom:8px">${unik} firma fra HMSreg, med byggherre, hovedentreprenør, UE og UE-enes UE. Registeret er et oppslagsverk: firmaene blir først aktive i planen (med farge og tilgang) når de tas i bruk. Firma i registeret kan også velges som UE på metodebeskrivelsene.</p>
+    <p class="intro" style="margin-bottom:8px">${unik} firma fra HMSreg, med byggherre, hovedentreprenør, UE og UE-enes UE. Registeret er et oppslagsverk. Firma som tas i bruk, legges på aktivitetene under «Utførelse av firma». De får egen farge først når de står først på en aktivitet. Firma i registeret kan også velges som UE på metodebeskrivelsene.</p>
     <input type="search" id="reg-search" class="reg-search" placeholder="Søk navn, org.nr eller beskrivelse …" value="${esc(ui.admin.regSearch)}">
     <div class="reg-list" id="reg-list"></div>`;
   renderRegisterList();
@@ -2935,7 +3163,7 @@ function renderRegisterList() {
       return `<div class="reg-row" style="padding-left:${8 + r.niva * 18}px">
         <div class="grow"><b>${esc(r.navn)}</b> <span class="sub">org.nr ${esc(r.orgnr)}</span>${r.beskrivelse ? `<div class="sub">${esc(r.beskrivelse)}</div>` : ''}</div>
         <span class="badge ${['st-done', 'st-go', 'st-plan', 'rk-l'][r.niva] || 'st-plan'}">${['Byggherre', 'Hovedentreprenør', 'UE', 'UE av UE'][r.niva] || 'Nivå ' + r.niva}</span>
-        ${hit ? `<span title="Aktivt firma i planen">${firmBadge(hit.navn)}</span>` : sys ? `<button class="btn" data-action="reg-use" data-rid="${esc(r.id)}">Ta i bruk</button>` : ''}
+        ${hit ? `<span title="Firma med egen farge i planen">${firmBadge(hit.navn)}</span>` : r.iBruk ? `<span class="badge st-done" title="Tatt i bruk – får egen farge først når det står først på en aktivitet">✓ Tatt i bruk</span>${sys ? ` <button class="btn" data-action="reg-unuse" data-rid="${esc(r.id)}">Fjern fra bruk</button>` : ''}` : sys ? `<button class="btn" data-action="reg-use" data-rid="${esc(r.id)}">Ta i bruk</button>` : ''}
       </div>`;
     }).join('') || '<p class="muted">Ingen treff.</p>'}`;
 }
@@ -3026,6 +3254,7 @@ function renderCurrent() {
   else if (currentTab === 'skrastrek') renderSkrastrek();
   else if (currentTab === 'statustavle') renderStatustavle();
   else if (currentTab === 'metoder') renderMetoder();
+  else if (currentTab === 'firma') renderFirma();
   else if (currentTab === 'koordinering') renderKoord();
   else if (currentTab === 'admin') renderAdmin();
 }
@@ -3040,7 +3269,7 @@ function showTab(tab) {
 }
 
 // ---------- hendelser ----------
-function rerenderPage(page) { if (page === 'skrastrek') renderSkrastrek(); else if (page === 'statustavle') renderStatustavle(); else if (page === 'metoder') renderMetoder(); else renderTable(page); }
+function rerenderPage(page) { if (page === 'firma') { renderFirma(); return; } if (page === 'skrastrek') renderSkrastrek(); else if (page === 'statustavle') renderStatustavle(); else if (page === 'metoder') renderMetoder(); else renderTable(page); }
 function pageOf(el) { const p = el.closest('.page'); return p ? p.id.replace('page-', '') : null; }
 function targetOf(el) {
   const tr = el.closest('tr[data-id]');
@@ -3098,6 +3327,7 @@ document.addEventListener('click', e => {
   if (action === 'sv-undo') { svUndo(); return; }
   if (['sv-del', 'sv-open', 'sv-cancel'].includes(action)) { svDialogAction(action); return; }
   if (action.startsWith('svp-')) { svPopAction(action); return; }
+  if (action.startsWith('fu-')) { fuAction(action, btn); return; }
   if (action === 'logg-csv') { loggCsv(); return; }
   if (action === 'ff-mine') { ui[btn.dataset.page].firms = new Set([me().firma]); rerenderPage(btn.dataset.page); return; }
   if (action === 'toggle-archive') { const p = btn.dataset.page; ui[p].showArchive = !ui[p].showArchive; rerenderPage(p); return; }
@@ -3212,7 +3442,7 @@ document.addEventListener('click', e => {
   }
 
   // admin (kun systemadministrator)
-  if (!isSys() && ['add-user', 'del-user', 'invite-copy', 'invite-code', 'add-firm', 'del-firm', 'firm-move-del', 'firm-rename-save', 'reg-use', 'reset-data', 'mb-add', 'mb-del'].includes(action)) return;
+  if (!isSys() && ['add-user', 'del-user', 'invite-copy', 'invite-code', 'add-firm', 'del-firm', 'firm-move-del', 'firm-rename-save', 'reg-use', 'reg-unuse', 'reset-data', 'mb-add', 'mb-del'].includes(action)) return;
   if (action === 'add-user') {
     const name = document.getElementById('u-name').value.trim(), email = document.getElementById('u-email').value.trim().toLowerCase();
     if (!name) { alert('Skriv inn navn.'); return; }
@@ -3264,8 +3494,13 @@ document.addEventListener('click', e => {
   }
   if (action === 'reg-use') {
     const r = REGISTER.find(x => x.id === btn.dataset.rid); if (!r) return;
-    const navn = addFirmFromRegister(r);
-    save(); renderAdmin(); showToast(`${navn} er tatt i bruk som firma i planen.`); return;
+    REGISTER.filter(x => regKey(x) === regKey(r)).forEach(x => { x.iBruk = true; });
+    save(); renderAdmin(); showToast(`${regNavn(r)} er tatt i bruk og ligger nå under «Utførelse av firma». Firmaet får egen farge først når det står først på en aktivitet.`); return;
+  }
+  if (action === 'reg-unuse') {
+    const r = REGISTER.find(x => x.id === btn.dataset.rid); if (!r) return;
+    REGISTER.filter(x => regKey(x) === regKey(r)).forEach(x => { delete x.iBruk; });
+    save(); renderAdmin(); showToast(`${regNavn(r)} er fjernet fra listen over firma i bruk. Koblinger på aktiviteter blir liggende.`); return;
   }
   if (action === 'firm-rename') { ui.admin.firmEdit = Number(btn.dataset.i); ui.admin.firmDel = null; renderAdmin(); const el = document.getElementById('firm-new-name'); if (el) el.focus(); return; }
   if (action === 'firm-rename-cancel') { ui.admin.firmEdit = null; renderAdmin(); return; }
@@ -3356,6 +3591,7 @@ document.addEventListener('change', e => {
   if (el.id === 'sk-niva' || el.id === 'sk-uker') { ui.skrastrek[el.id === 'sk-niva' ? 'niva' : 'uker'] = el.value; renderSkrastrek(); return; }
   if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; renderKoord(); return; }
   if (el.id === 'map-upload') { if (el.files[0]) uploadMap(el.files[0]); el.value = ''; return; }
+  if (el.id === 'fu-uten') { ui.firma.uten = el.checked; renderFirma(); return; }
   if (el.id === 'mb-unlinked') { ui.metoder.bareUkoblede = el.checked; renderMetoder(); return; }
   if (el.id === 'mod-atkoord') { if (isSys()) { SETTINGS.atkoord = el.checked; save(); } renderCurrent(); return; }
   if (el.id === 'mod-skrastrek') { if (isSys()) { SETTINGS.skrastrek = el.checked; save(); } renderCurrent(); return; }

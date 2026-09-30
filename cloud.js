@@ -301,7 +301,10 @@ function startSync(uid) {
   unsubs.push(onSnapshot(collection(db, 'at'), s => { st.ats = s.docs.map(d => d.data()); st.atsDenied = false; apply(); },
     () => { st.ats = []; st.atsDenied = true; apply(); }));
   // Avhengigheter: blir tom liste hvis sikkerhetsreglene ikke er oppdatert ennå.
-  unsubs.push(onSnapshot(collection(db, 'avhengigheter'), s => { st.avh = s.docs.map(d => d.data()); apply(); }, () => { st.avh = []; apply(); }));
+  unsubs.push(onSnapshot(collection(db, 'avhengigheter'), s => { window.cloudAvhDenied = false; st.avh = s.docs.map(d => d.data()); apply(); }, () => {
+    window.cloudAvhDenied = true; st.avh = []; apply();
+    if (sysOrAdmin()) showToast('Avhengigheter kan ikke lagres før sikkerhetsreglene i Firebase er publisert på nytt (firestore.rules fra GitHub).');
+  }));
   unsubs.push(onSnapshot(collection(db, 'aktiviteter'), s => { st.akt = s.docs.map(d => d.data()); apply(); }, fail));
 }
 
@@ -335,6 +338,10 @@ async function seed(st) {
 }
 
 // ---------- lagring av endringer ----------
+const sysOrAdmin = () => ['systemadmin', 'firmaadmin'].includes((USERS.find(u => u.id === myUid) || {}).rolle);
+const avhFail = err => showToast(err && err.code === 'permission-denied'
+  ? 'Avhengigheten ble ikke lagret: sikkerhetsreglene i Firebase må publiseres på nytt (firestore.rules fra GitHub), eller du mangler tilgang til begge aktivitetene.'
+  : 'Kunne ikke lagre avhengigheten: ' + errText(err));
 const saveFail = err => showToast('Kunne ikke lagre: ' + errText(err) + ' Endringen er rullet tilbake.');
 window.cloudSync = () => {
   if (!started) return;
@@ -354,9 +361,9 @@ window.cloudSync = () => {
   const curAvh = new Map(AVH.map(d => [d.id, JSON.parse(JSON.stringify(d))]));
   for (const [id, d] of curAvh) {
     const s = stable(d);
-    if (base.avh.get(id) !== s) { base.avh.set(id, s); setDoc(doc(db, 'avhengigheter', id), d).catch(saveFail); }
+    if (base.avh.get(id) !== s) { base.avh.set(id, s); setDoc(doc(db, 'avhengigheter', id), d).catch(avhFail); }
   }
-  for (const id of [...base.avh.keys()]) if (!curAvh.has(id)) { base.avh.delete(id); deleteDoc(doc(db, 'avhengigheter', id)).catch(saveFail); }
+  for (const id of [...base.avh.keys()]) if (!curAvh.has(id)) { base.avh.delete(id); deleteDoc(doc(db, 'avhengigheter', id)).catch(avhFail); }
   if (!isSys()) return;
   if (stable(REGISTER) !== base.register) { base.register = stable(REGISTER); setDoc(doc(db, 'config', 'firmaregister'), {list: REGISTER}).catch(saveFail); }
   if (stable(METHODS) !== base.metoder) { base.metoder = stable(METHODS); setDoc(doc(db, 'config', 'metoder'), {list: METHODS}).catch(saveFail); }

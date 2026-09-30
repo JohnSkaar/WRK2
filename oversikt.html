@@ -442,7 +442,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <label>Vis: <select class="week-sel" id="sv-lys"><option value="">Alle</option><option value="avvik">Bare røde og gule</option><option value="rod">Bare røde</option><option value="ikke">Ikke ferdig vurdert</option></select></label>
       </div>
       <div class="sv-edit-hint" id="sv-edit-hint" hidden>✏️ <b>Redigering er på.</b> Dra en stolpe sidelengs for å flytte startdatoen, eller opp og ned for å flytte den til en annen sone. Dra i høyre kant for å endre varigheten. Trykk på en stolpe for å endre detaljer, og trykk i et tomt felt for å legge inn en ny aktivitet der. Endringer merkes med ✎, slik at de kan synkroniseres med Sitedrive eller Tactplan senere.</div>
-      <div class="sv-edit-hint sv-avh-hint" id="sv-avh-hint" hidden>⛓ <b>Avhengigheter er på.</b> Dra fra forsiden (◯ til venstre) eller baksiden (◯ til høyre) av en aktivitet til forsiden eller baksiden av en annen. Du kan også trykke på det ene håndtaket og så på det andre. Kobler du en bakside til en forside, blir det <b>FS</b> (slutt–start), og aktiviteten med baksiden kommer først. Forside mot forside blir <b>SS</b>, og bakside mot bakside blir <b>FF</b>. Da styres rekkefølgen av planen. I menyen som kommer opp, kan du bytte type, også til <b>SF</b> eller <b>Samtidighet</b>. Går du bare videre, beholdes typen. Trykk på en linje for å endre eller slette den. Brutte avhengigheter vises med <b style="color:var(--red)">fet rød linje</b>.</div>
+      <div class="sv-edit-hint sv-avh-hint" id="sv-avh-hint" hidden>⛓ <b>Avhengigheter er på.</b> Dra fra forsiden (◯ til venstre) eller baksiden (◯ til høyre) av en aktivitet til forsiden eller baksiden av en annen. Du kan også trykke på det ene håndtaket og så på det andre. Kobler du en bakside til en forside, blir det <b>FS</b> (slutt–start), og aktiviteten med baksiden kommer først. Forside mot forside blir <b>SS</b>, og bakside mot bakside blir <b>FF</b>. Da styres rekkefølgen av planen. Overlapper aktivitetene, tolkes overlappen som avtalt. Da blir det for eksempel <b>FS −10 d</b>, og det kommer en advarsel hvis de senere flyttes tettere. I menyen som kommer opp, kan du bytte type, også til <b>SF</b> eller <b>Samtidighet</b>, og justere forskyvningen. Går du bare videre, beholdes forslaget. Trykk på en linje for å endre eller slette den. Brutte avhengigheter vises med <b style="color:var(--red)">fet rød linje</b>.</div>
       <div class="stats" id="stats-statustavle"></div>
       <div class="legend" id="sv-legend"></div>
     </div>
@@ -620,6 +620,8 @@ const ZONES = [
   {navn: 'Pallelager', pts: R(1430, 545, 1580, 615), fill: '#fff0d9', labels: [['Pallelager', 1505, 585, 12]], bg: '#fff', fg: '#444'}
 ];
 const UTOMHUS = '8300 - Utomhus';
+// Kjellerens fotavtrykk: Kjeller vest/øst i nord og videre under Trådhall del 1 (mellom W1 og W9, ned til akse C).
+const KJELLER_OMRISS = [[543, 165], [850, 165], [850, 345], [890, 345], [890, 540], [550, 540], [550, 345], [543, 345]];
 const AX_TOP = [['F1', 222], ['F2', 254], ['F3', 286], ['F4', 321], ['F5', 356], ['F6', 403], ['F7', 438], ['F8', 474], ['F9', 509], ['F10', 545],
   ['W1', 571], ['W2', 603], ['W3', 640], ['W4', 678], ['W5', 715], ['W6', 753], ['W7', 790], ['W8', 828], ['W9', 866], ['W10', 904],
   ['W11', 941], ['W12', 979], ['W13', 1016], ['W14', 1054], ['W15', 1091], ['W16', 1129], ['W17', 1167], ['W18', 1204], ['W19', 1242]];
@@ -634,6 +636,8 @@ const AX_ROWS_R = [['B', 340, 1794], ['C', 540, 1794]];
 const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
+// Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
+const APP_VERSION = '2026-09-30.4';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -911,6 +915,13 @@ function save() {
 function loadMap() { return readRaw(MAP_KEY); }
 
 const OMRADER = () => [...new Set(EXCEL.map(r => r[1]).concat(DATA.map(a => a.omrade), ZONES.map(z => z.navn)))];
+// Tekstfarge på fargeflater: svart eller hvit etter hva som gir best kontrast (WCAG), siden firmafargene er gitt av et fargekart.
+function textOn(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return '#fff';
+  const n = parseInt(m[1], 16), [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+  const L = .2126 * r + .7152 * g + .0722 * b;
+  return (L + .05) / .05 >= 1.05 / (L + .05) ? '#1b1f24' : '#fff';
+}
 function firmColor(n) { const f = FIRMS.find(x => x.navn === n); return f && /^#[0-9a-f]{6}$/i.test(f.farge) ? f.farge : '#7f8c8d'; }
 function findAT(nr) { const t = ATS.find(x => x.nr === nr); return t ? {a: actById(t.aktiviteter[0]) || null, t} : null; }
 
@@ -980,7 +991,7 @@ function selectHtml(field, options, val, cls = '') {
   const opts = options.includes(val) ? options : [val, ...options];
   return `<select data-field="${field}" class="${cls}">${opts.map(o => `<option value="${esc(o)}" ${o === val ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
 }
-function firmBadge(n) { return `<span class="badge firm-badge" style="background:${firmColor(n)}">${esc(n)}</span>`; }
+function firmBadge(n) { const c = firmColor(n); return `<span class="badge firm-badge" style="background:${c};color:${textOn(c)}">${esc(n)}</span>`; }
 function cLys(path, val, ed, keys = Object.keys(LYS)) {
   if (!LYS[val]) val = 'ikke';
   if (ed) return `<select class="lys-sel lys-${val}" data-field="${path}" title="${esc(LYS[val].label)}">${keys.map(k => `<option value="${k}" ${k === val ? 'selected' : ''}>${LYS[k].emoji} ${LYS[k].kort}</option>`).join('')}</select>`;
@@ -1237,9 +1248,12 @@ function zoneSvg(counts) {
       ${z.labels.map(([t, x, y, fs]) => label(t, x, y, fs, z.bg, z.fg)).join('')}
       ${badge(Math.max(...xs) - 18, Math.min(...ys) + 18, counts[z.navn] || 0)}`;
   }).join('');
+  // Kjelleren ligger under Trådhall del 1 (akse W1–W9). Omrisset vises stiplet i kjellerens grønnfarge, over de andre sonene.
+  const kjeller = `<polygon points="${KJELLER_OMRISS.map(p => p.join(',')).join(' ')}" fill="#1e8e3e" fill-opacity=".06" stroke="#1e8e3e" stroke-width="3.5" stroke-dasharray="14 7" stroke-linejoin="round" pointer-events="none"/>
+    ${label('8302 KJELLER (under Trådhall del 1)', 720, 365, 13, '#1e8e3e', '#fff')}`;
   return `<svg viewBox="0 0 ${MAP_W} ${MAP_H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sonekart WRK2">
     <rect x="0" y="0" width="${MAP_W}" height="${MAP_H}" fill="#fbfcf8"/>
-    ${grid}${zones}
+    ${grid}${zones}${kjeller}
     ${box('NORD', '(NORTH)', 886, 26)}${box('SØR', '(SOUTH)', 914, 767)}${box('VEST', '(WEST)', 83, 412)}${box('ØST', '(EAST)', 1833, 432)}
     <text x="20" y="785" font-size="13" fill="#6b7a5b" font-family="Arial,Helvetica,sans-serif">8300 UTOMHUS = resten av tomten</text>
     ${badge(300, 785, counts[UTOMHUS] || 0)}
@@ -1329,7 +1343,7 @@ function renderKoord() {
   mapWrap.classList.toggle('drawing', !!d);
   mapWrap.innerHTML = (custom ? `<img src="${esc(custom)}" alt="Sonebilde" draggable="false">` : zoneSvg(counts))
     + `<svg class="map-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">${polys}${preview}</svg>`
-    + placements.map(({t, p, i}) => `<div class="marker${selNr === t.nr ? ' selected' : ''}${selPid === p.id ? ' current' : ''}${canPlaceAT(t) ? '' : ' locked'}" data-nr="${esc(t.nr)}" data-pid="${esc(p.id)}" style="left:${p.x}%;top:${p.y}%;background:${firmColor(t.firma)}" title="${esc(t.nr + ' – ' + t.navn + ' (' + t.firma + ') · ' + (p.sone || ''))}">${esc(t.nr)}${t.plasseringer.length > 1 ? `<sup>${i + 1}</sup>` : ''}</div>`).join('')
+    + placements.map(({t, p, i}) => `<div class="marker${selNr === t.nr ? ' selected' : ''}${selPid === p.id ? ' current' : ''}${canPlaceAT(t) ? '' : ' locked'}" data-nr="${esc(t.nr)}" data-pid="${esc(p.id)}" style="left:${p.x}%;top:${p.y}%;background:${firmColor(t.firma)};color:${textOn(firmColor(t.firma))}" title="${esc(t.nr + ' – ' + t.navn + ' (' + t.firma + ') · ' + (p.sone || ''))}">${esc(t.nr)}${t.plasseringer.length > 1 ? `<sup>${i + 1}</sup>` : ''}</div>`).join('')
     + dots;
   renderSelBar();
 
@@ -1634,11 +1648,7 @@ function totalStatus(a) {
   const lys = punkter.reduce((m, p) => LYS_RANK[p.lys] > LYS_RANK[m] ? p.lys : m, 'gronn');
   return {lys, punkter};
 }
-function svTextColor(hex) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex); if (!m) return '#fff';
-  const n = parseInt(m[1], 16), [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
-  return .2126 * r + .7152 * g + .0722 * b > .42 ? '#1b1f24' : '#fff';
-}
+const svTextColor = textOn;
 
 function renderStatustavle() {
   const st = ui.statustavle;
@@ -2056,33 +2066,39 @@ const AVH_TYPER = {
   SAM: 'Samtidighet – må pågå samtidig'
 };
 let svLink = null, svPopD = null, svPopTimer = null;
+// Faktisk forskyvning slik aktivitetene ligger nå, i dager (FS: dager mellom slutt og start, negativ = overlapp).
+function avhFaktisk(d) {
+  const p = actById(d.fra), q = actById(d.til); if (!p || !q) return 0;
+  const ps = p.startdato, pe = endDate(p), qs = q.startdato, qe = endDate(q);
+  return {FS: daysBetween(pe, qs) - 1, SS: daysBetween(ps, qs), FF: daysBetween(pe, qe), SF: daysBetween(ps, qe)}[d.type] ?? 0;
+}
+// Ny avhengighet: overlapper aktivitetene, tolkes overlappen som den avtalte (f.eks. FS −10 d). Ellers 0.
+const avhStdLag = d => d.type === 'SAM' ? 0 : Math.min(0, avhFaktisk(d));
+const fmtLag = n => n ? `${n > 0 ? '+' : '−'}${Math.abs(n)} d` : '±0 d';
 function avhBrudd(d) {
   const p = actById(d.fra), q = actById(d.til); if (!p || !q) return false;
-  const lag = Number(d.lag) || 0, ps = p.startdato, pe = endDate(p), qs = q.startdato, qe = endDate(q);
-  if (d.type === 'FS') return qs < addDays(pe, 1 + lag);
-  if (d.type === 'SS') return qs < addDays(ps, lag);
-  if (d.type === 'FF') return qe < addDays(pe, lag);
-  if (d.type === 'SF') return qe < addDays(ps, lag);
-  if (d.type === 'SAM') return !(qs <= pe && ps <= qe);
-  return false;
+  if (d.type === 'SAM') return !(q.startdato <= endDate(p) && p.startdato <= endDate(q));
+  return avhFaktisk(d) < (Number(d.lag) || 0);
 }
 function avhBeskriv(d) {
-  const lag = Number(d.lag) || 0, l = lag ? ` + ${lag} dag${Math.abs(lag) === 1 ? '' : 'er'}` : '';
-  return {
-    FS: `${d.til} kan starte når ${d.fra} er ferdig${l}.`, SS: `${d.til} kan starte når ${d.fra} har startet${l}.`,
-    FF: `${d.til} kan bli ferdig når ${d.fra} er ferdig${l}.`, SF: `${d.til} kan bli ferdig når ${d.fra} har startet${l}.`,
-    SAM: `${d.fra} og ${d.til} må pågå samtidig i minst én dag. Rekkefølgen er fri.`
-  }[d.type] || '';
+  if (d.type === 'SAM') return `${d.fra} og ${d.til} må pågå samtidig i minst én dag. Rekkefølgen er fri.`;
+  const lag = Number(d.lag) || 0, n = Math.abs(lag), dg = `${n} dag${n === 1 ? '' : 'er'}`;
+  const [verb, hendelse] = {FS: ['starte', 'er ferdig'], SS: ['starte', 'starter'], FF: ['bli ferdig', 'er ferdig'], SF: ['bli ferdig', 'starter']}[d.type] || ['starte', 'er ferdig'];
+  return `${d.til} kan ${verb} ${lag === 0 ? 'når' : lag < 0 ? `inntil ${dg} før` : `tidligst ${dg} etter at`} ${d.fra} ${hendelse}.`;
 }
 function avhBruddTekst(d) {
   const p = actById(d.fra), q = actById(d.til); if (!p || !q || !avhBrudd(d)) return '';
-  if (d.type === 'FS') return `${q.id} starter ${fmtNo(q.startdato)}, men ${p.id} er ikke ferdig før ${fmtNo(endDate(p))}.`;
-  if (d.type === 'SS') return `${q.id} starter ${fmtNo(q.startdato)}, før ${p.id} starter ${fmtNo(p.startdato)}.`;
-  if (d.type === 'FF') return `${q.id} blir ferdig ${fmtNo(endDate(q))}, før ${p.id} blir ferdig ${fmtNo(endDate(p))}.`;
-  if (d.type === 'SF') return `${q.id} blir ferdig ${fmtNo(endDate(q))}, før ${p.id} starter ${fmtNo(p.startdato)}.`;
+  if (d.type !== 'SAM') {
+    const lag = Number(d.lag) || 0, f = avhFaktisk(d), tettere = lag - f;
+    const avtalt = `Avtalt ${d.type} ${fmtLag(lag)}, nå ${d.type} ${fmtLag(f)}: ${tettere} dag${tettere === 1 ? '' : 'er'} for tett.`;
+    if (d.type === 'FS') return `${avtalt} ${q.id} starter ${fmtNo(q.startdato)}, ${p.id} er ferdig ${fmtNo(endDate(p))}.`;
+    if (d.type === 'SS') return `${avtalt} ${q.id} starter ${fmtNo(q.startdato)}, ${p.id} starter ${fmtNo(p.startdato)}.`;
+    if (d.type === 'FF') return `${avtalt} ${q.id} er ferdig ${fmtNo(endDate(q))}, ${p.id} er ferdig ${fmtNo(endDate(p))}.`;
+    return `${avtalt} ${q.id} er ferdig ${fmtNo(endDate(q))}, ${p.id} starter ${fmtNo(p.startdato)}.`;
+  }
   return `${p.id} (${fmtShort(p.startdato)}–${fmtShort(endDate(p))}) og ${q.id} (${fmtShort(q.startdato)}–${fmtShort(endDate(q))}) overlapper ikke.`;
 }
-const avhNavn = d => `${d.fra} → ${d.til} (${d.type === 'SAM' ? 'samtidighet' : d.type}${Number(d.lag) ? ` ${d.lag > 0 ? '+' : ''}${d.lag} d` : ''})`;
+const avhNavn = d => `${d.fra} → ${d.til} (${d.type === 'SAM' ? 'samtidighet' : d.type}${Number(d.lag) ? ' ' + fmtLag(Number(d.lag)) : ''})`;
 const svKanAvh = d => { const p = actById(d.fra), q = actById(d.til); return !!((p && canEditAct(p)) || (q && canEditAct(q))); };
 
 function svAvhTip(a) {
@@ -2090,7 +2106,7 @@ function svAvhTip(a) {
   return `<div class="sec">Avhengigheter</div><ul>${l.map(d => {
     const b = avhBrudd(d), other = d.fra === a.id ? d.til : d.fra, o = actById(other);
     const rel = d.type === 'SAM' ? 'Samtidig med' : d.fra === a.id ? `Før (${d.type})` : `Etter (${d.type})`;
-    return `<li><span>${b ? '⚠️' : '⛓'}</span><span${b ? ' style="color:var(--red);font-weight:600"' : ''}>${rel} <b>${esc(other)}</b> ${esc(o ? o.navn : '')}${Number(d.lag) ? ` · ${d.lag > 0 ? '+' : ''}${d.lag} d` : ''}${b ? ' – brutt' : ''}</span></li>`;
+    return `<li><span>${b ? '⚠️' : '⛓'}</span><span${b ? ' style="color:var(--red);font-weight:600"' : ''}>${rel} <b>${esc(other)}</b> ${esc(o ? o.navn : '')}${Number(d.lag) && d.type !== 'SAM' ? ` · ${fmtLag(Number(d.lag))}` : ''}${b ? ' – brutt' : ''}</span></li>`;
   }).join('')}</ul>`;
 }
 
@@ -2198,6 +2214,7 @@ function svLinkFinish(t) {
   const A = L.it.a, B = svItems[Number(t.closest('.sv-bar').dataset.i)].a, eA = L.end, eB = t.dataset.end;
   if (A.id === B.id) return;
   if (!canEditAct(A) && !canEditAct(B)) { showToast('Du kan bare lage avhengigheter der minst én av aktivitetene tilhører ditt firma.'); return; }
+  if (CLOUD && window.cloudAvhDenied) { showToast('Avhengigheter kan ikke lagres ennå: sikkerhetsreglene i Firebase må publiseres på nytt (firestore.rules fra GitHub).'); return; }
   const finnes = AVH.find(d => (d.fra === A.id && d.til === B.id) || (d.fra === B.id && d.til === A.id));
   const r = t.getBoundingClientRect();
   if (finnes) { showToast(`Det finnes allerede en avhengighet mellom ${A.id} og ${B.id}.`); svPopOpen(finnes, r.left + r.width / 2, r.bottom); return; }
@@ -2206,6 +2223,7 @@ function svLinkFinish(t) {
   if (eA !== eB) { [fra, til] = eA === 'e' ? [A, B] : [B, A]; type = 'FS'; }
   else { [fra, til] = A.startdato < B.startdato || (A.startdato === B.startdato && A.id < B.id) ? [A, B] : [B, A]; type = eA === 's' ? 'SS' : 'FF'; }
   const d = {id: 'd' + uid(), fra: fra.id, til: til.id, type, lag: 0, av: me().name || '', tid: new Date().toISOString()};
+  d.lag = avhStdLag(d);
   AVH.push(d);
   svPushUndo({avh: {op: 'add', after: {...d}}, label: `ny avhengighet ${avhNavn(d)}`});
   logg('Ny avhengighet', `${d.fra} → ${d.til}`, `${avhNavn(d)}${avhBrudd(d) ? ' · brutt: ' + avhBruddTekst(d) : ''}`);
@@ -2222,7 +2240,8 @@ function svPopOpen(d, cx, cy, ny = false) {
     <div class="sub"><b>${esc(d.fra)}</b> ${esc(p ? p.navn : '')}<br>→ <b>${esc(d.til)}</b> ${esc(q ? q.navn : '')}</div>
     <label>Type</label>
     <select id="svp-type" ${kan ? '' : 'disabled'}>${Object.entries(AVH_TYPER).map(([k, v]) => `<option value="${k}" ${k === d.type ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
-    <label ${d.type === 'SAM' ? 'hidden' : ''} id="svp-lag-l">Buffer (dager)<input type="number" id="svp-lag" value="${Number(d.lag) || 0}" step="1" ${kan ? '' : 'disabled'}></label>
+    <label ${d.type === 'SAM' ? 'hidden' : ''} id="svp-lag-l">Forskyvning (dager)<input type="number" id="svp-lag" value="${Number(d.lag) || 0}" step="1" ${kan ? '' : 'disabled'}>
+      <span class="sub" style="font-weight:400">Negativ = tillatt overlapp. <span id="svp-naa">${d.type === 'SAM' ? '' : `Slik de ligger nå: ${d.type} ${fmtLag(avhFaktisk(d))}.`}</span></span></label>
     <div class="sub" id="svp-besk" style="margin-top:6px">${esc(avhBeskriv(d))}</div>
     <div class="brudd-txt" id="svp-brudd">${avhBrudd(d) ? '⚠ Brutt: ' + esc(avhBruddTekst(d)) : ''}</div>
     <div class="row">${kan ? `<button class="btn" data-action="svp-swap" ${d.type === 'SAM' ? 'hidden' : ''} title="Bytt hvem som er forgjenger">⇄ Snu</button><button class="btn danger" data-action="svp-del">🗑 Slett</button>` : `<span class="sub">🔒 Bare firmaene til aktivitetene kan endre</span>`}<span style="flex:1"></span><button class="btn primary" data-action="svp-ok">OK</button></div>`;
@@ -2237,6 +2256,7 @@ function svPopRefresh() {
   document.getElementById('svp-besk').textContent = avhBeskriv(d);
   document.getElementById('svp-brudd').textContent = avhBrudd(d) ? '⚠ Brutt: ' + avhBruddTekst(d) : '';
   document.getElementById('svp-lag-l').hidden = d.type === 'SAM';
+  document.getElementById('svp-naa').textContent = d.type === 'SAM' ? '' : `Slik de ligger nå: ${d.type} ${fmtLag(avhFaktisk(d))}.`;
   const sw = document.querySelector('#sv-pop [data-action="svp-swap"]'); if (sw) sw.hidden = d.type === 'SAM';
   const sub = document.querySelector('#sv-pop .sub'); const p = actById(d.fra), q = actById(d.til);
   sub.innerHTML = `<b>${esc(d.fra)}</b> ${esc(p ? p.navn : '')}<br>→ <b>${esc(d.til)}</b> ${esc(q ? q.navn : '')}`;
@@ -2263,8 +2283,12 @@ function svPopAction(action) {
 }
 document.addEventListener('change', e => {
   const d = AVH.find(x => x.id === svPopD); if (!d) return;
-  if (e.target.id === 'svp-type' && e.target.value !== d.type) svAvhEdit(d, {type: e.target.value}, `Type ${d.type} → ${e.target.value}`);
-  if (e.target.id === 'svp-lag') { const v = parseInt(e.target.value, 10) || 0; if (v !== (Number(d.lag) || 0)) svAvhEdit(d, {lag: v}, `Buffer ${Number(d.lag) || 0} → ${v} d`); }
+  if (e.target.id === 'svp-type' && e.target.value !== d.type) {
+    const lag = avhStdLag({...d, type: e.target.value});
+    svAvhEdit(d, {type: e.target.value, lag}, `Type ${d.type} → ${e.target.value}${e.target.value === 'SAM' ? '' : ', forskyvning ' + fmtLag(lag) + ' ut fra dagens plassering'}`);
+    const inp = document.getElementById('svp-lag'); if (inp) inp.value = lag;
+  }
+  if (e.target.id === 'svp-lag') { const v = parseInt(e.target.value, 10) || 0; if (v !== (Number(d.lag) || 0)) svAvhEdit(d, {lag: v}, `Forskyvning ${fmtLag(Number(d.lag) || 0)} → ${fmtLag(v)}`); }
 });
 // Går musepekeren mer enn ca. 70 px bort fra menyen, lukkes den og valgt type beholdes.
 document.addEventListener('pointermove', e => {
@@ -3118,6 +3142,6 @@ function scheduleRender() {
 if (CLOUD) document.body.classList.add('locked');
 else { load(); startApp(); }
 </script>
-<script type="module">if (CLOUD) import('./cloud.js').catch(e => { document.getElementById('login-body').innerHTML = '<p class="login-msg">Kunne ikke laste innloggingen. Sjekk nettforbindelsen og last siden på nytt.</p>'; console.error(e); });</script>
+<script type="module">if (CLOUD) import('./cloud.js?v=' + APP_VERSION).catch(e => { document.getElementById('login-body').innerHTML = '<p class="login-msg">Kunne ikke laste innloggingen. Sjekk nettforbindelsen og last siden på nytt.</p>'; console.error(e); });</script>
 </body>
 </html>

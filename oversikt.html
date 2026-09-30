@@ -169,6 +169,57 @@ tr.week-row.arkiv-row td{background:#eceef1;color:#57606a}
 .sk-tip{position:absolute;z-index:20;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.16);padding:8px 10px;font-size:12.5px;max-width:300px;pointer-events:none}
 tr.main-row.flash-main td{animation:flash 1.6s}
 @media(max-width:600px){.sk-axis{width:130px !important}.sk-zone{font-size:11px;padding:0 6px}}
+/* statustavle */
+.sv-panel{position:relative;padding:0;overflow:visible}
+.sv-scroll{overflow-x:auto;border-radius:8px}
+.sv-grid{min-width:1040px;position:relative}
+.sv-head,.sv-row{display:flex}
+.sv-head{background:#f6f7f9;border-bottom:1px solid #d0d7de}
+.sv-left{flex:0 0 200px;width:200px;position:sticky;left:0;z-index:3;background:#fff;border-right:2px solid #d0d7de;box-sizing:border-box}
+.sv-head .sv-left{background:#f6f7f9;display:flex;align-items:flex-end;padding:0 10px 8px;font-size:12px;color:var(--muted);font-weight:600}
+.sv-time{flex:1;position:relative;min-width:0}
+.sv-months,.sv-weeks{display:flex}
+.sv-months div{font-size:12px;color:var(--muted);text-align:center;padding:5px 0;border-left:1px solid #e1e4e8;white-space:nowrap;overflow:hidden}
+.sv-weeks div{font-size:13px;font-weight:600;text-align:center;padding:7px 0 2px;border-left:1px solid #e1e4e8;border-top:1px solid #e1e4e8;line-height:1.15}
+.sv-weeks div small{display:block;font-size:10.5px;font-weight:400;color:var(--muted);padding-bottom:4px}
+.sv-weeks div.now{background:#1f6feb;color:#fff}
+.sv-weeks div.now small{color:#dbe7ff}
+.sv-row{border-bottom:1px solid #e1e4e8}
+.sv-row .sv-left{padding:8px 10px;font-size:13px;font-weight:600;display:flex;flex-direction:column;justify-content:center}
+.sv-row .sv-left .grp{font-size:10.5px;font-weight:600;color:var(--muted)}
+.sv-row .sv-left .sub-z{padding-left:8px;border-left:3px solid #d0d7de}
+.sv-row .sv-left .cnt{font-size:11px;font-weight:400;color:var(--muted)}
+.sv-bg{position:absolute;inset:0;display:flex;pointer-events:none}
+.sv-bg div{flex:1;border-left:1px solid #f0f2f4}
+.sv-bg div.we{background:#f6f7f9}
+.sv-bg div.wk{border-left-color:#d0d7de}
+.sv-today{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#1f6feb;pointer-events:none}
+.sv-bar{position:absolute;height:22px;border-radius:5px;display:flex;align-items:center;gap:5px;padding:0 6px 0 3px;box-sizing:border-box;font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;cursor:pointer;z-index:1;box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.sv-bar:hover,.sv-bar.hover{box-shadow:0 0 0 2px #24292f,0 3px 8px rgba(0,0,0,.25);z-index:2}
+.sv-bar.cut-l{border-top-left-radius:0;border-bottom-left-radius:0}
+.sv-bar.cut-r{border-top-right-radius:0;border-bottom-right-radius:0}
+.sv-bar.done{opacity:.45}
+.sv-bar .txt{overflow:hidden;text-overflow:ellipsis}
+.sv-lab{position:absolute;height:22px;line-height:22px;font-size:11.5px;white-space:nowrap;color:#24292f;cursor:pointer;z-index:1;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.sv-lab b{font-weight:600}
+.sv-lab.done{opacity:.55}
+.sv-lys{display:inline-block;flex:none;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);box-sizing:border-box;vertical-align:-2px}
+.sv-lys.rod{background:var(--red)}.sv-lys.gul{background:var(--yellow)}.sv-lys.gronn{background:var(--green)}.sv-lys.ikke{background:#afb8c1}
+.sv-lys.big{width:18px;height:18px}
+.sv-tip{position:absolute;z-index:30;background:#fff;border:1px solid #d0d7de;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:10px 12px;font-size:12.5px;width:330px;max-width:calc(100vw - 32px);pointer-events:none;box-sizing:border-box}
+.sv-tip::after{content:"";position:absolute;left:var(--ax,30px);width:12px;height:12px;background:#fff;border:1px solid #d0d7de;transform:rotate(45deg)}
+.sv-tip.above::after{bottom:-7px;border-top:0;border-left:0}
+.sv-tip.below::after{top:-7px;border-bottom:0;border-right:0}
+.sv-tip h4{font-size:13.5px;margin:0 0 2px}
+.sv-tip .tot{display:flex;align-items:center;gap:7px;margin:8px 0 6px;padding:6px 8px;border-radius:6px;font-weight:700}
+.sv-tip .tot.rod{background:#ffebe9;color:#a40e26}.sv-tip .tot.gul{background:#fff8c5;color:#7d4e00}.sv-tip .tot.gronn{background:#dafbe1;color:#116329}.sv-tip .tot.ikke{background:#eef1f4;color:#57606a}
+.sv-tip .sec{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:8px 0 3px}
+.sv-tip ul{list-style:none;margin:0;padding:0}
+.sv-tip li{display:flex;gap:6px;align-items:flex-start;margin:2px 0;line-height:1.35}
+.sv-tip li .sv-lys{width:11px;height:11px;border-width:1.5px;margin-top:2px}
+.sv-tip .kom{background:#f6f8fa;border-left:3px solid #d0d7de;padding:4px 7px;margin:3px 0;border-radius:0 4px 4px 0;line-height:1.4;white-space:pre-wrap}
+.sv-tip .kom b{font-weight:600}
+@media(max-width:600px){.sv-left{flex-basis:120px;width:120px}.sv-row .sv-left{font-size:11.5px;padding:6px}.sv-grid{min-width:900px}}
 .person{display:inline-block;min-width:30px;padding:2px 6px;border-radius:4px;background:#eef1f4;color:#24292f;font-weight:600;font-size:12px;font-family:ui-monospace,Menlo,monospace}
 .module-row{display:flex;gap:10px;align-items:flex-start;padding:8px;border:1px solid var(--line);border-radius:6px;cursor:pointer}
 .module-row input{width:18px;height:18px;margin-top:2px}
@@ -260,6 +311,7 @@ td.firma-cell{white-space:normal;min-width:130px}
   <button data-tab="klargjoring">Klargjøring av aktiviteter</button>
   <button data-tab="metoder">Metodebeskrivelser</button>
   <button data-tab="oversikt">Totaloversikt</button>
+  <button data-tab="statustavle">Statustavle</button>
   <button data-tab="skrastrek">Skråstreksdiagram</button>
   <button data-tab="koordinering">AT-koordinering</button>
   <button data-tab="admin">Admin</button>
@@ -316,6 +368,25 @@ td.firma-cell{white-space:normal;min-width:130px}
     <div class="mb-grid">
       <div class="panel" id="mb-methods"></div>
       <div class="panel mb-acts" id="mb-acts"></div>
+    </div>
+  </section>
+
+  <section class="page" id="page-statustavle">
+    <div class="panel">
+      <h2>Statustavle – 8 uker <span class="readonly-tag">Kun visning</span></h2>
+      <p class="intro">Aktivitetene de neste 8 ukene, per sone. Fargen på stolpen er firmaet, og trafikklyset er totalstatusen for aktiviteten. Den er satt sammen av metodebeskrivelsen og alle forutsetningene, også på AT-ene. Det dårligste lyset gjelder. Hold over en aktivitet for å se hva som mangler og hva som er kommentert. Trykk for å åpne den i «Klargjøring av aktiviteter».</p>
+      <div class="toolbar">
+        <div class="firm-filter" data-page="statustavle"></div>
+        <button class="btn" data-action="ff-mine" data-page="statustavle">Bare mitt firma</button>
+        <input type="search" data-search="statustavle" placeholder="Søk aktivitet, ID, AT-nr, område …">
+        <label>Vis: <select class="week-sel" id="sv-lys"><option value="">Alle</option><option value="avvik">Bare røde og gule</option><option value="rod">Bare røde</option><option value="ikke">Ikke ferdig vurdert</option></select></label>
+      </div>
+      <div class="stats" id="stats-statustavle"></div>
+      <div class="legend" id="sv-legend"></div>
+    </div>
+    <div class="panel sv-panel" id="sv-panel">
+      <div class="sv-chart" id="sv-chart"></div>
+      <div class="sv-tip" id="sv-tip" hidden></div>
     </div>
   </section>
 
@@ -808,6 +879,7 @@ const ui = {
   klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set(), showArchive: false},
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
+  statustavle: {firms: null, search: '', lys: ''},
   metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set()},
   admin: {firmDel: null, firmEdit: null, regSearch: ''},
   koord: {week: null, selected: null, drawing: null}
@@ -1458,6 +1530,179 @@ document.addEventListener('click', e => {
   if (row) { row.scrollIntoView({block: 'center'}); row.classList.add('flash-main'); setTimeout(() => row.classList.remove('flash-main'), 1700); }
 });
 
+// ---------- statustavle (8 uker, firmafarge og trafikklys for totalstatus) ----------
+const SV_DAYS = 56, SV_LANE = 28, SV_PAD = 7;
+const LYS_RANK = {gronn: 0, ikke: 1, gul: 2, rod: 3};
+const MANEDER = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+let svItems = [], svTapped = null;
+
+// Totalstatus: det dårligste lyset av metodebeskrivelsen og alle forutsetningene på aktiviteten og AT-ene.
+// Grå betyr at noe ikke er vurdert, men at ingenting er rødt eller gult.
+function totalStatus(a) {
+  const punkter = [{hva: 'Metodebeskrivelse', lys: LYS[a.metode.status] ? a.metode.status : 'ikke'}];
+  FORUTSETNINGER.forEach(([k, l]) => punkter.push({hva: l, lys: a.forutsetninger[k] || 'ikke'}));
+  a.at.forEach(t => FORUTSETNINGER.forEach(([k, l]) => punkter.push({hva: l, lys: t.forutsetninger[k] || 'ikke', at: t.nr})));
+  const lys = punkter.reduce((m, p) => LYS_RANK[p.lys] > LYS_RANK[m] ? p.lys : m, 'gronn');
+  return {lys, punkter};
+}
+function svTextColor(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex); if (!m) return '#fff';
+  const n = parseInt(m[1], 16), [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+  return .2126 * r + .7152 * g + .0722 * b > .42 ? '#1b1f24' : '#fff';
+}
+
+function renderStatustavle() {
+  const st = ui.statustavle;
+  renderFirmFilter('statustavle');
+  document.getElementById('sv-lys').value = st.lys;
+  const from = mondayOf(TODAY), to = addDays(from, SV_DAYS - 1);
+  const pct = d => (daysBetween(from, d) / SV_DAYS * 100);
+
+  const items = DATA.filter(a => matches(a, st) && a.startdato <= to && endDate(a) >= from).map(a => ({a, s: totalStatus(a)}))
+    .filter(({s}) => !st.lys || (st.lys === 'avvik' ? s.lys === 'rod' || s.lys === 'gul' : s.lys === st.lys));
+  const zones = [...SK_ZONE_ORDER, ...[...new Set(items.map(x => x.a.omrade))].filter(z => !SK_ZONE_ORDER.includes(z)).sort()];
+  svItems = [];
+  const rows = zones.map((z, zi) => {
+    const zs = items.filter(x => x.a.omrade === z).sort((p, q) => p.a.startdato.localeCompare(q.a.startdato) || p.a.id.localeCompare(q.a.id));
+    // Stolpene legges i baner så de ikke overlapper.
+    const lanes = [];
+    zs.forEach(it => {
+      const s = it.a.startdato < from ? from : it.a.startdato, e = endDate(it.a) > to ? to : endDate(it.a);
+      // Korte stolper får teksten til høyre for stolpen; den plassen regnes med når banene fordeles (ca. 15 px per dag).
+      const txtDays = Math.ceil(((it.a.id + ' ' + it.a.navn).length * 6.3 + 30) / 15);
+      const dagene = daysBetween(s, e) + 1, ute = dagene < Math.min(txtDays, 7);
+      const opptatt = ute ? addDays(s, dagene + Math.ceil(Math.min(it.a.navn.length, 34) * 6.3 / 15) + 2) : e;
+      let k = lanes.findIndex(end => end < s);
+      if (k < 0) { k = lanes.length; lanes.push(''); }
+      lanes[k] = opptatt;
+      Object.assign(it, {k, x0: s, x1: e, ute});
+    });
+    const h = zs.length ? lanes.length * SV_LANE + SV_PAD * 2 - 6 : 38;
+    const [grp, sub] = z.includes(' / ') ? z.split(' / ') : [null, z];
+    const firstInGrp = grp && !(zones[zi - 1] || '').startsWith(grp + ' / ');
+    const bars = zs.map(it => {
+      const i = svItems.push(it) - 1, a = it.a, c = firmColor(a.firma);
+      const cutL = a.startdato < from, cutR = endDate(a) > to;
+      return `<div class="sv-bar${cutL ? ' cut-l' : ''}${cutR ? ' cut-r' : ''}${a.status === 'Utført' ? ' done' : ''}" data-i="${i}"
+        style="left:${pct(it.x0)}%;width:calc(${(daysBetween(it.x0, it.x1) + 1) / SV_DAYS * 100}% - 2px);top:${SV_PAD + it.k * SV_LANE}px;background:${c};color:${svTextColor(c)}">
+        <span class="sv-lys ${it.s.lys}"></span>${it.ute ? '' : `<span class="txt">${cutL ? '◂ ' : ''}${esc(a.id)} ${esc(a.navn)}</span>`}</div>
+        ${it.ute ? `<div class="sv-lab${a.status === 'Utført' ? ' done' : ''}" data-i="${i}" style="left:calc(${pct(addDays(it.x1, 1))}% + 3px);top:${SV_PAD + it.k * SV_LANE}px">${cutL ? '◂ ' : ''}<b>${esc(a.id)}</b> ${esc(a.navn.length > 34 ? a.navn.slice(0, 33) + '…' : a.navn)}</div>` : ''}`;
+    }).join('');
+    return `<div class="sv-row">
+      <div class="sv-left">${grp ? `${firstInGrp ? `<span class="grp">${esc(grp)}</span>` : ''}<span class="sub-z">${esc(sub)}</span>` : `<span>${esc(z)}</span>`}${zs.length ? `<span class="cnt">${zs.length} aktivitet${zs.length === 1 ? '' : 'er'}</span>` : ''}</div>
+      <div class="sv-time" style="height:${h}px">${bars}</div>
+    </div>`;
+  }).join('');
+
+  const days = Array.from({length: SV_DAYS}, (_, i) => addDays(from, i));
+  const bg = `<div class="sv-bg">${days.map((d, i) => `<div class="${i % 7 >= 5 ? 'we' : ''}${i % 7 === 0 ? ' wk' : ''}"></div>`).join('')}</div>`;
+  const months = [];
+  days.forEach(d => { const m = d.slice(0, 7); if (!months.length || months[months.length - 1].m !== m) months.push({m, n: 0}); months[months.length - 1].n++; });
+  const weeks = Array.from({length: 8}, (_, i) => addDays(from, i * 7));
+  const todayLeft = (daysBetween(from, TODAY) + .5) / SV_DAYS * 100;
+
+  document.getElementById('sv-chart').innerHTML = `<div class="sv-scroll"><div class="sv-grid">
+    <div class="sv-head">
+      <div class="sv-left">Sone</div>
+      <div class="sv-time">
+        <div class="sv-months">${months.map(m => `<div style="flex:${m.n}">${m.n >= 4 ? MANEDER[Number(m.m.slice(5)) - 1] + ' ' + m.m.slice(0, 4) : ''}</div>`).join('')}</div>
+        <div class="sv-weeks">${weeks.map(w => `<div style="flex:7" class="${w === from ? 'now' : ''}">Uke ${isoWeek(w)}<small>${fmtShort(w)}–${fmtShort(addDays(w, 6))}</small></div>`).join('')}</div>
+      </div>
+    </div>
+    <div style="position:relative">
+      <div style="position:absolute;top:0;bottom:0;left:var(--svl,200px);right:0;pointer-events:none" class="sv-bgwrap">${bg}<div class="sv-today" style="left:${todayLeft}%" title="I dag"></div></div>
+      ${rows}
+    </div>
+  </div></div>`;
+
+  const cnt = k => items.filter(x => x.s.lys === k).length;
+  document.getElementById('stats-statustavle').innerHTML = `<span><b>${items.length}</b> aktiviteter uke ${isoWeek(from)}–${isoWeek(to)}</span>
+    <span><span class="sv-lys rod" style="display:inline-block;vertical-align:-2px"></span> <b>${cnt('rod')}</b> røde</span>
+    <span><span class="sv-lys gul" style="display:inline-block;vertical-align:-2px"></span> <b>${cnt('gul')}</b> gule</span>
+    <span><span class="sv-lys ikke" style="display:inline-block;vertical-align:-2px"></span> <b>${cnt('ikke')}</b> ikke ferdig vurdert</span>
+    <span><span class="sv-lys gronn" style="display:inline-block;vertical-align:-2px"></span> <b>${cnt('gronn')}</b> grønne</span>`;
+  const firmsShown = FIRMS.map(f => f.navn).filter(n => items.some(x => x.a.firma === n));
+  document.getElementById('sv-legend').innerHTML = `<span><b>Totalstatus:</b></span>
+    <span><span class="sv-lys rod"></span> Rød – noe er ikke avklart</span><span><span class="sv-lys gul"></span> Gul – under avklaring</span>
+    <span><span class="sv-lys ikke"></span> Grå – ikke ferdig vurdert</span><span><span class="sv-lys gronn"></span> Grønn – alt avklart</span>
+    ${firmsShown.length ? `<span style="margin-left:10px"><b>Firma:</b></span>${firmsShown.map(f => firmBadge(f)).join(' ')}` : ''}
+    <span class="muted">Blek stolpe = utført · ◂ = startet før denne uken</span>`;
+  const left = document.querySelector('#sv-chart .sv-row .sv-left');
+  if (left) document.querySelector('#sv-chart .sv-bgwrap').style.setProperty('--svl', left.offsetWidth + 'px');
+}
+
+function svTipHtml(it) {
+  const a = it.a, {lys, punkter} = it.s;
+  const avvik = punkter.filter(p => p.lys === 'rod' || p.lys === 'gul').sort((p, q) => LYS_RANK[q.lys] - LYS_RANK[p.lys]);
+  const ikke = punkter.filter(p => p.lys === 'ikke');
+  // Ikke vurdert grupperes per kilde: «Aktiviteten: Plass, Utstyr» / «AT-027: alle forutsetninger».
+  const kilder = new Map();
+  ikke.forEach(p => { const k = p.at || 'Aktiviteten'; if (!kilder.has(k)) kilder.set(k, []); kilder.get(k).push(p.hva); });
+  const ikkeTxt = [...kilder].map(([k, l]) => `<li><span class="sv-lys ikke"></span><span><b>${esc(k)}:</b> ${l.filter(x => x !== 'Metodebeskrivelse').length === FORUTSETNINGER.length ? 'alle forutsetninger' + (l.includes('Metodebeskrivelse') ? ' og metodebeskrivelsen' : '') : esc(l.join(', ').toLowerCase())}</span></li>`);
+  const kom = [];
+  if (a.kommentar) kom.push(['Aktiviteten', a.kommentar]);
+  if (a.metode.historikk) kom.push(['Metodebeskrivelse', a.metode.historikk]);
+  a.at.forEach(t => { if (t.kommentar) kom.push([t.nr + ' ' + t.navn, t.kommentar]); });
+  const chain = chainHtml(actMbNrs(a));
+  return `<h4>${esc(a.id)} ${esc(a.navn)}</h4>
+    <div class="sub">${esc(a.omrade)} · ${fmtNo(a.startdato)}–${fmtNo(endDate(a))} · ${a.varighet} dager</div>
+    <div style="margin-top:5px">${firmBadge(a.firma)} <span class="badge ${STATUS_CLS[a.status] || ''}">${esc(a.status)}</span>${a.at.length ? ` <span class="sub">${a.at.length} AT</span>` : ''}</div>
+    ${chain ? `<div style="margin-top:3px">${chain}</div>` : ''}
+    <div class="tot ${lys}"><span class="sv-lys big ${lys}"></span>${esc(LYS[lys].label)}</div>
+    ${avvik.length ? `<div class="sec">Mangler</div><ul>${avvik.map(p => `<li><span class="sv-lys ${p.lys}"></span><span>${p.at ? `<b>${esc(p.at)}</b> ` : ''}${esc(p.hva)} – ${esc(LYS[p.lys].kort.toLowerCase())}</span></li>`).join('')}</ul>` : ''}
+    ${ikkeTxt.length ? `<div class="sec">Ikke vurdert</div><ul class="sub">${ikkeTxt.slice(0, 6).join('')}${ikkeTxt.length > 6 ? `<li>… og ${ikkeTxt.length - 6} AT til</li>` : ''}</ul>` : ''}
+    ${!avvik.length && !ikkeTxt.length ? '<div class="sub">Alle forutsetninger er avklart.</div>' : ''}
+    <div class="sec">Kommentarer</div>
+    ${kom.length ? kom.map(([k, v]) => `<div class="kom"><b>${esc(k)}:</b> ${esc(v)}</div>`).join('') : '<div class="sub">Ingen kommentarer registrert.</div>'}
+    <div class="sub" style="margin-top:7px">Trykk for å åpne i Klargjøring av aktiviteter</div>`;
+}
+function svBarOf(el) {
+  const x = el && el.closest && el.closest('.sv-bar, .sv-lab');
+  return x ? (x.classList.contains('sv-bar') ? x : document.querySelector(`#sv-chart .sv-bar[data-i="${x.dataset.i}"]`)) : null;
+}
+function svShowTip(bar) {
+  const tip = document.getElementById('sv-tip');
+  document.querySelectorAll('.sv-bar.hover').forEach(x => x !== bar && x.classList.remove('hover'));
+  if (!bar) { tip.hidden = true; return; }
+  if (tip.dataset.i === bar.dataset.i && !tip.hidden) return;
+  bar.classList.add('hover');
+  tip.dataset.i = bar.dataset.i;
+  tip.innerHTML = svTipHtml(svItems[Number(bar.dataset.i)]);
+  tip.hidden = false;
+  const panel = document.getElementById('sv-panel').getBoundingClientRect(), r = bar.getBoundingClientRect();
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  const anchor = Math.max(r.left, Math.min(r.right, r.left + 40)) - panel.left;
+  let left = Math.max(4, Math.min(anchor - 30, panel.width - w - 4));
+  const above = r.top - h - 12 > 0;
+  tip.classList.toggle('above', above); tip.classList.toggle('below', !above);
+  tip.style.left = left + 'px';
+  tip.style.top = (above ? r.top - panel.top - h - 10 : r.bottom - panel.top + 10) + 'px';
+  tip.style.setProperty('--ax', Math.max(10, Math.min(w - 22, anchor - left - 6)) + 'px');
+}
+document.addEventListener('pointerover', e => {
+  if (currentTab !== 'statustavle' || e.pointerType === 'touch') return;
+  svShowTip(svBarOf(e.target));
+});
+document.addEventListener('scroll', () => { if (currentTab === 'statustavle') svShowTip(null); }, true);
+document.addEventListener('click', e => {
+  if (currentTab !== 'statustavle') return;
+  const bar = svBarOf(e.target);
+  // På berøringsskjerm viser første trykk boblen, andre trykk åpner aktiviteten.
+  if (!bar) { svShowTip(null); svTapped = null; return; }
+  if (e.pointerType === 'touch' || (e.pointerType === undefined && matchMedia('(hover: none)').matches)) {
+    if (svTapped !== bar.dataset.i) { svTapped = bar.dataset.i; svShowTip(bar); return; }
+  }
+  svTapped = null;
+  const a = svItems[Number(bar.dataset.i)].a;
+  svShowTip(null);
+  ui.klargjoring.expanded.add(a.id);
+  ui.klargjoring.collapsedWeeks.clear();
+  if (erArkiv(a)) ui.klargjoring.showArchive = true;
+  showTab('klargjoring');
+  const row = document.querySelector(`#table-klargjoring tr.main-row[data-id="${CSS.escape(a.id)}"]`);
+  if (row) { row.scrollIntoView({block: 'center'}); row.classList.add('flash-main'); setTimeout(() => row.classList.remove('flash-main'), 1700); }
+});
+
 // ---------- metodebeskrivelser (entreprenør → metodebeskrivelse → AT → aktiviteter) ----------
 // Metodebeskrivelsene i prosjektet (PDF-ene i Dalux), gruppert per entreprenør og fag.
 const METODESETT = 2;
@@ -1864,6 +2109,7 @@ function renderCurrent() {
   renderUserBar();
   if (currentTab === 'klargjoring' || currentTab === 'oversikt') renderTable(currentTab);
   else if (currentTab === 'skrastrek') renderSkrastrek();
+  else if (currentTab === 'statustavle') renderStatustavle();
   else if (currentTab === 'metoder') renderMetoder();
   else if (currentTab === 'koordinering') renderKoord();
   else if (currentTab === 'admin') renderAdmin();
@@ -1879,7 +2125,7 @@ function showTab(tab) {
 }
 
 // ---------- hendelser ----------
-function rerenderPage(page) { if (page === 'skrastrek') renderSkrastrek(); else if (page === 'metoder') renderMetoder(); else renderTable(page); }
+function rerenderPage(page) { if (page === 'skrastrek') renderSkrastrek(); else if (page === 'statustavle') renderStatustavle(); else if (page === 'metoder') renderMetoder(); else renderTable(page); }
 function pageOf(el) { const p = el.closest('.page'); return p ? p.id.replace('page-', '') : null; }
 function targetOf(el) {
   const tr = el.closest('tr[data-id]');
@@ -2175,6 +2421,7 @@ document.addEventListener('change', e => {
     ui.klargjoring.editing.clear(); ui.koord.drawing = null;
     save(); renderCurrent(); return;
   }
+  if (el.id === 'sv-lys') { ui.statustavle.lys = el.value; renderStatustavle(); return; }
   if (el.id === 'sk-niva' || el.id === 'sk-uker') { ui.skrastrek[el.id === 'sk-niva' ? 'niva' : 'uker'] = el.value; renderSkrastrek(); return; }
   if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; renderKoord(); return; }
   if (el.id === 'map-upload') { if (el.files[0]) uploadMap(el.files[0]); el.value = ''; return; }

@@ -184,7 +184,7 @@ function stable(v) {
   if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
-const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0});
+const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0});
 const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle, ...(u.pending && u.kode ? {kode: u.kode} : {})});
 const codeDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
 
@@ -244,7 +244,7 @@ async function ensureProfile(user) {
 function startSync(uid) {
   myUid = uid;
   const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false, avh: null};
-  let importing = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
+  let importing = false, importingAt = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
   const fail = err => { view('error', 'Mistet kontakten med databasen: ' + errText(err)); };
 
   const apply = async () => {
@@ -294,6 +294,8 @@ function startSync(uid) {
     // Sitedrive-planen importeres én gang, i én samlet skriving, når de andre engangsoppdateringene er lagret.
     else if (sys && !readOnly && !importing && (st.settings.plansett || 0) < PLANSETT
       && (st.settings.metodesett || 0) >= METODESETT && (st.settings.registersett || 0) >= REGISTERSETT) { importing = true; await importPlan(); }
+    // Deretter byttes AT-ene ut med de gjeldende fra AT-systemet, også i én samlet skriving.
+    else if (sys && !readOnly && !importingAt && (st.settings.plansett || 0) >= PLANSETT && (st.settings.atsett || 0) < ATSETT) { importingAt = true; await importAts(); }
   };
 
   unsubs.push(onSnapshot(collection(db, 'users'), s => { st.users = s.docs.map(d => ({id: d.id, ...d.data()})); apply(); }, fail));
@@ -325,6 +327,17 @@ async function importPlan() {
   batch.set(doc(db, 'config', 'settings'), settingsDoc());
   try { await batch.commit(); showToast(`Sitedrive-planen er importert: ${SETTINGS.planImport.ny} nye, ${SETTINGS.planImport.oppdatert} oppdatert, ${SETTINGS.planImport.fjernet} fjernet.`); }
   catch (err) { showToast('Importen av Sitedrive-planen feilet: ' + errText(err)); }
+}
+
+async function importAts() {
+  const gamle = ATS.map(t => t.id);
+  if (!applyAtsett()) return;
+  const batch = writeBatch(db), nye = new Set(ATS.map(t => t.id));
+  gamle.forEach(id => { if (!nye.has(id)) batch.delete(doc(db, 'at', id)); });
+  ATS.forEach(t => batch.set(doc(db, 'at', t.id), toATDoc(t)));
+  batch.set(doc(db, 'config', 'settings'), settingsDoc());
+  try { await batch.commit(); showToast(`AT-ene er byttet ut: ${ATS.length} AT-er fra AT-systemet.`); }
+  catch (err) { showToast('Utbyttingen av AT-er feilet: ' + errText(err)); }
 }
 
 // Engangsoppgradering: AT-er som ligger inni aktivitetene flyttes til egen samling.

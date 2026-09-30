@@ -528,8 +528,8 @@ td.firma-cell{white-space:normal;min-width:130px}
         <div id="firm-form"></div>
         <div id="firm-list"></div>
       </div>
-      <div class="panel reg-panel" id="register-panel"></div>
       <div class="panel" id="modules-panel"></div>
+      <div class="panel reg-panel" id="register-panel"></div>
       <div class="panel" id="data-panel"></div>
       <div class="panel logg-panel" id="logg-panel" hidden></div>
     </div>
@@ -637,7 +637,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-09-30.4';
+const APP_VERSION = '2026-09-30.5';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -2733,7 +2733,9 @@ function renderAdmin() {
   renderRegister();
   renderLogg();
   document.getElementById('modules-panel').innerHTML = `<h3>Moduler i prosjektet</h3>
-    <p class="intro" style="margin-bottom:8px">Tilleggsmoduler er skrudd av som standard. En systemadministrator kan gjøre dem tilgjengelige for alle brukerne i prosjektet.</p>
+    <p class="intro" style="margin-bottom:8px">En systemadministrator velger hvilke moduler som skal være tilgjengelige for alle brukerne i prosjektet. Dataene blir liggende selv om en modul skrus av.</p>
+    <label class="module-row"><input type="checkbox" id="mod-atkoord" ${SETTINGS.atkoord !== false ? 'checked' : ''} ${sys ? '' : 'disabled'}>
+      <span><b>AT-koordinering</b><br><span class="sub">Sonekart der AT-ene plasseres og tegnes inn uke for uke. På som standard.</span></span></label>
     <label class="module-row"><input type="checkbox" id="mod-skrastrek" ${SETTINGS.skrastrek ? 'checked' : ''} ${sys ? '' : 'disabled'}>
       <span><b>Skråstreksdiagram</b><br><span class="sub">Soner mot uker, med hver aktivitet eller AT som en skråstrek.</span></span></label>`;
   document.getElementById('data-panel').innerHTML = `<h3>Data</h3>
@@ -2745,6 +2747,8 @@ function renderAdmin() {
 // ---------- navigasjon ----------
 function renderCurrent() {
   document.querySelector('nav.tabs button[data-tab="skrastrek"]').hidden = !SETTINGS.skrastrek;
+  document.querySelector('nav.tabs button[data-tab="koordinering"]').hidden = SETTINGS.atkoord === false;
+  if (currentTab === 'koordinering' && SETTINGS.atkoord === false) { showTab('statustavle'); return; }
   renderUserBar();
   if (currentTab === 'klargjoring' || currentTab === 'oversikt') renderTable(currentTab);
   else if (currentTab === 'skrastrek') renderSkrastrek();
@@ -2754,7 +2758,7 @@ function renderCurrent() {
   else if (currentTab === 'admin') renderAdmin();
 }
 function showTab(tab) {
-  if (!document.getElementById('page-' + tab) || (tab === 'skrastrek' && !SETTINGS.skrastrek)) tab = 'oversikt';
+  if (!document.getElementById('page-' + tab) || (tab === 'skrastrek' && !SETTINGS.skrastrek) || (tab === 'koordinering' && SETTINGS.atkoord === false)) tab = 'oversikt';
   currentTab = tab;
   ui.koord.drawing = null;
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + tab));
@@ -3074,6 +3078,7 @@ document.addEventListener('change', e => {
   if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; renderKoord(); return; }
   if (el.id === 'map-upload') { if (el.files[0]) uploadMap(el.files[0]); el.value = ''; return; }
   if (el.id === 'mb-unlinked') { ui.metoder.bareUkoblede = el.checked; renderMetoder(); return; }
+  if (el.id === 'mod-atkoord') { if (isSys()) { SETTINGS.atkoord = el.checked; save(); } renderCurrent(); return; }
   if (el.id === 'mod-skrastrek') { if (isSys()) { SETTINGS.skrastrek = el.checked; save(); } renderCurrent(); return; }
   if (el.dataset.firmColor !== undefined) { if (isSys()) { FIRMS[Number(el.dataset.firmColor)].farge = el.value; save(); } renderAdmin(); return; }
   if (el.dataset.userField) {

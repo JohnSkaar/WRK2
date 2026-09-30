@@ -184,7 +184,7 @@ function stable(v) {
   if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
-const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0});
+const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0});
 const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle, ...(u.pending && u.kode ? {kode: u.kode} : {})});
 const codeDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
 

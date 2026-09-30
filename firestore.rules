@@ -70,7 +70,11 @@ service cloud.firestore {
 
     match /aktiviteter/{id} {
       allow read: if member();
-      allow create, delete: if sys();
+      // Firma-admin kan legge inn nye aktiviteter for eget firma (Statustavlen), og slette dem igjen.
+      allow create: if sys() || (member() && me().rolle == 'firmaadmin'
+        && request.resource.data.firma == me().firma && request.resource.data.get('kilde', '') == 'WRK2');
+      allow delete: if sys() || (member() && me().rolle == 'firmaadmin'
+        && resource.data.firma == me().firma && resource.data.get('kilde', '') == 'WRK2');
       // Firma-admin kan endre aktiviteter som eies av eget firma eller har AT-er fra eget firma, men ikke flytte dem til et annet firma.
       allow update: if sys() || (member() && me().rolle == 'firmaadmin'
         && (resource.data.firma == me().firma || me().firma in resource.data.get('atFirmaer', []))

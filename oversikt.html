@@ -200,6 +200,26 @@ tr.main-row.flash-main td{animation:flash 1.6s}
 .sv-bar.cut-r{border-top-right-radius:0;border-bottom-right-radius:0}
 .sv-bar.done{opacity:.45}
 .sv-bar .txt{overflow:hidden;text-overflow:ellipsis}
+.sv-edit-hint{background:#fff8c5;border:1px solid #eac54f;border-radius:6px;padding:7px 10px;font-size:12.5px;margin:4px 0 8px;line-height:1.45}
+.sv-panel.editing .sv-time{cursor:copy}
+.sv-panel.editing .sv-bar.editable{cursor:grab;touch-action:none}
+.sv-panel.editing .sv-bar.locked{cursor:not-allowed}
+.sv-bar.dragging{cursor:grabbing !important;opacity:.85;z-index:5;box-shadow:0 0 0 2px #24292f,0 6px 16px rgba(0,0,0,.3)}
+.sv-rs{position:absolute;right:0;top:0;bottom:0;width:9px;cursor:ew-resize;background:linear-gradient(90deg,transparent 3px,rgba(255,255,255,.75) 3px,rgba(255,255,255,.75) 5px,transparent 5px)}
+.sv-bar.wrk2::after{content:"✎";position:absolute;right:2px;top:-1px;font-size:10px;line-height:1;color:inherit;opacity:.9}
+.sv-panel.editing .sv-bar.wrk2::after{right:11px}
+.sv-row.drop{background:#ddf4ff}
+.sv-row.drop .sv-left{background:#ddf4ff}
+.sv-drag-info{position:absolute;z-index:40;background:#24292f;color:#fff;border-radius:6px;padding:5px 8px;font-size:12px;pointer-events:none;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.sv-dlg{margin:auto;border:1px solid #d0d7de;border-radius:10px;padding:18px 20px;width:520px;max-width:calc(100vw - 32px);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.sv-dlg::backdrop{background:rgba(27,42,58,.45)}
+.sv-dlg h3{margin:0 0 12px;font-size:17px}
+.sv-dlg label{display:block;font-size:12.5px;font-weight:600;margin-bottom:10px;flex:1;min-width:0}
+.sv-dlg input,.sv-dlg select{display:block;width:100%;box-sizing:border-box;margin-top:3px;padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:14px;font-weight:400}
+.sv-dlg input[readonly]{background:#f6f8fa;color:var(--muted)}
+.sv-dlg-row{display:flex;gap:10px}
+.sv-dlg-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+@media(max-width:600px){.sv-dlg-row{flex-direction:column;gap:0}}
 .sv-lab{position:absolute;height:22px;line-height:22px;font-size:11.5px;white-space:nowrap;color:#24292f;cursor:pointer;z-index:1;text-shadow:0 0 3px #fff,0 0 3px #fff}
 .sv-lab b{font-weight:600}
 .sv-lab.done{opacity:.55}
@@ -373,21 +393,45 @@ td.firma-cell{white-space:normal;min-width:130px}
 
   <section class="page" id="page-statustavle">
     <div class="panel">
-      <h2>Statustavle – 8 uker <span class="readonly-tag">Kun visning</span></h2>
-      <p class="intro">Aktivitetene de neste 8 ukene, per sone. Fargen på stolpen er firmaet, og trafikklyset er totalstatusen for aktiviteten. Den er satt sammen av metodebeskrivelsen og alle forutsetningene, også på AT-ene. Det dårligste lyset gjelder. Hold over en aktivitet for å se hva som mangler og hva som er kommentert. Trykk for å åpne den i «Klargjøring av aktiviteter».</p>
+      <h2>Statustavle – 8 uker <span class="readonly-tag" id="sv-ro-tag">Kun visning</span></h2>
+      <p class="intro">Aktivitetene de neste 8 ukene, per sone. Fargen på stolpen er firmaet, og trafikklyset er totalstatusen for aktiviteten. Den er satt sammen av metodebeskrivelsen og alle forutsetningene, også på AT-ene. Det dårligste lyset gjelder. Hold over en aktivitet for å se hva som mangler og hva som er kommentert. Trykk for å åpne den i «Klargjøring av aktiviteter». Med «✏️ Rediger tidslinje» kan du flytte startdatoer, endre varighet og legge inn nye aktiviteter.</p>
       <div class="toolbar">
         <div class="firm-filter" data-page="statustavle"></div>
         <button class="btn" data-action="ff-mine" data-page="statustavle">Bare mitt firma</button>
         <input type="search" data-search="statustavle" placeholder="Søk aktivitet, ID, AT-nr, område …">
+        <button class="btn" data-action="sv-edit" id="sv-edit-btn" hidden>✏️ Rediger tidslinje</button>
+        <button class="btn primary" data-action="sv-new" id="sv-new-btn" hidden>+ Ny aktivitet</button>
+        <label id="sv-flytt-lbl" hidden title="AT-er som bare hører til aktiviteten, flyttes like mange dager"><input type="checkbox" id="sv-flytt" checked> Flytt AT-er med</label>
+        <button class="btn" data-action="sv-undo" id="sv-undo" hidden>↶ Angre</button>
         <label>Vis: <select class="week-sel" id="sv-lys"><option value="">Alle</option><option value="avvik">Bare røde og gule</option><option value="rod">Bare røde</option><option value="ikke">Ikke ferdig vurdert</option></select></label>
       </div>
+      <div class="sv-edit-hint" id="sv-edit-hint" hidden>✏️ <b>Redigering er på.</b> Dra en stolpe sidelengs for å flytte startdatoen, eller opp og ned for å flytte den til en annen sone. Dra i høyre kant for å endre varigheten. Trykk på en stolpe for å endre detaljer, og trykk i et tomt felt for å legge inn en ny aktivitet der. Endringer merkes med ✎, slik at de kan synkroniseres med Sitedrive eller Tactplan senere.</div>
       <div class="stats" id="stats-statustavle"></div>
       <div class="legend" id="sv-legend"></div>
     </div>
     <div class="panel sv-panel" id="sv-panel">
       <div class="sv-chart" id="sv-chart"></div>
       <div class="sv-tip" id="sv-tip" hidden></div>
+      <div class="sv-drag-info" id="sv-drag-info" hidden></div>
     </div>
+    <dialog class="sv-dlg" id="sv-dlg">
+      <form id="sv-form" method="dialog">
+        <h3 id="sv-dlg-title">Ny aktivitet</h3>
+        <label>Navn<input type="text" id="svf-navn" maxlength="120" required placeholder="F.eks. Forskaling vegg akse 3–5"></label>
+        <div class="sv-dlg-row"><label>Sone<select id="svf-sone"></select></label><label>Firma<select id="svf-firma"></select></label></div>
+        <div class="sv-dlg-row"><label>Startdato<input type="date" id="svf-start" required></label><label>Varighet (dager)<input type="number" id="svf-var" min="1" max="999" required></label><label>Sluttdato<input type="text" id="svf-slutt" readonly tabindex="-1"></label></div>
+        <label>Metodebeskrivelse<select id="svf-mb"></select></label>
+        <label>Kommentar<input type="text" id="svf-kom" maxlength="120" placeholder="Kort kommentar"></label>
+        <p class="sub" id="svf-info"></p>
+        <div class="sv-dlg-actions">
+          <button type="button" class="btn danger" data-action="sv-del" id="svf-del">🗑 Slett</button>
+          <span style="flex:1"></span>
+          <button type="button" class="btn" data-action="sv-open" id="svf-open">Åpne i Klargjøring</button>
+          <button type="button" class="btn" data-action="sv-cancel">Avbryt</button>
+          <button type="submit" class="btn primary">Lagre</button>
+        </div>
+      </form>
+    </dialog>
   </section>
 
   <section class="page" id="page-skrastrek">
@@ -879,7 +923,7 @@ const ui = {
   klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set(), showArchive: false},
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
-  statustavle: {firms: null, search: '', lys: ''},
+  statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: []},
   metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set()},
   admin: {firmDel: null, firmEdit: null, regSearch: ''},
   koord: {week: null, selected: null, drawing: null}
@@ -1555,6 +1599,17 @@ function renderStatustavle() {
   const st = ui.statustavle;
   renderFirmFilter('statustavle');
   document.getElementById('sv-lys').value = st.lys;
+  const kanRedigere = isSys() || me().rolle === 'firmaadmin';
+  if (!kanRedigere) st.edit = false;
+  const eb = document.getElementById('sv-edit-btn');
+  document.getElementById('sv-ro-tag').hidden = kanRedigere;
+  eb.hidden = !kanRedigere; eb.classList.toggle('on', st.edit); eb.textContent = st.edit ? '✔ Ferdig med redigering' : '✏️ Rediger tidslinje';
+  document.getElementById('sv-new-btn').hidden = !st.edit;
+  document.getElementById('sv-flytt-lbl').hidden = !st.edit;
+  document.getElementById('sv-flytt').checked = st.flyttAT;
+  document.getElementById('sv-edit-hint').hidden = !st.edit;
+  document.getElementById('sv-undo').hidden = !st.edit || !st.undo.length;
+  document.getElementById('sv-panel').classList.toggle('editing', st.edit);
   const from = mondayOf(TODAY), to = addDays(from, SV_DAYS - 1);
   const pct = d => (daysBetween(from, d) / SV_DAYS * 100);
 
@@ -1583,12 +1638,13 @@ function renderStatustavle() {
     const bars = zs.map(it => {
       const i = svItems.push(it) - 1, a = it.a, c = firmColor(a.firma);
       const cutL = a.startdato < from, cutR = endDate(a) > to;
-      return `<div class="sv-bar${cutL ? ' cut-l' : ''}${cutR ? ' cut-r' : ''}${a.status === 'Utført' ? ' done' : ''}" data-i="${i}"
+      const edCls = st.edit ? (canEditAct(a) ? ' editable' : ' locked') : '';
+      return `<div class="sv-bar${cutL ? ' cut-l' : ''}${cutR ? ' cut-r' : ''}${a.status === 'Utført' ? ' done' : ''}${a.endretIWRK2 ? ' wrk2' : ''}${edCls}" data-i="${i}"
         style="left:${pct(it.x0)}%;width:calc(${(daysBetween(it.x0, it.x1) + 1) / SV_DAYS * 100}% - 2px);top:${SV_PAD + it.k * SV_LANE}px;background:${c};color:${svTextColor(c)}">
-        <span class="sv-lys ${it.s.lys}"></span>${it.ute ? '' : `<span class="txt">${cutL ? '◂ ' : ''}${esc(a.id)} ${esc(a.navn)}</span>`}</div>
+        <span class="sv-lys ${it.s.lys}"></span>${it.ute ? '' : `<span class="txt">${cutL ? '◂ ' : ''}${esc(a.id)} ${esc(a.navn)}</span>`}${st.edit && canEditAct(a) && !cutR ? '<span class="sv-rs" title="Dra for å endre varighet"></span>' : ''}</div>
         ${it.ute ? `<div class="sv-lab${a.status === 'Utført' ? ' done' : ''}" data-i="${i}" style="left:calc(${pct(addDays(it.x1, 1))}% + 3px);top:${SV_PAD + it.k * SV_LANE}px">${cutL ? '◂ ' : ''}<b>${esc(a.id)}</b> ${esc(a.navn.length > 34 ? a.navn.slice(0, 33) + '…' : a.navn)}</div>` : ''}`;
     }).join('');
-    return `<div class="sv-row">
+    return `<div class="sv-row" data-zone="${esc(z)}">
       <div class="sv-left">${grp ? `${firstInGrp ? `<span class="grp">${esc(grp)}</span>` : ''}<span class="sub-z">${esc(sub)}</span>` : `<span>${esc(z)}</span>`}${zs.length ? `<span class="cnt">${zs.length} aktivitet${zs.length === 1 ? '' : 'er'}</span>` : ''}</div>
       <div class="sv-time" style="height:${h}px">${bars}</div>
     </div>`;
@@ -1626,7 +1682,7 @@ function renderStatustavle() {
     <span><span class="sv-lys rod"></span> Rød – noe er ikke avklart</span><span><span class="sv-lys gul"></span> Gul – under avklaring</span>
     <span><span class="sv-lys ikke"></span> Grå – ikke ferdig vurdert</span><span><span class="sv-lys gronn"></span> Grønn – alt avklart</span>
     ${firmsShown.length ? `<span style="margin-left:10px"><b>Firma:</b></span>${firmsShown.map(f => firmBadge(f)).join(' ')}` : ''}
-    <span class="muted">Blek stolpe = utført · ◂ = startet før denne uken</span>`;
+    <span class="muted">Blek stolpe = utført · ◂ = startet før denne uken · ✎ = endret i WRK2</span>`;
   const left = document.querySelector('#sv-chart .sv-row .sv-left');
   if (left) document.querySelector('#sv-chart .sv-bgwrap').style.setProperty('--svl', left.offsetWidth + 'px');
 }
@@ -1654,7 +1710,8 @@ function svTipHtml(it) {
     ${!avvik.length && !ikkeTxt.length ? '<div class="sub">Alle forutsetninger er avklart.</div>' : ''}
     <div class="sec">Kommentarer</div>
     ${kom.length ? kom.map(([k, v]) => `<div class="kom"><b>${esc(k)}:</b> ${esc(v)}</div>`).join('') : '<div class="sub">Ingen kommentarer registrert.</div>'}
-    <div class="sub" style="margin-top:7px">Trykk for å åpne i Klargjøring av aktiviteter</div>`;
+    ${a.endretIWRK2 ? `<div class="sub" style="margin-top:7px">✎ ${a.kilde === 'WRK2' ? 'Lagt inn' : 'Endret'} i WRK2 ${fmtNo(a.endretIWRK2.tid.slice(0, 10))}${a.endretIWRK2.av ? ' av ' + esc(a.endretIWRK2.av) : ''}. Ikke synkronisert med Sitedrive/Tactplan.</div>` : ''}
+    <div class="sub" style="margin-top:7px">${ui.statustavle.edit ? (canEditAct(a) ? 'Dra for å flytte · dra i høyre kant for varighet · trykk for å endre' : `🔒 Bare ${esc(a.firma)} eller systemadministrator kan endre`) : 'Trykk for å åpne i Klargjøring av aktiviteter'}</div>`;
 }
 function svBarOf(el) {
   const x = el && el.closest && el.closest('.sv-bar, .sv-lab');
@@ -1680,13 +1737,23 @@ function svShowTip(bar) {
   tip.style.setProperty('--ax', Math.max(10, Math.min(w - 22, anchor - left - 6)) + 'px');
 }
 document.addEventListener('pointerover', e => {
-  if (currentTab !== 'statustavle' || e.pointerType === 'touch') return;
+  if (currentTab !== 'statustavle' || e.pointerType === 'touch' || svDrag) return;
   svShowTip(svBarOf(e.target));
 });
 document.addEventListener('scroll', () => { if (currentTab === 'statustavle') svShowTip(null); }, true);
 document.addEventListener('click', e => {
-  if (currentTab !== 'statustavle') return;
+  if (currentTab !== 'statustavle' || e.target.closest('#sv-dlg')) return;
+  if (Date.now() - svDragEnd < 350) return;
   const bar = svBarOf(e.target);
+  if (ui.statustavle.edit) {
+    if (bar && bar.classList.contains('editable')) { svShowTip(null); svOpenDialog(svItems[Number(bar.dataset.i)].a); return; }
+    const time = !bar && e.target.closest('#sv-chart .sv-row .sv-time');
+    if (time) {
+      const r = time.getBoundingClientRect(), day = Math.max(0, Math.min(SV_DAYS - 1, Math.floor((e.clientX - r.left) / r.width * SV_DAYS)));
+      svOpenDialog(null, {omrade: time.parentElement.dataset.zone, startdato: addDays(mondayOf(TODAY), day)});
+      return;
+    }
+  }
   // På berøringsskjerm viser første trykk boblen, andre trykk åpner aktiviteten.
   if (!bar) { svShowTip(null); svTapped = null; return; }
   if (e.pointerType === 'touch' || (e.pointerType === undefined && matchMedia('(hover: none)').matches)) {
@@ -1702,6 +1769,193 @@ document.addEventListener('click', e => {
   const row = document.querySelector(`#table-klargjoring tr.main-row[data-id="${CSS.escape(a.id)}"]`);
   if (row) { row.scrollIntoView({block: 'center'}); row.classList.add('flash-main'); setTimeout(() => row.classList.remove('flash-main'), 1700); }
 });
+
+// ---------- statustavle: redigering av tidslinjen ----------
+// Endringer merkes med endretIWRK2 (og kilde: 'WRK2' for nye aktiviteter), slik at de kan synkroniseres med Sitedrive/Tactplan senere.
+let svDrag = null, svDragEnd = 0, svDlgAct = null;
+const svKanLageNy = () => isSys() || me().rolle === 'firmaadmin';
+const svKanSlette = a => isSys() || (me().rolle === 'firmaadmin' && a.firma === me().firma && a.kilde === 'WRK2');
+function svMerk(a) { a.endretIWRK2 = {tid: new Date().toISOString(), av: me().name || ''}; }
+function svSnapshot(a) {
+  const {at, ...rest} = a;
+  return {id: a.id, act: JSON.parse(JSON.stringify(rest)), ats: a.at.map(t => ({id: t.id, startdato: t.startdato, omrade: t.omrade}))};
+}
+function svPushUndo(u) { const st = ui.statustavle; st.undo.push(u); if (st.undo.length > 30) st.undo.shift(); }
+function svUndo() {
+  const u = ui.statustavle.undo.pop(); if (!u) return;
+  if (u.created) { DATA = DATA.filter(a => a.id !== u.created); relink(); showToast(`${u.created} er fjernet igjen.`); }
+  else if (u.deleted) { DATA.push(u.deleted.act); u.deleted.links.forEach(({id}) => { const t = ATS.find(x => x.id === id); if (t && !t.aktiviteter.includes(u.deleted.act.id)) t.aktiviteter.push(u.deleted.act.id); }); relink(); showToast(`${u.deleted.act.id} er lagt tilbake.`); }
+  else {
+    const a = actById(u.id); if (!a) return;
+    Object.keys(a).forEach(k => { if (!(k in u.act)) delete a[k]; });
+    Object.assign(a, u.act);
+    u.ats.forEach(x => { const t = ATS.find(y => y.id === x.id); if (t) { t.startdato = x.startdato; t.omrade = x.omrade; } });
+    showToast(`Endringen på ${a.id} er angret.`);
+  }
+  save(); renderStatustavle();
+}
+// Flytter aktiviteten (og AT-er som bare hører til den) og/eller endrer varighet og sone.
+function svApply(a, ny) {
+  svPushUndo(svSnapshot(a));
+  const delta = ny.startdato ? daysBetween(a.startdato, ny.startdato) : 0, fraSone = a.omrade;
+  if (ui.statustavle.flyttAT) a.at.forEach(t => {
+    if (t.aktiviteter.length !== 1 || !canEditAT(a, t)) return;
+    if (delta) t.startdato = addDays(t.startdato, delta);
+    if (ny.omrade && ny.omrade !== fraSone && t.omrade === fraSone) t.omrade = ny.omrade;
+  });
+  Object.assign(a, ny);
+  svMerk(a);
+  save(); renderStatustavle();
+  const deler = [];
+  if (delta) deler.push(`start ${fmtNo(a.startdato)} (uke ${isoWeek(a.startdato)})`);
+  if (ny.varighet) deler.push(`varighet ${a.varighet} dager, slutt ${fmtNo(endDate(a))}`);
+  if (ny.omrade && ny.omrade !== fraSone) deler.push(`sone ${a.omrade}`);
+  if (deler.length) showToast(`${a.id}: ${deler.join(' · ')}. Trykk «↶ Angre» for å gå tilbake.`);
+}
+function svRowAt(y) {
+  return [...document.querySelectorAll('#sv-chart .sv-row[data-zone]')].find(r => { const b = r.getBoundingClientRect(); return y >= b.top && y < b.bottom; });
+}
+document.addEventListener('pointerdown', e => {
+  if (currentTab !== 'statustavle' || !ui.statustavle.edit || e.button > 0) return;
+  const bar = e.target.closest('#sv-chart .sv-bar.editable'); if (!bar) return;
+  const it = svItems[Number(bar.dataset.i)];
+  svDrag = {bar, it, mode: e.target.closest('.sv-rs') ? 'resize' : 'move', x0: e.clientX, y0: e.clientY,
+    dayPx: bar.parentElement.getBoundingClientRect().width / SV_DAYS, w0: bar.offsetWidth, dd: 0, zone: it.a.omrade, moved: false, id: e.pointerId};
+  try { bar.setPointerCapture(e.pointerId); } catch (err) {}
+});
+document.addEventListener('pointermove', e => {
+  const d = svDrag; if (!d || e.pointerId !== d.id) return;
+  const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+  if (!d.moved && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+  if (!d.moved) { d.moved = true; d.bar.classList.add('dragging'); svShowTip(null); }
+  e.preventDefault();
+  const a = d.it.a;
+  d.dd = Math.round(dx / d.dayPx);
+  document.querySelectorAll('#sv-chart .sv-row.drop').forEach(r => r.classList.remove('drop'));
+  let txt;
+  if (d.mode === 'resize') {
+    d.dd = Math.max(1 - a.varighet, d.dd);
+    d.bar.style.width = Math.max(d.dayPx - 2, d.w0 + d.dd * d.dayPx) + 'px';
+    const v = a.varighet + d.dd;
+    txt = `Varighet ${v} dag${v === 1 ? '' : 'er'} · slutt ${fmtNo(addDays(a.startdato, v - 1))}`;
+  } else {
+    const row = svRowAt(e.clientY);
+    d.zone = row ? row.dataset.zone : a.omrade;
+    if (row && d.zone !== a.omrade) row.classList.add('drop');
+    const rowTop = d.bar.closest('.sv-row').getBoundingClientRect().top;
+    d.bar.style.transform = `translate(${d.dd * d.dayPx}px, ${row ? row.getBoundingClientRect().top - rowTop : 0}px)`;
+    const ns = addDays(a.startdato, d.dd);
+    txt = `Start ${fmtNo(ns)} (uke ${isoWeek(ns)}) · slutt ${fmtNo(addDays(ns, a.varighet - 1))}${d.zone !== a.omrade ? ` · → ${d.zone}` : ''}`;
+  }
+  const info = document.getElementById('sv-drag-info'), panel = document.getElementById('sv-panel').getBoundingClientRect();
+  info.textContent = txt; info.hidden = false;
+  info.style.left = Math.min(e.clientX - panel.left + 14, panel.width - info.offsetWidth - 6) + 'px';
+  info.style.top = (e.clientY - panel.top - 38) + 'px';
+}, {passive: false});
+function svDragStop(e, cancel) {
+  const d = svDrag; if (!d || (e && e.pointerId !== d.id)) return;
+  svDrag = null;
+  document.getElementById('sv-drag-info').hidden = true;
+  document.querySelectorAll('#sv-chart .sv-row.drop').forEach(r => r.classList.remove('drop'));
+  if (!d.moved) return;
+  svDragEnd = Date.now();
+  const a = d.it.a;
+  if (cancel || (!d.dd && d.zone === a.omrade)) { renderStatustavle(); return; }
+  if (d.mode === 'resize') svApply(a, {varighet: a.varighet + d.dd});
+  else svApply(a, {...(d.dd ? {startdato: addDays(a.startdato, d.dd)} : {}), ...(d.zone !== a.omrade ? {omrade: d.zone} : {})});
+}
+document.addEventListener('pointerup', e => svDragStop(e, false));
+document.addEventListener('pointercancel', e => svDragStop(e, true));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && svDrag) svDragStop(null, true); });
+
+function svZoneList(extra) { return [...new Set([...SK_ZONE_ORDER, ...OMRADER(), extra].filter(Boolean))]; }
+function nextActId() {
+  const max = DATA.reduce((m, a) => { const n = /^A(\d+)$/.exec(a.id); return n ? Math.max(m, Number(n[1])) : m; }, 0);
+  return 'A' + String(max + 1).padStart(3, '0');
+}
+function svOpenDialog(a, preset = {}) {
+  if (a ? !canEditAct(a) : !svKanLageNy()) return;
+  svDlgAct = a;
+  const o = a || {navn: '', omrade: preset.omrade || SK_ZONE_ORDER[0], firma: isSys() ? 'Skanska' : me().firma, startdato: preset.startdato || TODAY, varighet: 5, metode: {nr: ''}, kommentar: ''};
+  const $ = id => document.getElementById(id);
+  $('sv-dlg-title').textContent = a ? `Endre ${a.id}` : 'Ny aktivitet';
+  $('svf-navn').value = o.navn;
+  $('svf-sone').innerHTML = svZoneList(o.omrade).map(z => `<option ${z === o.omrade ? 'selected' : ''}>${esc(z)}</option>`).join('');
+  const firmaer = isSys() ? FIRMS.map(f => f.navn) : [me().firma];
+  $('svf-firma').innerHTML = [...new Set([...firmaer, o.firma])].map(f => `<option ${f === o.firma ? 'selected' : ''}>${esc(f)}</option>`).join('');
+  $('svf-firma').disabled = !isSys();
+  $('svf-start').value = o.startdato; $('svf-var').value = o.varighet;
+  const nr = o.metode.nr || '';
+  $('svf-mb').innerHTML = `<option value="">Ingen / ikke avklart</option>${METHODS.map(m => `<option value="${esc(m.nr)}" ${m.nr === nr ? 'selected' : ''}>MB ${esc(m.nr)} ${esc(m.navn)}${m.firma ? ' – ' + esc(m.firma) : ''}</option>`).join('')}${nr && !METHODS.some(m => m.nr === nr) ? `<option value="${esc(nr)}" selected>MB ${esc(nr)}</option>` : ''}`;
+  $('svf-kom').value = o.kommentar || '';
+  $('svf-del').hidden = !a || !svKanSlette(a);
+  $('svf-open').hidden = !a;
+  $('svf-info').textContent = a
+    ? `Forutsetninger, AT-er og risiko endres i «Klargjøring av aktiviteter».${a.at.length ? ` AT-er som bare hører til ${a.id}, flyttes med når startdatoen endres${ui.statustavle.flyttAT ? '' : ' (slått av nå)'}.` : ''}`
+    : `Aktiviteten får ID ${nextActId()} og merkes som lagt inn i WRK2. Alle forutsetningene starter som «ikke vurdert».`;
+  svSluttOppdater();
+  $('sv-dlg').showModal();
+  setTimeout(() => $('svf-navn').focus(), 0);
+}
+function svSluttOppdater() {
+  const s = document.getElementById('svf-start').value, v = Math.max(1, parseInt(document.getElementById('svf-var').value, 10) || 1);
+  document.getElementById('svf-slutt').value = s ? `${fmtNo(addDays(s, v - 1))} (uke ${isoWeek(addDays(s, v - 1))})` : '';
+}
+document.addEventListener('input', e => { if (e.target.id === 'svf-start' || e.target.id === 'svf-var') svSluttOppdater(); });
+document.addEventListener('submit', e => {
+  if (e.target.id !== 'sv-form') return;
+  e.preventDefault();
+  const $ = id => document.getElementById(id);
+  const navn = $('svf-navn').value.trim(), start = $('svf-start').value, varighet = Math.max(1, parseInt($('svf-var').value, 10) || 1);
+  if (!navn || !start) return;
+  const omrade = $('svf-sone').value, firma = isSys() ? $('svf-firma').value : me().firma, mb = $('svf-mb').value, kommentar = $('svf-kom').value.trim();
+  const m = METHODS.find(x => x.nr === mb);
+  if (!svDlgAct) {
+    const id = nextActId();
+    const a = {id, navn, omrade, startdato: start, varighet, firma,
+      metode: {nr: mb, status: mb ? 'gul' : 'rod', historikk: mb ? `MB ${mb} ${m ? m.navn : ''} – koblet i Statustavlen, må bekreftes.` : 'Lagt inn i Statustavlen. Metodebeskrivelse ikke avklart.'},
+      forutsetninger: ikkeVurdert(), risikoniva: 'Middels', dodsrisiko: [], status: statusFor(start, varighet), kommentar,
+      ansvarUtforelse: '', ansvarGodkjenning: '', kilde: 'WRK2'};
+    svMerk(a);
+    DATA.push(a); relink();
+    svPushUndo({created: id});
+    save(); $('sv-dlg').close(); renderStatustavle();
+    showToast(`${id} ${navn} er lagt inn fra ${fmtNo(start)}. Klargjør forutsetningene i «Klargjøring av aktiviteter».`);
+    return;
+  }
+  const a = svDlgAct, ny = {};
+  if (navn !== a.navn) ny.navn = navn;
+  if (omrade !== a.omrade) ny.omrade = omrade;
+  if (isSys() && firma !== a.firma) ny.firma = firma;
+  if (start !== a.startdato) ny.startdato = start;
+  if (varighet !== a.varighet) ny.varighet = varighet;
+  if (kommentar !== (a.kommentar || '')) ny.kommentar = kommentar;
+  if (mb !== (a.metode.nr || '')) ny.metode = {...a.metode, nr: mb, status: mb ? (a.metode.status === 'rod' ? 'gul' : a.metode.status) : 'rod'};
+  $('sv-dlg').close();
+  if (Object.keys(ny).length) svApply(a, ny);
+});
+function svDialogAction(action) {
+  const dlg = document.getElementById('sv-dlg'), a = svDlgAct;
+  if (action === 'sv-cancel') { dlg.close(); return; }
+  if (action === 'sv-open' && a) {
+    dlg.close();
+    ui.klargjoring.expanded.add(a.id); ui.klargjoring.collapsedWeeks.clear();
+    showTab('klargjoring');
+    const row = document.querySelector(`#table-klargjoring tr.main-row[data-id="${CSS.escape(a.id)}"]`);
+    if (row) { row.scrollIntoView({block: 'center'}); row.classList.add('flash-main'); setTimeout(() => row.classList.remove('flash-main'), 1700); }
+    return;
+  }
+  if (action === 'sv-del' && a && svKanSlette(a)) {
+    if (!confirm(`Slette ${a.id} ${a.navn}?${a.at.length ? ` AT-ene blir liggende, men knyttes fra aktiviteten.` : ''}`)) return;
+    const {at, ...rest} = a;
+    const links = a.at.map(t => ({id: t.id}));
+    svPushUndo({deleted: {act: JSON.parse(JSON.stringify(rest)), links}});
+    ATS.forEach(t => { t.aktiviteter = t.aktiviteter.filter(x => x !== a.id); });
+    DATA = DATA.filter(x => x !== a);
+    relink(); save(); dlg.close(); renderStatustavle();
+    showToast(`${a.id} er slettet. Trykk «↶ Angre» for å legge den tilbake.`);
+  }
+}
 
 // ---------- metodebeskrivelser (entreprenør → metodebeskrivelse → AT → aktiviteter) ----------
 // Metodebeskrivelsene i prosjektet (PDF-ene i Dalux), gruppert per entreprenør og fag.
@@ -2178,6 +2432,10 @@ document.addEventListener('click', e => {
 
   if (action === 'logout') { if (window.cloudSignOut) window.cloudSignOut(); return; }
   if (action === 'ff-toggle') { btn.closest('.firm-filter').classList.toggle('open'); return; }
+  if (action === 'sv-edit') { const st = ui.statustavle; st.edit = !st.edit; svShowTip(null); renderStatustavle(); return; }
+  if (action === 'sv-new') { svOpenDialog(null); return; }
+  if (action === 'sv-undo') { svUndo(); return; }
+  if (['sv-del', 'sv-open', 'sv-cancel'].includes(action)) { svDialogAction(action); return; }
   if (action === 'ff-mine') { ui[btn.dataset.page].firms = new Set([me().firma]); rerenderPage(btn.dataset.page); return; }
   if (action === 'toggle-archive') { const p = btn.dataset.page; ui[p].showArchive = !ui[p].showArchive; rerenderPage(p); return; }
   if (action === 'expand-all') { const p = btn.dataset.page; DATA.forEach(a => ui[p].expanded.add(a.id)); renderTable(p); return; }
@@ -2421,6 +2679,7 @@ document.addEventListener('change', e => {
     ui.klargjoring.editing.clear(); ui.koord.drawing = null;
     save(); renderCurrent(); return;
   }
+  if (el.id === 'sv-flytt') { ui.statustavle.flyttAT = el.checked; return; }
   if (el.id === 'sv-lys') { ui.statustavle.lys = el.value; renderStatustavle(); return; }
   if (el.id === 'sk-niva' || el.id === 'sk-uker') { ui.skrastrek[el.id === 'sk-niva' ? 'niva' : 'uker'] = el.value; renderSkrastrek(); return; }
   if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; renderKoord(); return; }

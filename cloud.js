@@ -184,7 +184,7 @@ function stable(v) {
   if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
-const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0});
+const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, mbrydd: SETTINGS.mbrydd || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0});
 const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle, ...(u.pending && u.kode ? {kode: u.kode} : {})});
 const codeDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
 
@@ -244,7 +244,7 @@ async function ensureProfile(user) {
 function startSync(uid) {
   myUid = uid;
   const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false, avh: null};
-  let importing = false, importingAt = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
+  let importing = false, importingAt = false, rydding = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
   const fail = err => { view('error', 'Mistet kontakten med databasen: ' + errText(err)); };
 
   const apply = async () => {
@@ -296,6 +296,7 @@ function startSync(uid) {
       && (st.settings.metodesett || 0) >= METODESETT && (st.settings.registersett || 0) >= REGISTERSETT) { importing = true; await importPlan(); }
     // Deretter byttes AT-ene ut med de gjeldende fra AT-systemet, også i én samlet skriving.
     else if (sys && !readOnly && !importingAt && (st.settings.plansett || 0) >= PLANSETT && (st.settings.atsett || 0) < ATSETT) { importingAt = true; await importAts(); }
+    else if (sys && !readOnly && !rydding && (st.settings.atsett || 0) >= ATSETT && (st.settings.mbrydd || 0) < MBRYDD) { rydding = true; await ryddMb(); }
   };
 
   unsubs.push(onSnapshot(collection(db, 'users'), s => { st.users = s.docs.map(d => ({id: d.id, ...d.data()})); apply(); }, fail));
@@ -327,6 +328,20 @@ async function importPlan() {
   batch.set(doc(db, 'config', 'settings'), settingsDoc());
   try { await batch.commit(); showToast(`Sitedrive-planen er importert: ${SETTINGS.planImport.ny} nye, ${SETTINGS.planImport.oppdatert} oppdatert, ${SETTINGS.planImport.fjernet} fjernet.`); }
   catch (err) { showToast('Importen av Sitedrive-planen feilet: ' + errText(err)); }
+}
+
+// Rydding av direkte MB-koblinger og aktiviteter utenfor planen, i én batch.
+async function ryddMb() {
+  const gamle = DATA.map(a => a.id), atFor = new Map(ATS.map(t => [t.id, t.aktiviteter.join(',')]));
+  if (!applyMbrydd()) return;
+  const batch = writeBatch(db), byId = new Map(DATA.map(a => [a.id, a]));
+  gamle.forEach(id => { if (!byId.has(id)) batch.delete(doc(db, 'aktiviteter', id)); });
+  DATA.forEach(a => batch.set(doc(db, 'aktiviteter', a.id), toDoc(a)));
+  // Bare AT-er der en slettet aktivitet er fjernet fra koblingene, skrives.
+  ATS.filter(t => atFor.get(t.id) !== t.aktiviteter.join(',')).forEach(t => batch.update(doc(db, 'at', t.id), {aktiviteter: t.aktiviteter}));
+  batch.set(doc(db, 'config', 'settings'), settingsDoc());
+  try { await batch.commit(); showToast('Metodebeskrivelsene er ryddet: aktivitetene kobles nå bare via AT-er.'); }
+  catch (err) { showToast('Ryddingen feilet: ' + errText(err)); }
 }
 
 async function importAts() {

@@ -645,7 +645,7 @@ const LYS = {
   gul: {label: 'Gul – under avklaring', kort: 'Gul', emoji: '🟡'},
   rod: {label: 'Rød – ikke avklart', kort: 'Rød', emoji: '🔴'}
 };
-const METODE_LYS = ['gronn', 'gul', 'rod'];
+const METODE_LYS = ['ikke', 'gronn', 'gul', 'rod'];
 function ikkeVurdert() { return Object.fromEntries(FORUTSETNINGER.map(([k]) => [k, 'ikke'])); }
 const STATUSER = ['Til utførelse', 'Pågår', 'Utført'];
 const STATUS_CLS = {'Til utførelse': 'st-plan', 'Pågår': 'st-go', 'Utført': 'st-done'};
@@ -719,7 +719,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-09-30.11';
+const APP_VERSION = '2026-09-30.12';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -982,6 +982,7 @@ function load() {
   applyRegistersett();
   applyPlansett();
   applyAtsett();
+  applyMbrydd();
   save();
 }
 function save() {
@@ -2575,7 +2576,7 @@ function applyPlansett(force = false) {
       Object.assign(a, {omrade, startdato: start, varighet: daysBetween(start, slutt) + 1, firma: firmaFor[team]});
       oppdatert++;
     } else {
-      const start = start0, mb = sdMetode(team, pdfNavn), m = METHODS.find(x => x.nr === mb);
+      const start = start0, mb = '', m = null;
       a = {id: nextActId(), navn: pdfNavn + (avkortet ? '…' : ''), omrade, startdato: start, varighet: daysBetween(start, slutt) + 1, firma: firmaFor[team],
         metode: {nr: mb, status: mb ? 'gul' : 'rod', historikk: mb ? `MB ${mb} ${m ? m.navn : ''} – foreslått ut fra Sitedrive-teamet «${team}», må bekreftes.` : 'Importert fra Sitedrive. Metodebeskrivelse ikke koblet.'},
         forutsetninger: ikkeVurdert(), risikoniva: 'Middels', dodsrisiko: [], kommentar: '', ansvarUtforelse: '', ansvarGodkjenning: ''};
@@ -2645,6 +2646,28 @@ function applyAtsett(force = false) {
   relink();
   SETTINGS.atsett = ATSETT;
   logg('AT-er byttet ut', '', `${n - ATS.filter(t => gamle.has(t.id)).length} AT-er fjernet, ${ATS.length} AT-er fra AT-systemet beholdt/lagt inn (${ATS.map(t => t.nr).join(', ')}), alle godkjent 30.09–07.10`);
+  return true;
+}
+
+
+// ---------- rydding: aktiviteter kobles til metodebeskrivelser bare via AT (engangs) ----------
+// Direkte koblinger aktivitet → metodebeskrivelse kom fra Excel-utdraget og forslag ved Sitedrive-importen. De fjernes, sammen med
+// den genererte historikken. Aktiviteter som ikke er fra Sitedrive-planen eller lagt inn i WRK2, slettes.
+const MBRYDD = 1;
+let mbryddKjort = false;
+function applyMbrydd(force = false) {
+  if (!force && (mbryddKjort || (SETTINGS.mbrydd || 0) >= MBRYDD)) return false;
+  mbryddKjort = true;
+  const fjern = DATA.filter(a => a.kilde !== 'Sitedrive' && a.kilde !== 'WRK2');
+  const koblet = DATA.filter(a => !fjern.includes(a) && (a.metode.nr || a.metode.historikk));
+  DATA = DATA.filter(a => !fjern.includes(a));
+  DATA.forEach(a => { a.metode = {nr: '', status: 'ikke', historikk: ''}; });
+  const ids = new Set(DATA.map(a => a.id));
+  ATS.forEach(t => { t.aktiviteter = t.aktiviteter.filter(id => ids.has(id)); });
+  AVH = AVH.filter(d => ids.has(d.fra) && ids.has(d.til));
+  relink();
+  SETTINGS.mbrydd = MBRYDD;
+  logg('Rydding metodebeskrivelser', '', `Direkte kobling til metodebeskrivelse fjernet på ${koblet.length} aktiviteter; ${fjern.length} aktiviteter utenfor planen slettet${fjern.length ? ' (' + fjern.map(a => a.id).join(', ') + ')' : ''}. AT-koblinger beholdt.`);
   return true;
 }
 
@@ -3658,6 +3681,7 @@ document.addEventListener('click', e => {
     normalizeAll();
     applyPlansett(true);
     applyAtsett(true);
+    applyMbrydd(true);
     ui.klargjoring.editing.clear(); ui.koord.selected = null;
     save(); alert('Dataene er tilbakestilt.'); renderAdmin(); return;
   }

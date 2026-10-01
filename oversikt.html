@@ -139,6 +139,11 @@ td.empty{text-align:center;color:var(--muted);padding:30px}
 .kk-mark{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px;cursor:move;touch-action:none;z-index:4;max-width:118px}
 .kk-mark.locked{cursor:pointer}
 .kk-nr{font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;padding:2px 6px;border-radius:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35);white-space:nowrap}
+.kk-nr{position:relative}
+.kk-dod{position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:3px;display:flex;gap:1px;pointer-events:none}
+.kk-dod .dod-icon{display:block;width:auto !important;height:var(--dh) !important;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
+#kk-print .kp-dodleg{display:none}
+.kk-dod.kp-dod-etter{position:static;transform:none;margin-left:0}
 .kk-txt{font-size:11px;line-height:1.15;background:rgba(255,255,255,.9);padding:0 3px;border-radius:3px;white-space:nowrap;max-width:118px;overflow:hidden;text-overflow:ellipsis;color:#24292f}
 .kk-mark.aktiv .kk-nr{border:3px solid #1a7f37;box-shadow:0 0 0 2px #fff,0 0 6px 2px rgba(26,127,55,.6)}
 .kk-mark.ikke-gyldig .kk-nr{opacity:.75;border-style:dotted;border-color:#57606a}
@@ -152,6 +157,11 @@ td.empty{text-align:center;color:var(--muted);padding:30px}
 .kk-at.mangler{border:2px dashed #cf222e;background:#fff8f8}
 .kk-at-head{font-size:13.5px;margin-bottom:3px}
 .kk-item{border:1px solid var(--line);border-left:5px solid #999;border-radius:5px;padding:5px 7px;margin-top:5px;background:#fff;font-size:12.5px;cursor:pointer}
+#rull-bunn{position:fixed;bottom:0;height:16px;overflow-x:auto;overflow-y:hidden;z-index:45;background:rgba(246,248,250,.95);border-top:1px solid var(--line);box-shadow:0 -2px 6px rgba(0,0,0,.08)}
+#rull-bunn>div{height:1px}
+#rull-bunn::-webkit-scrollbar{height:12px}
+#rull-bunn::-webkit-scrollbar-thumb{background:#8c959f;border-radius:6px;border:2px solid #f6f8fa}
+@media print{#rull-bunn{display:none !important}}
 #kk-print{display:none}
 @media print{
   @page{size:A4 landscape;margin:8mm}
@@ -644,6 +654,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <label class="btn">Last opp sonebilde <input type="file" accept="image/*" id="map-upload" hidden></label>
         <button class="btn" data-action="map-reset" id="map-reset-btn">Bruk skjematisk sonekart</button>
         <label class="btn"><input type="checkbox" id="kk-stort"> Stort kart</label>
+        <label class="btn" title="Vis dødsrisikoene som er markert på selve aktiviteten (ikke fra AT-en), i kartet og på utskriften"><input type="checkbox" id="kk-dod"> ⚠️ Dødsrisiko</label>
         <button class="btn" data-action="kk-print" title="Plan og snitt på ett liggende A4-ark, med AT-oversikten på neste side">🖨 Skriv ut</button>
       </div>
       <div class="stats" id="stats-koord"></div>
@@ -831,7 +842,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-01.9';
+const APP_VERSION = '2026-10-01.10';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1624,6 +1635,7 @@ function renderKoord() {
   document.getElementById('week-sel').innerHTML = `<option value="alle" ${ui.koord.week === 'alle' ? 'selected' : ''}>Alle 8 uker (uke ${isoWeek(weeks[0])}–${isoWeek(weeks[7])})</option>`
     + weeks.map((w, i) => `<option value="${w}" ${ui.koord.week === w ? 'selected' : ''}>Uke ${isoWeek(w)} (${fmtShort(w)}–${fmtShort(addDays(w, 6))})${i === 0 ? ' – denne uken' : ''}</option>`).join('');
   document.getElementById('kk-stort').checked = !!ui.koord.stort;
+  document.getElementById('kk-dod').checked = kkVisDod();
   const acts = kkAktive(), sel = ui.koord.selAkt;
   const st = {aktiv: 0, 'ikke-gyldig': 0, mangler: 0};
   acts.forEach(a => st[kkStatus(a)]++);
@@ -1686,6 +1698,9 @@ function renderKoord() {
     <span><span class="kk-leg mangler"></span> ⚠ AT? = mangler AT</span><span><span class="kk-leg teller">3</span> Blå sirkel = antall aktiviteter i sonen</span><span class="muted">Trange soner viser bare AT-nummeret; hold over for detaljer.</span><span class="muted">Fargen er firmaet. Dra en markør i plan for å flytte den; ↺ auto i listen legger den tilbake. I snittet står markøren alltid rett under plan-markøren og kan bare flyttes opp og ned.</span></div>`
     + (custom && !zonesApply() ? '<p class="sub warn">Det opplastede bildet har et annet utsnitt enn plantegningen, så markørene står etter det skjematiske kartet.</p>' : '');
 }
+// Dødsrisiko på markørene: bare risikoene som er markert på selve aktiviteten, ikke de som kommer fra AT-en.
+const kkVisDod = () => readRaw('wrk2_kk_dod') === '1';
+const kkDod = (a, str) => kkVisDod() && a.dodsrisiko && a.dodsrisiko.length ? `<span class="kk-dod" style="--dh:${Math.round(str * .91)}px">${a.dodsrisiko.filter(k => DOD[k]).map(k => dodIcon(k, str)).join('')}</span>` : '';
 function kkMarkHtml(a, p, smal, sel, hint) {
   const s = kkStatus(a), c = firmColor(a.firma);
   const nrs = a.at.map(t => t.nr);
@@ -1693,7 +1708,7 @@ function kkMarkHtml(a, p, smal, sel, hint) {
   const tittel = `${a.id} ${a.navn} · ${a.omrade} · ${a.firma}\n${s === 'mangler' ? 'Mangler AT' : a.at.map(t => `${t.nr} ${t.navn} – ${atAktivIPerioden(t) ? 'godkjent i perioden' : 'gjelder ikke i perioden'}`).join('\n')}${canEditAct(a) ? '\n' + hint : ''}`;
   const nrTxt = s === 'mangler' ? (smal ? '⚠' : '⚠ AT?') : smal ? nrs[0] + (nrs.length > 1 ? '+' : '') : nrs.slice(0, 2).join(' · ') + (nrs.length > 2 ? ' +' + (nrs.length - 2) : '');
   return `<div class="kk-mark ${s}${smal ? ' kompakt' : ''}${sel === a.id ? ' selected' : ''}${canEditAct(a) ? '' : ' locked'}" data-akt="${esc(a.id)}" style="left:${p.x}%;top:${p.y}%" title="${esc(tittel)}">
-    <span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(nrTxt)}</span>
+    <span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(nrTxt)}${kkDod(a, smal ? 18 : 22)}</span>
     ${smal ? '' : `<span class="kk-txt">${esc(kort)}</span>`}</div>`;
 }
 // Utskrift: plan og snitt på ett liggende A4-ark, AT-oversikten på neste ark.
@@ -1710,7 +1725,7 @@ function kkUtskrift() {
   // På papiret viser markøren AT-nummeret og aktivitetsnummeret; aktiviteten står i kolonnen til høyre.
   const merke = (a, p, rad) => {
     const s = kkStatus(a), c = firmColor(a.firma), nrs = a.at.map(t => t.nr);
-    return `<div class="kk-mark kp-mark ${s}${rad ? ' kp-rad1' : ''}" style="left:${p.x}%;top:${p.y}%"><span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(s === 'mangler' ? '⚠' : nrs[0] + (nrs.length > 1 ? '+' : ''))}</span><span class="kp-id">${esc(a.id)}</span></div>`;
+    return `<div class="kk-mark kp-mark ${s}${rad ? ' kp-rad1' : ''}" style="left:${p.x}%;top:${p.y}%"><span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(s === 'mangler' ? '⚠' : nrs[0] + (nrs.length > 1 ? '+' : ''))}${rad ? '' : kkDod(a, 16)}</span><span class="kp-id">${esc(a.id)}</span>${rad ? kkDod(a, 16).replace('class="kk-dod"', 'class="kk-dod kp-dod-etter"') : ''}</div>`;
   };
   const planPos = a => a.kart || auto.get(a.id), snPos = snittPos(acts, planPos);
   const plan = (custom ? `<img src="${esc(custom)}" alt="Sonebilde">` : zoneSvg(counts))
@@ -1737,7 +1752,7 @@ function kkUtskrift() {
   let el = document.getElementById('kk-print');
   if (!el) { el = document.createElement('div'); el.id = 'kk-print'; document.body.appendChild(el); }
   el.innerHTML = `<div class="kp-side">${hode(1)}
-      <p class="kp-st"><b>${acts.length}</b> aktiviteter · <span class="kp-ok">${st.aktiv} med godkjent AT</span> · ${st['ikke-gyldig']} med AT som ikke gjelder i perioden · <span class="kp-nei">${st.mangler} mangler AT</span><span class="kp-leg2">Markør: AT-nummer og aktivitetsnummer · grønn ramme = godkjent AT · ⚠ = mangler AT · fargen er firmaet</span></p>
+      <p class="kp-st">${kkVisDod() ? '<span class="kp-dodleg">Dødsrisiko (markert på aktiviteten) står til høyre for markøren.</span>' : ''}<b>${acts.length}</b> aktiviteter · <span class="kp-ok">${st.aktiv} med godkjent AT</span> · ${st['ikke-gyldig']} med AT som ikke gjelder i perioden · <span class="kp-nei">${st.mangler} mangler AT</span><span class="kp-leg2">Markør: AT-nummer og aktivitetsnummer · grønn ramme = godkjent AT · ⚠ = mangler AT · fargen er firmaet</span></p>
       <div class="kp-rad"><div class="kp-tegn">
         <div class="kp-lbl">Plan</div><div class="map-wrap">${plan}</div>
         <div class="kp-lbl">Snitt vest–øst (høyde) – står loddrett under planen</div><div class="snitt-wrap">${snitt}</div></div>
@@ -1748,7 +1763,8 @@ function kkUtskrift() {
   document.body.classList.add('kk-printing');
   const ferdig = () => { document.body.classList.remove('kk-printing'); window.removeEventListener('afterprint', ferdig); };
   window.addEventListener('afterprint', ferdig);
-  setTimeout(() => { window.print(); setTimeout(ferdig, 500); }, 50);
+  const bilder = [...el.querySelectorAll('img')].filter(i => !i.complete).map(i => new Promise(ok => { i.onload = i.onerror = ok; }));
+  Promise.race([Promise.all(bilder), new Promise(ok => setTimeout(ok, 2000))]).then(() => setTimeout(() => { window.print(); setTimeout(ferdig, 500); }, 50));
 }
 // Forsiktig gantt til utskriften: nummer, navn og en stolpe for perioden. Etterfølgende aktiviteter står rett under
 // forgjengeren, rykket litt inn, og bindingene tegnes mellom stolpene (rødt hvis bindingen er brutt).
@@ -4023,6 +4039,38 @@ document.addEventListener('mouseout', e => {
   if (th && !th.contains(e.relatedTarget)) fuInfoSkjul(false);
 });
 
+// ---------- rullefelt nederst i vinduet ----------
+// Brede visninger (tabeller, statustavle, kart) har sitt eget rullefelt nederst i boksen. Når bunnen av boksen er
+// under skjermkanten, vises et rullefelt nederst i vinduet som styrer den samme boksen.
+(() => {
+  const SEL = '.table-wrap, .sv-scroll, .map-scroll, .sk-scroll';
+  const bar = document.createElement('div'), inner = document.createElement('div');
+  bar.id = 'rull-bunn'; bar.hidden = true; bar.appendChild(inner); document.body.appendChild(bar);
+  let mal = null;
+  const oppdater = () => {
+    const vh = window.innerHeight;
+    mal = [...document.querySelectorAll(SEL)].find(el => {
+      if (!el.offsetParent || el.closest('#kk-print')) return false;
+      const r = el.getBoundingClientRect();
+      return el.scrollWidth > el.clientWidth + 2 && r.top < vh - 60 && r.bottom > vh + 2;
+    }) || null;
+    bar.hidden = !mal;
+    if (!mal) return;
+    const r = mal.getBoundingClientRect();
+    bar.style.left = Math.max(0, r.left) + 'px'; bar.style.width = Math.min(r.width, window.innerWidth - Math.max(0, r.left)) + 'px';
+    inner.style.width = (mal.scrollWidth - mal.clientWidth + bar.clientWidth) + 'px';
+    if (Math.abs(bar.scrollLeft - mal.scrollLeft) > 1) bar.scrollLeft = mal.scrollLeft;
+  };
+  bar.addEventListener('scroll', () => { if (mal && Math.abs(mal.scrollLeft - bar.scrollLeft) > 1) mal.scrollLeft = bar.scrollLeft; });
+  document.addEventListener('scroll', e => {
+    if (e.target === mal) { if (Math.abs(bar.scrollLeft - mal.scrollLeft) > 1) bar.scrollLeft = mal.scrollLeft; }
+    else if (e.target === document || e.target === document.documentElement) oppdater();
+  }, true);
+  window.addEventListener('resize', oppdater);
+  new ResizeObserver(oppdater).observe(document.body);
+  setInterval(oppdater, 800);
+})();
+
 // ---------- hendelser ----------
 function rerenderPage(page) { if (page === 'firma') { renderFirma(); return; } if (page === 'skrastrek') renderSkrastrek(); else if (page === 'statustavle') renderStatustavle(); else if (page === 'metoder') renderMetoder(); else renderTable(page); }
 function pageOf(el) { const p = el.closest('.page'); return p ? p.id.replace('page-', '') : null; }
@@ -4379,6 +4427,7 @@ document.addEventListener('change', e => {
   if (el.id === 'sk-niva' || el.id === 'sk-uker') { ui.skrastrek[el.id === 'sk-niva' ? 'niva' : 'uker'] = el.value; renderSkrastrek(); return; }
   if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; ui.koord.tegn = null; renderKoord(); return; }
   if (el.id === 'kk-stort') { ui.koord.stort = el.checked; renderKoord(); return; }
+  if (el.id === 'kk-dod') { writeRaw('wrk2_kk_dod', el.checked ? '1' : ''); renderKoord(); return; }
   if (el.id === 'map-upload') { if (el.files[0]) uploadMap(el.files[0]); el.value = ''; return; }
   if (el.dataset.atFirma) {
     const t = atById(el.dataset.atFirma); if (!t || !isSys()) return;

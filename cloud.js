@@ -49,7 +49,7 @@ function view(state, info = '') {
     body.innerHTML = `<form id="login-form" autocomplete="on">
         <label>E-post<input type="email" id="li-email" autocomplete="username" required></label>
         <label>Passord<input type="password" id="li-pass" autocomplete="current-password" required minlength="6"></label>
-        <label>Invitasjonskode <span class="muted" style="font-weight:400">(bare første gang)</span><input type="text" id="li-kode" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX" value="${esc(getKode())}"></label>
+        <label>Invitasjonskode <span class="muted" style="font-weight:400">(bare når du oppretter konto – la stå tomt ved vanlig innlogging)</span><input type="text" id="li-kode" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX" value="${esc(getKode())}"></label>
         <div class="login-actions">
           <button class="btn primary" type="submit">Logg inn</button>
           <button class="btn" type="button" data-login="register">Opprett konto</button>

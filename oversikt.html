@@ -123,16 +123,15 @@ td.empty{text-align:center;color:var(--muted);padding:30px}
 .placed-list{margin-top:10px;font-size:13px}
 .map-scroll{overflow-x:auto}
 .map-wrap.stort{width:1800px;max-width:none}
-.kk-mark{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px;cursor:move;touch-action:none;z-index:4;max-width:96px}
+.kk-mark{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px;cursor:move;touch-action:none;z-index:4;max-width:118px}
 .kk-mark.locked{cursor:pointer}
-.kk-nr{font-size:10.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;padding:2px 6px;border-radius:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35);white-space:nowrap}
-.kk-txt{font-size:9px;line-height:1.1;background:rgba(255,255,255,.88);padding:0 3px;border-radius:3px;white-space:nowrap;max-width:96px;overflow:hidden;text-overflow:ellipsis;color:#24292f}
+.kk-nr{font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;padding:2px 6px;border-radius:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35);white-space:nowrap}
+.kk-txt{font-size:11px;line-height:1.15;background:rgba(255,255,255,.9);padding:0 3px;border-radius:3px;white-space:nowrap;max-width:118px;overflow:hidden;text-overflow:ellipsis;color:#24292f}
 .kk-mark.aktiv .kk-nr{border:3px solid #1a7f37;box-shadow:0 0 0 2px #fff,0 0 6px 2px rgba(26,127,55,.6)}
 .kk-mark.ikke-gyldig .kk-nr{opacity:.75;border-style:dotted;border-color:#57606a}
 .kk-mark.mangler .kk-nr{background:#fff !important;color:#cf222e !important;border:2px dashed #cf222e}
 .kk-mark.selected{z-index:8}
-.kk-mark.kompakt .kk-nr{font-size:9px;padding:1px 4px;border-width:2px}
-.kk-mark.kompakt .kk-txt{font-size:8px}
+.kk-mark.kompakt .kk-nr{font-size:11px;padding:1px 5px;border-width:2px}
 .kk-mark.kompakt.aktiv .kk-nr{border-width:2.5px}
 .kk-mark.selected .kk-nr{outline:3px solid #ffd33d}
 .kk-at{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px;background:#fafbfc}
@@ -143,6 +142,7 @@ td.empty{text-align:center;color:var(--muted);padding:30px}
 .kk-item.selected{outline:3px solid #ffd33d}
 .kk-st.aktiv b{color:#1a7f37}.kk-st.mangler b{color:#cf222e}
 .kk-leg{display:inline-block;width:22px;height:12px;border-radius:7px;vertical-align:-2px;background:#2a78d6}
+.kk-leg.teller{width:16px;height:16px;border-radius:50%;background:#1f6feb;color:#fff;font-size:10px;font-weight:700;text-align:center;line-height:16px;vertical-align:-3px}
 .kk-leg.aktiv{border:3px solid #1a7f37}.kk-leg.ikke-gyldig{border:2px dotted #57606a;opacity:.75}.kk-leg.mangler{background:#fff;border:2px dashed #cf222e}
 .placed-list .zone-group{margin-bottom:6px}
 .warn{color:#9a5b00}
@@ -585,6 +585,7 @@ td.firma-cell{white-space:normal;min-width:130px}
     <div class="koord">
       <div class="panel at-list" id="at-list"></div>
       <div class="panel">
+        <div class="sel-bar" id="kk-bar"></div>
         <div class="map-scroll"><div class="map-wrap" id="map-wrap"></div></div>
         <div class="placed-list" id="placed-list"></div>
       </div>
@@ -726,10 +727,11 @@ const ZONES = [
   // 8302 Kjeller: Rampe, Vest og Øst er delsoner av samme grønne område. Vest/øst-skillet går midt mellom akse W5 og W6.
   {navn: '8302 - Kjeller / Kjellerinnkjøring', pts: [[228, 113], [708, 113], [760, 165], [228, 165]], fill: '#e3f1e5', kjeller: true,
     labels: [['Rampe', 262, 128, 12]], ekstra: [[228, 40, 700, 108]], ekstraForst: true, topp: 22},
-  {navn: '8302 - Kjeller / Vest', pts: R(543, 165, 734, 345), fill: '#e3f1e5', kjeller: true, labels: [['Vest', 638, 214, 12]], topp: 54},
-  {navn: '8302 - Kjeller / Øst', pts: R(734, 165, 850, 345), fill: '#e3f1e5', kjeller: true, labels: [['Øst', 792, 214, 12]], topp: 54},
+  // Vest og Øst går ned under Trådhall del 1 (kjelleren ligger under trådhallen), med skillet midt mellom W5 og W6 helt ned til Kontrollsenter.
+  {navn: '8302 - Kjeller / Vest', pts: [[543, 165], [734, 165], [734, 540], [550, 540], [550, 345], [543, 345]], fill: '#e3f1e5', kjeller: true, labels: [['Vest', 600, 214, 13]], topp: 56, badgeXY: [560, 181]},
+  {navn: '8302 - Kjeller / Øst', pts: [[734, 165], [850, 165], [850, 345], [890, 345], [890, 540], [734, 540]], fill: '#e3f1e5', kjeller: true, labels: [['Øst', 800, 214, 13]], topp: 56, badgeXY: [834, 181]},
   {navn: '8303 - Driftssenter', pts: R(850, 165, 1215, 345), fill: '#fdecef', labels: [['8303 DRIFTSSENTER', 1032, 280, 18]], bg: '#16877f', fg: '#fff'},
-  {navn: '8302 - Trådhall', pts: R(550, 345, 1215, 540), fill: '#edf3fc', labels: [['8302 TRÅDHALL', 742, 420, 19], ['8302 TRÅDHALL', 1045, 420, 19]], bg: '#8b1cf0', fg: '#fff'},
+  {navn: '8302 - Trådhall', pts: R(550, 345, 1215, 540), fill: '#edf3fc', labels: [['8302 TRÅDHALL', 1052, 420, 19]], bg: '#8b1cf0', fg: '#fff', boks: [896, 379, 1209, 536], badgeXY: [1197, 363]},
   {navn: '8302 - Kontrollsenter', pts: R(550, 540, 910, 665), fill: '#efefef', labels: [['8302 KONTROLLSENTER', 730, 616, 18]], bg: '#fff176', fg: '#000'},
   {navn: '8301 - Ovnshall', pts: R(222, 251, 550, 588), fill: '#ffd4d4', labels: [['8301 OVNSHALL', 352, 415, 19]], bg: '#ff1f1f', fg: '#000'},
   {navn: '8304 - Lagerhall', pts: R(1215, 330, 1780, 630), fill: '#fdfaec', labels: [['8304 LAGERHALL', 1488, 414, 19]], bg: '#f7931e', fg: '#000'},
@@ -753,7 +755,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-01.4';
+const APP_VERSION = '2026-10-01.5';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1363,24 +1365,21 @@ function zoneSvg(counts) {
     + AX_S.map(([t, x]) => `<line x1="${x}" y1="311" x2="${x}" y2="630" stroke="#c8c8c8" stroke-dasharray="10 4 2 4"/>${bubble(x, 299, t)}`).join('')
     + AX_ROWS.map(([t, y, bx, x1, x2]) => `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#c8c8c8" stroke-dasharray="10 4 2 4"/>${bubble(bx, y, t)}`).join('')
     + AX_ROWS_R.map(([t, y, bx]) => `<line x1="1225" y1="${y}" x2="1782" y2="${y}" stroke="#c8c8c8" stroke-dasharray="10 4 2 4"/>${bubble(bx, y, t)}`).join('');
-  // Merkelappene står øverst i sonene, så aktivitetene får plass under.
-  const zones = ZONES.map(z => {
-    const xs = z.pts.map(p => p[0]), ys = z.pts.map(p => p[1]);
-    if (z.kjeller) return `<polygon points="${z.pts.map(p => p.join(',')).join(' ')}" fill="${z.fill}" stroke="none"/>
-      ${z.labels.map(([t, x, y, fs]) => `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="#1e8e3e" font-family="Arial,Helvetica,sans-serif">${esc(t)}</text>`).join('')}
-      ${badge(Math.max(...xs) - 16, Math.min(...ys) + 16, counts[z.navn] || 0)}`;
-    return `<polygon points="${z.pts.map(p => p.join(',')).join(' ')}" fill="${z.fill}" stroke="#8a8a8a" stroke-width="2.5"/>
-      ${z.labels.map(([t, x, y, fs]) => label(t, x, Math.min(...ys) + fs + 6, fs, z.bg, z.fg)).join('')}
-      ${badge(Math.max(...xs) - 18, Math.min(...ys) + 18, counts[z.navn] || 0)}`;
-  }).join('')
-    // Felles ramme rundt 8302 Kjeller, grønne stiplede skiller mellom Rampe, Vest og Øst, og overskrift.
-    + `<polygon points="228,113 708,113 760,165 850,165 850,345 543,345 543,165 228,165" fill="none" stroke="#1e8e3e" stroke-width="3"/>
+  // Merkelappene står øverst i sonene, så aktivitetene får plass under. Kjelleren tegnes over Trådhall del 1, siden den ligger under hallen.
+  const andre = ZONES.filter(z => !z.kjeller), kj = ZONES.filter(z => z.kjeller);
+  const bx = z => { const xs = z.pts.map(p => p[0]), ys = z.pts.map(p => p[1]); return z.badgeXY || [Math.max(...xs) - 18, Math.min(...ys) + 18]; };
+  const zones = andre.map(z => `<polygon points="${z.pts.map(p => p.join(',')).join(' ')}" fill="${z.fill}" stroke="#8a8a8a" stroke-width="2.5"/>`).join('')
+    + kj.map(z => `<polygon points="${z.pts.map(p => p.join(',')).join(' ')}" fill="${z.fill}" stroke="none"/>`).join('')
+    + `<line x1="550" y1="345" x2="890" y2="345" stroke="#8a8a8a" stroke-width="2" stroke-dasharray="4 4"/>
+      <text x="720" y="534" text-anchor="middle" font-size="11" fill="#57606a" font-family="Arial,Helvetica,sans-serif">Kjeller under Trådhall del 1</text>
+      <polygon points="228,113 708,113 760,165 850,165 850,345 890,345 890,540 550,540 550,345 543,345 543,165 228,165" fill="none" stroke="#1e8e3e" stroke-width="3"/>
       <line x1="543" y1="165" x2="760" y2="165" stroke="#1e8e3e" stroke-width="2.5" stroke-dasharray="10 6"/>
-      <line x1="734" y1="165" x2="734" y2="345" stroke="#1e8e3e" stroke-width="2.5" stroke-dasharray="10 6"/>
-      ${label('8302 KJELLER', 696, 188, 15, '#1e8e3e', '#fff')}`;
-  // Kjelleren ligger under Trådhall del 1 (akse W1–W9). Omrisset vises stiplet i kjellerens grønnfarge, over de andre sonene.
-  const kjeller = `<polygon points="${KJELLER_OMRISS.map(p => p.join(',')).join(' ')}" fill="#1e8e3e" fill-opacity=".06" stroke="#1e8e3e" stroke-width="3.5" stroke-dasharray="14 7" stroke-linejoin="round" pointer-events="none"/>
-    ${label('8302 KJELLER under Trådhall del 1', 720, 528, 11, '#1e8e3e', '#fff')}`;
+      <line x1="734" y1="165" x2="734" y2="540" stroke="#1e8e3e" stroke-width="2.5" stroke-dasharray="10 6"/>`
+    + andre.map(z => { const ys = z.pts.map(p => p[1]); return z.labels.map(([t, x, y, fs]) => label(t, x, Math.min(...ys) + fs + 6, fs, z.bg, z.fg)).join(''); }).join('')
+    + kj.map(z => z.labels.map(([t, x, y, fs]) => `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="#1e8e3e" font-family="Arial,Helvetica,sans-serif">${esc(t)}</text>`).join('')).join('')
+    + label('8302 KJELLER', 696, 188, 15, '#1e8e3e', '#fff')
+    + ZONES.map(z => { const [x, y] = bx(z); return badge(x, y, counts[z.navn] || 0); }).join('');
+  const kjeller = '';
   return `<svg viewBox="0 0 ${MAP_W} ${MAP_H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sonekart WRK2">
     <rect x="0" y="0" width="${MAP_W}" height="${MAP_H}" fill="#fbfcf8"/>
     ${grid}${zones}${kjeller}
@@ -1427,7 +1426,7 @@ function renderSelBar() {
 // ---------- AT-koordinering: aktivitetene fra Statustavlen lagt ut i sonene, med AT-nummer og godkjenningsstatus ----------
 // Utomhus har ingen egen sone på kartet; aktivitetene legges i to frie felt (nederst til venstre, øverst til høyre).
 const KK_UTOMHUS = [[40, 612, 540, 705], [1255, 45, 1880, 285]];
-const KK_CELL = {w: 96, h: 34}, KK_SMAL = {w: 44, h: 20};   // markørstørrelse i piksler (vanlig / kompakt i trange soner)
+const KK_CELL = {w: 118, h: 42}, KK_SMAL = {w: 58, h: 26};   // markørstørrelse i piksler (vanlig / kompakt i trange soner)
 function kkAktive() {
   const [from, to] = periodRange();
   return DATA.filter(a => a.startdato <= to && endDate(a) >= from && !erArkiv(a))
@@ -1446,7 +1445,7 @@ function kkStatus(a) {
 function kkBokser(sone) {
   if (sone === UTOMHUS || !ZONES.some(z => z.navn === sone)) return KK_UTOMHUS;
   const z = ZONES.find(x => x.navn === sone), xs = z.pts.map(p => p[0]), ys = z.pts.map(p => p[1]);
-  const hoved = [Math.min(...xs) + 6, Math.min(...ys) + (z.topp || 34), Math.max(...xs) - 6, Math.max(...ys) - 4];
+  const hoved = z.boks || [Math.min(...xs) + 6, Math.min(...ys) + (z.topp || 34), Math.max(...xs) - 6, Math.max(...ys) - 4];
   return z.ekstraForst ? [...z.ekstra, hoved] : [hoved, ...(z.ekstra || [])];
 }
 // Legger aktivitetene i et rutenett innenfor sonen. Er det trangt, krymper avstanden og markørene overlapper litt.
@@ -1520,31 +1519,75 @@ function renderKoord() {
   const auto = kkLayout(acts, scale);
   const counts = {};
   acts.forEach(a => { counts[a.omrade] = (counts[a.omrade] || 0) + 1; });
+  // Tegnede områder (i firmafargen) og punktene mens et område tegnes.
+  const tg = ui.koord.tegn;
+  const polys = acts.filter(a => Array.isArray(a.kartOmrade) && a.kartOmrade.length > 2).map(a => {
+    const c = firmColor(a.firma), valgt = sel === a.id;
+    return `<polygon points="${a.kartOmrade.map(q => q.x + ',' + q.y).join(' ')}" fill="${c}" fill-opacity="${valgt ? .35 : .2}" stroke="${kkStatus(a) === 'aktiv' ? '#1a7f37' : c}" stroke-width="${valgt ? 3 : 2}" vector-effect="non-scaling-stroke"/>`;
+  }).join('');
+  const tc = tg ? firmColor((actById(tg.aid) || {}).firma) : '';
+  const forh = tg && tg.points.length ? `<polyline points="${tg.points.map(q => q.x + ',' + q.y).join(' ')}${tg.points.length > 2 ? ' ' + tg.points[0].x + ',' + tg.points[0].y : ''}" fill="${tc}" fill-opacity=".15" stroke="${tc}" stroke-width="2" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>` : '';
+  mapWrap.classList.toggle('drawing', !!tg);
   mapWrap.innerHTML = (custom ? `<img src="${esc(custom)}" alt="Sonebilde" draggable="false">` : zoneSvg(counts))
+    + `<svg class="map-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">${polys}${forh}</svg>`
+    + (tg ? tg.points.map(q => `<div class="draw-pt" style="left:${q.x}%;top:${q.y}%;background:${tc}"></div>`).join('') : '')
     + acts.map(a => {
       const p = a.kart || auto.get(a.id), s = kkStatus(a), c = firmColor(a.firma);
       const nrs = a.at.map(t => t.nr);
-      const kort = a.navn.length > 18 ? a.navn.slice(0, 17) + '…' : a.navn;
+      const kort = a.navn.length > 20 ? a.navn.slice(0, 19) + '…' : a.navn;
       const tittel = `${a.id} ${a.navn} · ${a.omrade} · ${a.firma}\n${s === 'mangler' ? 'Mangler AT' : a.at.map(t => `${t.nr} ${t.navn} – ${atAktivIPerioden(t) ? 'godkjent i perioden' : 'gjelder ikke i perioden'}`).join('\n')}${canEditAct(a) ? '\nDra for å flytte markøren' : ''}`;
       const smal = auto.kompakt.has(a.id) && !a.kart;
       const nrTxt = s === 'mangler' ? (smal ? '⚠' : '⚠ AT?') : smal ? nrs[0] + (nrs.length > 1 ? '+' : '') : nrs.slice(0, 2).join(' · ') + (nrs.length > 2 ? ' +' + (nrs.length - 2) : '');
       return `<div class="kk-mark ${s}${smal ? ' kompakt' : ''}${sel === a.id ? ' selected' : ''}${canEditAct(a) ? '' : ' locked'}" data-akt="${esc(a.id)}" style="left:${p.x}%;top:${p.y}%" title="${esc(tittel)}">
         <span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(nrTxt)}</span>
-        <span class="kk-txt">${esc(a.id)}${smal ? '' : ' ' + esc(kort)}</span></div>`;
+        ${smal ? '' : `<span class="kk-txt">${esc(kort)}</span>`}</div>`;
     }).join('');
+  renderKkBar();
   document.getElementById('placed-list').innerHTML = `<div class="legend"><span><b>Markører:</b></span>
     <span><span class="kk-leg aktiv"></span> Godkjent AT i perioden (grønn ramme)</span><span><span class="kk-leg ikke-gyldig"></span> AT gjelder ikke i perioden</span>
-    <span><span class="kk-leg mangler"></span> ⚠ AT? = mangler AT</span><span class="muted">Trange soner viser bare AT-nummer og ID; hold over for detaljer.</span><span class="muted">Fargen er firmaet. Dra en markør for å flytte den; ↺ auto i listen legger den tilbake.</span></div>`
+    <span><span class="kk-leg mangler"></span> ⚠ AT? = mangler AT</span><span><span class="kk-leg teller">3</span> Blå sirkel = antall aktiviteter i sonen</span><span class="muted">Trange soner viser bare AT-nummeret; hold over for detaljer.</span><span class="muted">Fargen er firmaet. Dra en markør for å flytte den; ↺ auto i listen legger den tilbake.</span></div>`
     + (custom && !zonesApply() ? '<p class="sub warn">Det opplastede bildet har et annet utsnitt enn plantegningen, så markørene står etter det skjematiske kartet.</p>' : '');
+}
+// Verktøylinje over kartet: tegn område rundt valgt aktivitet/AT.
+function renderKkBar() {
+  const bar = document.getElementById('kk-bar'), tg = ui.koord.tegn;
+  if (tg) {
+    const a = actById(tg.aid);
+    bar.className = 'sel-bar drawing';
+    bar.innerHTML = `<b>Tegn område for ${esc(a.at.map(t => t.nr).join(', ') || a.navn)}:</b> klikk på kartet for å sette hjørnepunkter (${tg.points.length} satt, minst 3).
+      <button class="btn primary" data-action="kk-tegn-ferdig" ${tg.points.length < 3 ? 'disabled' : ''}>Ferdig</button>
+      <button class="btn" data-action="kk-tegn-angre" ${tg.points.length ? '' : 'disabled'}>Angre siste punkt</button>
+      <button class="btn" data-action="kk-tegn-avbryt">Avbryt</button>`;
+    return;
+  }
+  bar.className = 'sel-bar';
+  const a = ui.koord.selAkt && actById(ui.koord.selAkt);
+  if (!a) { bar.innerHTML = '<span class="muted">Trykk på en markør for å tegne et område rundt arbeidet, eller dra den for å flytte den.</span>'; return; }
+  const can = canEditAct(a), har = Array.isArray(a.kartOmrade) && a.kartOmrade.length > 2;
+  bar.innerHTML = `${a.at.length ? a.at.map(t => `<span class="at-chip linked">${esc(t.nr)}</span>`).join(' ') : '<span class="badge rk-h">Mangler AT</span>'} <b>${esc(a.navn)}</b> ${firmBadge(a.firma)}
+    ${can ? `<button class="btn primary" data-action="kk-tegn">${har ? 'Tegn område på nytt' : '✏️ Tegn område'}</button>${har ? '<button class="btn" data-action="kk-omr-slett">Slett område</button>' : ''}` : `<span class="muted">Bare ${esc(a.firma)} kan endre.</span>`}
+    <button class="btn" data-action="kk-lukk">Lukk</button>`;
 }
 window.addEventListener('resize', () => { if (currentTab === 'koordinering') { clearTimeout(window.kkT); window.kkT = setTimeout(renderKoord, 200); } });
 
 // Velg / flytt markører
 let kkDrag = null;
+function kkMarkerIListen(id) {
+  document.querySelectorAll('.kk-item.selected').forEach(x => x.classList.toggle('selected', x.dataset.akt === id));
+  const items = [...document.querySelectorAll(`.kk-item[data-akt="${CSS.escape(id)}"]`)];
+  items.forEach(x => x.classList.add('selected'));
+  if (items[0]) items[0].scrollIntoView({block: 'nearest', behavior: 'smooth'});
+}
 document.addEventListener('pointerdown', e => {
   if (currentTab !== 'koordinering' || e.button > 0) return;
+  const mapWrap = document.getElementById('map-wrap');
+  if (ui.koord.tegn) {
+    if (mapWrap.contains(e.target)) { const p = pct(mapWrap, e); ui.koord.tegn.points.push({x: p.x, y: p.y}); renderKoord(); e.preventDefault(); }
+    return;
+  }
   const m = e.target.closest('.kk-mark'); if (!m) return;
   const a = actById(m.dataset.akt); if (!a) return;
+  kkMarkerIListen(a.id);
   kkDrag = {a, el: m, x0: e.clientX, y0: e.clientY, moved: false, can: canEditAct(a)};
   try { m.setPointerCapture(e.pointerId); } catch (err) {}
   e.preventDefault();
@@ -3536,7 +3579,7 @@ function renderCurrent() {
 function showTab(tab) {
   if (!document.getElementById('page-' + tab) || (tab === 'skrastrek' && !SETTINGS.skrastrek) || (tab === 'koordinering' && SETTINGS.atkoord === false)) tab = 'statustavle';
   currentTab = tab;
-  ui.koord.drawing = null;
+  ui.koord.drawing = null; ui.koord.tegn = null;
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + tab));
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);
@@ -3718,6 +3761,16 @@ document.addEventListener('click', e => {
   if (action === 'area-del') { if (s && s.p && canPlaceAT(s.t)) { s.p.omrade = null; save(); renderKoord(); } return; }
   if (action === 'draw-start') { if (s && s.p && canPlaceAT(s.t)) { ui.koord.drawing = {nr: s.t.nr, pid: s.p.id, points: []}; renderKoord(); } return; }
   if (action === 'draw-undo') { if (ui.koord.drawing) { ui.koord.drawing.points.pop(); renderKoord(); } return; }
+  if (action === 'kk-tegn') { const a = actById(ui.koord.selAkt); if (a && canEditAct(a)) { ui.koord.tegn = {aid: a.id, points: []}; renderKoord(); } return; }
+  if (action === 'kk-tegn-angre') { if (ui.koord.tegn) { ui.koord.tegn.points.pop(); renderKoord(); } return; }
+  if (action === 'kk-tegn-avbryt') { ui.koord.tegn = null; renderKoord(); return; }
+  if (action === 'kk-tegn-ferdig') {
+    const tg = ui.koord.tegn, a = tg && actById(tg.aid);
+    if (a && canEditAct(a) && tg.points.length > 2) { a.kartOmrade = tg.points.map(q => ({x: q.x, y: q.y})); logg('Område tegnet', a.id, `${a.at.map(t => t.nr).join(', ') || 'uten AT'} · ${tg.points.length} hjørnepunkter`); save(); }
+    ui.koord.tegn = null; renderKoord(); return;
+  }
+  if (action === 'kk-omr-slett') { const a = actById(ui.koord.selAkt); if (a && canEditAct(a) && confirm('Slette området?')) { delete a.kartOmrade; logg('Område slettet', a.id, ''); save(); renderKoord(); } return; }
+  if (action === 'kk-lukk') { ui.koord.selAkt = null; renderKoord(); return; }
   if (action === 'kk-auto') { const a = actById(btn.dataset.akt); if (a && canEditAct(a)) { delete a.kart; save(); renderKoord(); } return; }
   if (action === 'draw-cancel') { ui.koord.drawing = null; renderKoord(); return; }
   if (action === 'draw-done') {
@@ -3883,7 +3936,7 @@ document.addEventListener('change', e => {
   if (el.id === 'sv-flytt') { ui.statustavle.flyttAT = el.checked; return; }
   if (el.id === 'sv-lys') { ui.statustavle.lys = el.value; renderStatustavle(); return; }
   if (el.id === 'sk-niva' || el.id === 'sk-uker') { ui.skrastrek[el.id === 'sk-niva' ? 'niva' : 'uker'] = el.value; renderSkrastrek(); return; }
-  if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; renderKoord(); return; }
+  if (el.id === 'week-sel') { ui.koord.week = el.value; ui.koord.selected = null; ui.koord.drawing = null; ui.koord.tegn = null; renderKoord(); return; }
   if (el.id === 'kk-stort') { ui.koord.stort = el.checked; renderKoord(); return; }
   if (el.id === 'map-upload') { if (el.files[0]) uploadMap(el.files[0]); el.value = ''; return; }
   if (el.dataset.atFirma) {

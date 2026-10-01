@@ -423,7 +423,8 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .at-firma-sel{padding:4px 6px;border:1px solid var(--accent);border-radius:6px;font-size:12.5px;max-width:220px}
 .ue-kjede i{font-style:normal;font-size:10px;color:var(--muted)}
 .ue-linje{font-size:12px;white-space:nowrap;margin-top:1px}
-.fu-goto{font-size:11.5px;margin-top:3px}
+.fu-goto{font-size:11.5px;margin-top:3px;color:#444;line-height:1.35}
+.fu-goto i{color:#6a737d}
 .mb-act.drop-hover{outline:3px dashed var(--accent);outline-offset:-3px;background:#eef4ff}
 .mb-tag .mb-x{font-size:12px;color:inherit;padding:0 0 0 3px}
 .mb-act{display:flex;gap:8px;border:1px solid var(--line);border-left:6px solid #999;border-radius:6px;padding:8px;margin-bottom:8px;background:#fff;cursor:grab;user-select:none;-webkit-user-select:none}
@@ -842,7 +843,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-01.10';
+const APP_VERSION = '2026-10-01.11';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1224,7 +1225,7 @@ function commonCells(o, ed, firmaEd, kjede = '') {
     dato: `<td>${ed ? `<input type="date" class="w-date" data-field="startdato" value="${esc(o.startdato)}">` : fmtNo(o.startdato)}</td>`,
     varighet: `<td class="c">${ed ? `<input type="number" min="1" class="w-num" data-field="varighet" value="${o.varighet}">` : o.varighet}</td>`,
     // Firmakolonnen viser bare hovedfirmaet (entreprenøren). UE-er vises under «Utførelse av firma» og i Statustavlen.
-    firma: `<td class="firma-cell">${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}${ed && DATA.includes(o) ? `<div class="fu-goto"><button class="link-btn" data-action="fu-goto" data-id="${esc(o.id)}">UE-er →</button></div>` : ''}</td>`,
+    firma: `<td class="firma-cell">${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}${ed && DATA.includes(o) ? `<div class="fu-goto">${(o.ue || []).length ? o.ue.map(u => `<div>› ${esc(u.navn)} <i>UE</i>${(u.under || []).map(x => `<div>&nbsp;&nbsp;› ${esc(x.navn)} <i>UE av UE</i></div>`).join('')}</div>`).join('') : '<span class="muted">Ingen UE</span>'}</div>` : ''}</td>`,
     lys: FORUTSETNINGER.map(([k]) => { const km = (o.fuKommentar || {})[k]; return `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}${km ? `<div class="fu-km" title="${esc(km)}">💬</div>` : ''}</td>`; }).join(''),
     ansvar: ['ansvarUtforelse', 'ansvarGodkjenning'].map(f => `<td class="c">${ed
       ? `<select data-field="${f}" title="${f === 'ansvarUtforelse' ? 'Ansvarlig for utførelse' : 'Ansvarlig for godkjenning'}"><option value="" ${o[f] ? '' : 'selected'}>–</option>${[...new Set([...PERSONER, o[f]].filter(Boolean))].map(x => `<option value="${esc(x)}" ${x === o[f] ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`
@@ -1283,7 +1284,7 @@ function detailRows(a, page) {
   const n = a.at.length;
   const span = Math.max(1, n) + (actEd ? 1 : 0);
   const metodeCell = `<td class="metode-box" rowspan="${span}">
-    <div class="mb-title">Metodebeskrivelse – historikk<br>(felles for alle AT)</div>
+    <div class="mb-title">Metodebeskrivelse – historikk</div>
     ${actMbNrs(a).some(nr => mbDoker(nr).length) ? `<div class="mb-dok-i">${mbDokLenker(actMbNrs(a), false)}</div>` : ''}
     ${actEd ? `<textarea data-field="metode.historikk" data-scope="act" placeholder="F.eks. Innsendt 11.02, godkjent 12.03">${esc(a.metode.historikk)}</textarea>
       <div class="sub">MB nr: <input type="text" class="w-nr" data-field="metode.nr" data-scope="act" value="${esc(a.metode.nr)}"></div>`
@@ -3244,7 +3245,7 @@ const MBDOK_KEY = 'wrk2_mbdok', MBDOK_MAKS = 15 * 1024 * 1024, MBDOK_TYPER = /\.
 const mbDoker = nr => MBDOK.filter(d => d.nr === nr && d.ferdig !== false).sort((x, y) => x.navn.localeCompare(y.navn, 'nb'));
 const kanLasteOppMb = m => !!m && !m.ukjent && (isSys() || (me().rolle === 'firmaadmin' && !!m.firma && canEditFirm(m.firma)));
 const fmtStr = b => b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB';
-const dokIkon = navn => /\.pdf$/i.test(navn) ? '📕' : '📘';
+const dokIkon = () => '📗';
 // Lenker til dokumentene for en eller flere metodebeskrivelser. kort = bare ikonet.
 const dokLenke = (d, kort) => `<button type="button" class="mb-dok-lenke" data-action="mbdok-open" data-dok="${esc(d.id)}" title="Åpne ${esc(d.navn)} (MB ${esc(d.nr)}, ${fmtStr(d.str)})">${dokIkon(d.navn)}${kort ? '' : ' ' + esc(d.navn)}</button>`;
 function mbDokLenker(nrs, kort) { return [].concat(nrs).flatMap(mbDoker).map(d => dokLenke(d, kort)).join(' '); }

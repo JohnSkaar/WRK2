@@ -843,7 +843,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-01.12';
+const APP_VERSION = '2026-10-01.13';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -2317,6 +2317,8 @@ function renderStatustavle() {
   svDrawLinks();
 }
 
+// Korte kommentarer i boblen: første linje, maks n tegn.
+const kortTekst = (v, n) => { const t = String(v || '').split(/\n/)[0].trim(); return t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t; };
 function svTipHtml(it) {
   const a = it.a, {lys, punkter} = it.s;
   const avvik = punkter.filter(p => p.lys === 'rod' || p.lys === 'gul').sort((p, q) => LYS_RANK[q.lys] - LYS_RANK[p.lys]);
@@ -2341,7 +2343,8 @@ function svTipHtml(it) {
     ${!avvik.length && !ikkeTxt.length ? '<div class="sub">Alle forutsetninger er avklart.</div>' : ''}
     ${svAvhTip(a)}
     <div class="sec">Kommentarer</div>
-    ${kom.length ? kom.map(([k, v]) => `<div class="kom"><b>${esc(k)}:</b> ${esc(v)}</div>`).join('') : '<div class="sub">Ingen kommentarer registrert.</div>'}
+    ${kom.length ? kom.slice(0, 4).map(([k, v]) => `<div class="kom"><b>${esc(k)}:</b> ${esc(kortTekst(v, 90))}</div>`).join('')
+      + (kom.length > 4 ? `<div class="sub">+ ${kom.length - 4} kommentar${kom.length - 4 === 1 ? '' : 'er'} til – se Klargjøring av aktiviteter</div>` : '') : '<div class="sub">Ingen kommentarer registrert.</div>'}
     ${a.sd ? `<div class="sub" style="margin-top:7px">📥 Fra Sitedrive (${esc(a.sd.plan)}, eksportert ${fmtNo(a.sd.eksportert.slice(0, 10))}) · team «${esc(a.sd.team)}»${a.sd.merknad ? `<br>⚠ ${esc(a.sd.merknad)}` : ''}</div>` : ''}
     ${a.endretIWRK2 ? `<div class="sub" style="margin-top:7px">✎ ${a.kilde === 'WRK2' ? 'Lagt inn' : 'Endret'} i WRK2 ${fmtNo(a.endretIWRK2.tid.slice(0, 10))}${a.endretIWRK2.av ? ' av ' + esc(a.endretIWRK2.av) : ''}. Ikke synkronisert med Sitedrive/Tactplan.</div>` : ''}
     <div class="sub" style="margin-top:7px">${ui.statustavle.edit ? (canEditAct(a) ? 'Dra for å flytte · dra i høyre kant for varighet · trykk for å endre' : `🔒 Bare ${esc(a.firma)} eller systemadministrator kan endre`) : ui.statustavle.lenke ? 'Trykk for å åpne i Klargjøring av aktiviteter' : 'Slå på «Hyperlink mot aktivitet» for å åpne aktiviteten med et trykk'}</div>`;

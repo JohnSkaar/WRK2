@@ -139,7 +139,13 @@ td.empty{text-align:center;color:var(--muted);padding:30px}
 .kk-at.mangler{border:2px dashed #cf222e;background:#fff8f8}
 .kk-at-head{font-size:13.5px;margin-bottom:3px}
 .kk-item{border:1px solid var(--line);border-left:5px solid #999;border-radius:5px;padding:5px 7px;margin-top:5px;background:#fff;font-size:12.5px;cursor:pointer}
-.kk-item.selected{outline:3px solid #ffd33d}
+.kk-item.selected{background:#d8dce1 !important;outline:2px solid #8c959f}
+.snitt-wrap{position:relative;width:100%;margin-top:10px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
+.snitt-wrap.stort{width:1800px;max-width:none}
+.snitt-wrap svg{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
+.snitt-wrap .kk-mark{cursor:ns-resize}
+.snitt-wrap .kk-mark.locked{cursor:pointer}
+.snitt-tittel{font-weight:700;margin:12px 0 0;font-size:14px}
 .kk-st.aktiv b{color:#1a7f37}.kk-st.mangler b{color:#cf222e}
 .kk-leg{display:inline-block;width:22px;height:12px;border-radius:7px;vertical-align:-2px;background:#2a78d6}
 .kk-leg.teller{width:16px;height:16px;border-radius:50%;background:#1f6feb;color:#fff;font-size:10px;font-weight:700;text-align:center;line-height:16px;vertical-align:-3px}
@@ -586,7 +592,7 @@ td.firma-cell{white-space:normal;min-width:130px}
       <div class="panel at-list" id="at-list"></div>
       <div class="panel">
         <div class="sel-bar" id="kk-bar"></div>
-        <div class="map-scroll"><div class="map-wrap" id="map-wrap"></div></div>
+        <div class="map-scroll"><div class="map-wrap" id="map-wrap"></div><div class="snitt-tittel">Snitt – samme soner sett fra siden (høyde)</div><div class="snitt-wrap" id="snitt-wrap"></div></div>
         <div class="placed-list" id="placed-list"></div>
       </div>
     </div>
@@ -728,8 +734,8 @@ const ZONES = [
   {navn: '8302 - Kjeller / Kjellerinnkjøring', pts: [[228, 113], [708, 113], [760, 165], [228, 165]], fill: '#e3f1e5', kjeller: true,
     labels: [['Rampe', 262, 128, 12]], ekstra: [[228, 40, 700, 108]], ekstraForst: true, topp: 22},
   // Vest og Øst går ned under Trådhall del 1 (kjelleren ligger under trådhallen), med skillet midt mellom W5 og W6 helt ned til Kontrollsenter.
-  {navn: '8302 - Kjeller / Vest', pts: [[543, 165], [734, 165], [734, 540], [550, 540], [550, 345], [543, 345]], fill: '#e3f1e5', kjeller: true, labels: [['Vest', 600, 214, 13]], topp: 56, badgeXY: [560, 181]},
-  {navn: '8302 - Kjeller / Øst', pts: [[734, 165], [850, 165], [850, 345], [890, 345], [890, 540], [734, 540]], fill: '#e3f1e5', kjeller: true, labels: [['Øst', 800, 214, 13]], topp: 56, badgeXY: [834, 181]},
+  {navn: '8302 - Kjeller / Vest', pts: [[543, 165], [715, 165], [715, 540], [550, 540], [550, 345], [543, 345]], fill: '#e3f1e5', kjeller: true, labels: [['Vest', 629, 214, 13]], topp: 56, badgeXY: [560, 181]},
+  {navn: '8302 - Kjeller / Øst', pts: [[715, 165], [850, 165], [850, 345], [890, 345], [890, 540], [715, 540]], fill: '#e3f1e5', kjeller: true, labels: [['Øst', 782, 214, 13]], topp: 56, badgeXY: [834, 181]},
   {navn: '8303 - Driftssenter', pts: R(850, 165, 1215, 345), fill: '#fdecef', labels: [['8303 DRIFTSSENTER', 1032, 280, 18]], bg: '#16877f', fg: '#fff'},
   {navn: '8302 - Trådhall', pts: R(550, 345, 1215, 540), fill: '#edf3fc', labels: [['8302 TRÅDHALL', 1052, 420, 19]], bg: '#8b1cf0', fg: '#fff', boks: [896, 379, 1209, 536], badgeXY: [1197, 363]},
   {navn: '8302 - Kontrollsenter', pts: R(550, 540, 910, 665), fill: '#efefef', labels: [['8302 KONTROLLSENTER', 730, 616, 18]], bg: '#fff176', fg: '#000'},
@@ -755,7 +761,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-01.5';
+const APP_VERSION = '2026-10-01.6';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1374,7 +1380,7 @@ function zoneSvg(counts) {
       <text x="720" y="534" text-anchor="middle" font-size="11" fill="#57606a" font-family="Arial,Helvetica,sans-serif">Kjeller under Trådhall del 1</text>
       <polygon points="228,113 708,113 760,165 850,165 850,345 890,345 890,540 550,540 550,345 543,345 543,165 228,165" fill="none" stroke="#1e8e3e" stroke-width="3"/>
       <line x1="543" y1="165" x2="760" y2="165" stroke="#1e8e3e" stroke-width="2.5" stroke-dasharray="10 6"/>
-      <line x1="734" y1="165" x2="734" y2="540" stroke="#1e8e3e" stroke-width="2.5" stroke-dasharray="10 6"/>`
+      <line x1="715" y1="165" x2="715" y2="540" stroke="#1e8e3e" stroke-width="2.5" stroke-dasharray="10 6"/>`
     + andre.map(z => { const ys = z.pts.map(p => p[1]); return z.labels.map(([t, x, y, fs]) => label(t, x, Math.min(...ys) + fs + 6, fs, z.bg, z.fg)).join(''); }).join('')
     + kj.map(z => z.labels.map(([t, x, y, fs]) => `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="${fs}" font-weight="700" fill="#1e8e3e" font-family="Arial,Helvetica,sans-serif">${esc(t)}</text>`).join('')).join('')
     + label('8302 KJELLER', 696, 188, 15, '#1e8e3e', '#fff')
@@ -1477,6 +1483,63 @@ function kkLayout(acts, scale) {
   return pos;
 }
 
+// ---------- snitt (lengdesnitt øst–vest) under plantegningen ----------
+// Samme horisontale målestokk som plantegningen, så markørene i snittet står loddrett under markørene i plan.
+// I snittet kan markørene bare flyttes opp og ned (høyden); plasseringen sideveis styres av planen.
+const SNITT_H = 560, TERRENG = 250;
+const SNITT = [
+  {navn: '8303 Driftssenter', x1: 850, x2: 1215, y1: 18, y2: 82, fill: '#f0aa78', soner: ['8303 - Driftssenter'], band: [30, 74], stiplet: [[850, 82, 850, 130], [1215, 82, 1215, 130]]},
+  {navn: '8301 Ovnshall', pts: [[222, 100], [550, 128], [550, TERRENG], [222, TERRENG]], fill: '#f26d7d', soner: ['8301 - Ovnshall'], band: [150, 242]},
+  {navn: '8302 Trådhall', x1: 550, x2: 1215, y1: 128, y2: TERRENG, fill: '#2f5be0', fg: '#fff', soner: ['8302 - Trådhall'], band: [150, 242]},
+  {navn: '8304 Lagerhall', x1: 1215, x2: 1780, y1: 150, y2: TERRENG, fill: '#f28c1c', soner: ['8304 - Lagerhall', 'Pallelager'], band: [168, 242]},
+  {navn: '8302 Kjeller', x1: 550, x2: 890, y1: TERRENG, y2: 420, fill: '#b5e0bf', soner: ['8302 - Kjeller / Vest', '8302 - Kjeller / Øst', '8302 - Kjeller / Kjellerinnkjøring'], band: [264, 412]},
+  {navn: '8302 Kontrollsenter', x1: 550, x2: 910, y1: 470, y2: 530, fill: '#fbe96a', soner: ['8302 - Kontrollsenter'], band: [482, 522], stiplet: [[550, 420, 550, 470], [910, 420, 910, 470]]},
+  {navn: '8300 Utomhus', soner: [UTOMHUS], band: [205, 244]}
+];
+const snittFor = sone => SNITT.find(s => s.soner.includes(sone)) || SNITT[SNITT.length - 1];
+function snittSvg() {
+  const boks = s => s.pts
+    ? `<polygon points="${s.pts.map(p => p.join(',')).join(' ')}" fill="${s.fill}" fill-opacity=".85" stroke="#555" stroke-width="1.5"/>`
+    : s.x1 !== undefined ? `<rect x="${s.x1}" y="${s.y1}" width="${s.x2 - s.x1}" height="${s.y2 - s.y1}" fill="${s.fill}" fill-opacity=".85" stroke="#555" stroke-width="1.5"/>` : '';
+  const tekst = s => {
+    if (s.x1 === undefined && !s.pts) return '';
+    const x = s.pts ? 300 : (s.x1 + s.x2) / 2, y = s.pts ? 140 : s.y1 + 20;
+    return `<text x="${x}" y="${y}" text-anchor="middle" font-size="17" font-weight="700" fill="${s.fg || '#1b1f24'}" font-family="Arial,Helvetica,sans-serif">${esc(s.navn)}</text>`;
+  };
+  return `<svg viewBox="0 0 ${MAP_W} ${SNITT_H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Snitt øst–vest">
+    <rect x="0" y="0" width="${MAP_W}" height="${SNITT_H}" fill="#fbfcf8"/>
+    ${AX_TOP.map(([t, x]) => `<line x1="${x}" y1="0" x2="${x}" y2="${SNITT_H}" stroke="#e1e4e8" stroke-dasharray="6 4"/>`).join('')}
+    <line x1="0" y1="${TERRENG}" x2="${MAP_W}" y2="${TERRENG}" stroke="#8a6d3b" stroke-width="2"/>
+    <text x="12" y="${TERRENG - 6}" font-size="12" fill="#8a6d3b" font-family="Arial,Helvetica,sans-serif">Terreng</text>
+    <polygon points="228,${TERRENG} 550,${TERRENG} 550,420" fill="#b5e0bf" fill-opacity=".6" stroke="#1e8e3e" stroke-dasharray="6 4"/>
+    <text x="440" y="${TERRENG + 18}" text-anchor="middle" font-size="12" fill="#1e8e3e" font-family="Arial,Helvetica,sans-serif">Rampe</text>
+    ${SNITT.map(boks).join('')}
+    ${SNITT.flatMap(s => (s.stiplet || []).map(([x1, y1, x2, y2]) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#333" stroke-width="1.5" stroke-dasharray="5 4"/>`)).join('')}
+    ${SNITT.map(tekst).join('')}
+    <text x="12" y="${SNITT_H - 10}" font-size="12" fill="#6a737d" font-family="Arial,Helvetica,sans-serif">Snitt vest–øst (skjematisk). Markørene står loddrett under plantegningen; dra opp/ned for å angi høyde.</text>
+  </svg>`;
+}
+// Standardhøyde: midt i sonens bånd. Ligger flere markører over hverandre i plan (samme x), spres de i høyden.
+function snittPos(acts, planPos) {
+  const ut = new Map(), grupper = new Map();
+  acts.forEach(a => {
+    const s = snittFor(a.omrade), p = planPos(a);
+    const k = s.navn + '|' + Math.round(p.x / 2.5);
+    if (!grupper.has(k)) grupper.set(k, {s, liste: []});
+    grupper.get(k).liste.push({a, p});
+  });
+  grupper.forEach(({s, liste}) => {
+    liste.sort((u, v) => u.p.y - v.p.y);
+    // Minst 40 enheter mellom markørene; går de ikke inn i båndet, sentreres stabelen om båndets midte.
+    const [b1, b2] = s.band, n = liste.length, steg = Math.max((b2 - b1) / n, 40), y0 = (b1 + b2) / 2 - steg * (n - 1) / 2;
+    liste.forEach(({a, p}, i) => {
+      const y = Math.max(12, Math.min(SNITT_H - 12, y0 + steg * i));
+      ut.set(a.id, {x: p.x, y: a.snittY !== undefined ? a.snittY : y / SNITT_H * 100});
+    });
+  });
+  return ut;
+}
+
 function renderKoord() {
   const weeks = weeksAhead();
   if (!ui.koord.week || (ui.koord.week !== 'alle' && !weeks.includes(ui.koord.week))) ui.koord.week = weeks[0];
@@ -1495,7 +1558,7 @@ function renderKoord() {
   const ats = ATS.filter(t => t.aktiviteter.some(id => iPer.has(id))).sort((x, y) => byNr(x.nr, y.nr));
   const utenAkt = ATS.filter(t => !t.aktiviteter.some(id => iPer.has(id))).sort((x, y) => byNr(x.nr, y.nr));
   const item = (a, extra = '') => `<div class="kk-item ${kkStatus(a)}${sel === a.id ? ' selected' : ''}" data-akt="${esc(a.id)}" style="border-left-color:${firmColor(a.firma)}">
-      <b>${esc(a.id)}</b> ${esc(a.navn)}<div class="sub">${esc(a.omrade)} · ${fmtShort(a.startdato)}–${fmtShort(endDate(a))} · ${firmBadge(a.firma)}${a.kart ? ` · <button class="link-btn" data-action="kk-auto" data-akt="${esc(a.id)}" title="Flyttet for hånd – legg tilbake automatisk">↺ auto</button>` : ''}${extra}</div></div>`;
+      <b>${esc(a.id)}</b> ${esc(a.navn)}<div class="sub">${esc(a.omrade)} · ${fmtShort(a.startdato)}–${fmtShort(endDate(a))} · ${firmBadge(a.firma)}${a.kart || a.snittY !== undefined ? ` · <button class="link-btn" data-action="kk-auto" data-akt="${esc(a.id)}" title="Flyttet for hånd – legg tilbake automatisk">↺ auto</button>` : ''}${extra}</div></div>`;
   const mangler = acts.filter(a => !a.at.length);
   document.getElementById('at-list').innerHTML = `<h3>AT-er og aktiviteter i perioden</h3>`
     + ats.map(t => {
@@ -1531,22 +1594,27 @@ function renderKoord() {
   mapWrap.innerHTML = (custom ? `<img src="${esc(custom)}" alt="Sonebilde" draggable="false">` : zoneSvg(counts))
     + `<svg class="map-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">${polys}${forh}</svg>`
     + (tg ? tg.points.map(q => `<div class="draw-pt" style="left:${q.x}%;top:${q.y}%;background:${tc}"></div>`).join('') : '')
-    + acts.map(a => {
-      const p = a.kart || auto.get(a.id), s = kkStatus(a), c = firmColor(a.firma);
-      const nrs = a.at.map(t => t.nr);
-      const kort = a.navn.length > 20 ? a.navn.slice(0, 19) + '…' : a.navn;
-      const tittel = `${a.id} ${a.navn} · ${a.omrade} · ${a.firma}\n${s === 'mangler' ? 'Mangler AT' : a.at.map(t => `${t.nr} ${t.navn} – ${atAktivIPerioden(t) ? 'godkjent i perioden' : 'gjelder ikke i perioden'}`).join('\n')}${canEditAct(a) ? '\nDra for å flytte markøren' : ''}`;
-      const smal = auto.kompakt.has(a.id) && !a.kart;
-      const nrTxt = s === 'mangler' ? (smal ? '⚠' : '⚠ AT?') : smal ? nrs[0] + (nrs.length > 1 ? '+' : '') : nrs.slice(0, 2).join(' · ') + (nrs.length > 2 ? ' +' + (nrs.length - 2) : '');
-      return `<div class="kk-mark ${s}${smal ? ' kompakt' : ''}${sel === a.id ? ' selected' : ''}${canEditAct(a) ? '' : ' locked'}" data-akt="${esc(a.id)}" style="left:${p.x}%;top:${p.y}%" title="${esc(tittel)}">
-        <span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(nrTxt)}</span>
-        ${smal ? '' : `<span class="kk-txt">${esc(kort)}</span>`}</div>`;
-    }).join('');
+    + acts.map(a => kkMarkHtml(a, a.kart || auto.get(a.id), auto.kompakt.has(a.id) && !a.kart, sel, 'Dra for å flytte markøren')).join('');
+  // Snittet: samme x som i plan, høyden kan justeres.
+  const snWrap = document.getElementById('snitt-wrap');
+  snWrap.classList.toggle('stort', !!ui.koord.stort);
+  const snPos = snittPos(acts, a => a.kart || auto.get(a.id));
+  snWrap.innerHTML = snittSvg() + acts.map(a => kkMarkHtml(a, snPos.get(a.id), true, sel, 'Dra opp/ned for å angi høyden i snittet')).join('');
   renderKkBar();
   document.getElementById('placed-list').innerHTML = `<div class="legend"><span><b>Markører:</b></span>
     <span><span class="kk-leg aktiv"></span> Godkjent AT i perioden (grønn ramme)</span><span><span class="kk-leg ikke-gyldig"></span> AT gjelder ikke i perioden</span>
-    <span><span class="kk-leg mangler"></span> ⚠ AT? = mangler AT</span><span><span class="kk-leg teller">3</span> Blå sirkel = antall aktiviteter i sonen</span><span class="muted">Trange soner viser bare AT-nummeret; hold over for detaljer.</span><span class="muted">Fargen er firmaet. Dra en markør for å flytte den; ↺ auto i listen legger den tilbake.</span></div>`
+    <span><span class="kk-leg mangler"></span> ⚠ AT? = mangler AT</span><span><span class="kk-leg teller">3</span> Blå sirkel = antall aktiviteter i sonen</span><span class="muted">Trange soner viser bare AT-nummeret; hold over for detaljer.</span><span class="muted">Fargen er firmaet. Dra en markør i plan for å flytte den; ↺ auto i listen legger den tilbake. I snittet står markøren alltid rett under plan-markøren og kan bare flyttes opp og ned.</span></div>`
     + (custom && !zonesApply() ? '<p class="sub warn">Det opplastede bildet har et annet utsnitt enn plantegningen, så markørene står etter det skjematiske kartet.</p>' : '');
+}
+function kkMarkHtml(a, p, smal, sel, hint) {
+  const s = kkStatus(a), c = firmColor(a.firma);
+  const nrs = a.at.map(t => t.nr);
+  const kort = a.navn.length > 20 ? a.navn.slice(0, 19) + '…' : a.navn;
+  const tittel = `${a.id} ${a.navn} · ${a.omrade} · ${a.firma}\n${s === 'mangler' ? 'Mangler AT' : a.at.map(t => `${t.nr} ${t.navn} – ${atAktivIPerioden(t) ? 'godkjent i perioden' : 'gjelder ikke i perioden'}`).join('\n')}${canEditAct(a) ? '\n' + hint : ''}`;
+  const nrTxt = s === 'mangler' ? (smal ? '⚠' : '⚠ AT?') : smal ? nrs[0] + (nrs.length > 1 ? '+' : '') : nrs.slice(0, 2).join(' · ') + (nrs.length > 2 ? ' +' + (nrs.length - 2) : '');
+  return `<div class="kk-mark ${s}${smal ? ' kompakt' : ''}${sel === a.id ? ' selected' : ''}${canEditAct(a) ? '' : ' locked'}" data-akt="${esc(a.id)}" style="left:${p.x}%;top:${p.y}%" title="${esc(tittel)}">
+    <span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(nrTxt)}</span>
+    ${smal ? '' : `<span class="kk-txt">${esc(kort)}</span>`}</div>`;
 }
 // Verktøylinje over kartet: tegn område rundt valgt aktivitet/AT.
 function renderKkBar() {
@@ -1588,7 +1656,11 @@ document.addEventListener('pointerdown', e => {
   const m = e.target.closest('.kk-mark'); if (!m) return;
   const a = actById(m.dataset.akt); if (!a) return;
   kkMarkerIListen(a.id);
-  kkDrag = {a, el: m, x0: e.clientX, y0: e.clientY, moved: false, can: canEditAct(a)};
+  const snitt = !!m.closest('#snitt-wrap');
+  const tvilling = [...document.querySelectorAll(`.kk-mark[data-akt="${CSS.escape(a.id)}"]`)].find(x => x !== m);
+  document.querySelectorAll('.kk-mark.selected').forEach(x => x.classList.remove('selected'));
+  m.classList.add('selected'); if (tvilling) tvilling.classList.add('selected');
+  kkDrag = {a, el: m, tvilling, snitt, x0: e.clientX, y0: e.clientY, moved: false, can: canEditAct(a)};
   try { m.setPointerCapture(e.pointerId); } catch (err) {}
   e.preventDefault();
 });
@@ -1596,13 +1668,23 @@ document.addEventListener('pointermove', e => {
   const d = kkDrag; if (!d || !d.can) return;
   if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 5) return;
   d.moved = true;
+  // I snittet styres x av planen; bare høyden kan endres. Flyttes markøren i plan, følger snitt-markøren sideveis.
+  if (d.snitt) { d.el.style.top = pct(document.getElementById('snitt-wrap'), e).y + '%'; return; }
   const p = pct(document.getElementById('map-wrap'), e);
   d.el.style.left = p.x + '%'; d.el.style.top = p.y + '%';
+  if (d.tvilling) d.tvilling.style.left = p.x + '%';
 });
 function kkEnd(e, cancel) {
   const d = kkDrag; if (!d) return; kkDrag = null;
   if (cancel) { renderKoord(); return; }
-  if (d.moved) {
+  if (d.moved && d.snitt) {
+    const y = pct(document.getElementById('snitt-wrap'), e).y;
+    d.a.snittY = y;
+    const sx = parseFloat(d.el.style.left) * MAP_W / 100, sy = y * SNITT_H / 100;
+    const z = SNITT.find(b => b.x1 !== undefined && sx >= b.x1 && sx <= b.x2 && sy >= b.y1 && sy <= b.y2);
+    logg('Flyttet i snittet', d.a.id, `Høyde i snittet endret${z ? ` (står i ${z.navn})` : ''}`);
+    save();
+  } else if (d.moved) {
     const p = pct(document.getElementById('map-wrap'), e);
     d.a.kart = {x: p.x, y: p.y};
     const sone = hitZone(p);
@@ -3771,7 +3853,7 @@ document.addEventListener('click', e => {
   }
   if (action === 'kk-omr-slett') { const a = actById(ui.koord.selAkt); if (a && canEditAct(a) && confirm('Slette området?')) { delete a.kartOmrade; logg('Område slettet', a.id, ''); save(); renderKoord(); } return; }
   if (action === 'kk-lukk') { ui.koord.selAkt = null; renderKoord(); return; }
-  if (action === 'kk-auto') { const a = actById(btn.dataset.akt); if (a && canEditAct(a)) { delete a.kart; save(); renderKoord(); } return; }
+  if (action === 'kk-auto') { const a = actById(btn.dataset.akt); if (a && canEditAct(a)) { delete a.kart; delete a.snittY; save(); renderKoord(); } return; }
   if (action === 'draw-cancel') { ui.koord.drawing = null; renderKoord(); return; }
   if (action === 'draw-done') {
     const d = ui.koord.drawing; const f = d && findAT(d.nr);

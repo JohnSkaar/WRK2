@@ -113,7 +113,12 @@ document.addEventListener('submit', async e => {
   kodeInput();
   msg('Logger inn …');
   try { await signInWithEmailAndPassword(auth, $('li-email').value.trim(), $('li-pass').value); }
-  catch (err) { msg(errText(err)); }
+  catch (err) {
+    // Med en invitasjonskode utfylt er det trolig en ny konto som skal opprettes.
+    if (getKode() && ['auth/invalid-credential', 'auth/user-not-found', 'auth/wrong-password', 'auth/invalid-login-credentials'].includes(err.code))
+      msg('Fant ingen konto med denne e-posten og passordet. Du har fylt inn en invitasjonskode – trykk «Opprett konto» for å lage kontoen.');
+    else msg(errText(err));
+  }
 });
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-login]');

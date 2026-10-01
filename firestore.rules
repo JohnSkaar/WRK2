@@ -24,7 +24,6 @@ service cloud.firestore {
         && get(codePath(d.kode)).data.rolle == d.rolle
         && get(codePath(d.kode)).data.firma == d.firma;
     }
-
     match /users/{uid} {
       allow get: if authed() && request.auth.uid == uid;
       allow read: if member();
@@ -39,25 +38,21 @@ service cloud.firestore {
       allow update: if sys() && validUser(request.resource.data);
       allow delete: if sys() && request.auth.uid != uid;
     }
-
     match /invites/{inviteEmail} {
       allow get: if signedIn() && inviteEmail == email();
       allow delete: if (signedIn() || member()) && inviteEmail == email();
       allow read, write: if sys();
     }
-
     // Invitasjonskoder: dokument-id-en er selve koden og fungerer som et hemmelig passord. Kan hentes med koden, men ikke listes.
     match /invitekoder/{kode} {
       allow get: if authed();
       allow delete: if sys() || (authed() && resource.data.email == email());
       allow list, create, update: if sys();
     }
-
     match /config/{docId} {
       allow read: if member();
       allow write: if sys();
     }
-
     // Arbeidstillatelser: firma-admin kan endre AT-er for eget firma, eller AT-er knyttet til eget firmas aktiviteter.
     function atOwner(d) { return d.firma == me().firma || me().firma in d.get('aktFirmaer', []); }
     match /at/{id} {
@@ -67,7 +62,6 @@ service cloud.firestore {
         && (request.resource.data.firma == resource.data.firma || me().firma in resource.data.get('aktFirmaer', [])));
       allow delete: if sys() || (member() && me().rolle == 'firmaadmin' && atOwner(resource.data));
     }
-
     // Avhengigheter mellom aktiviteter: firma-admin kan lage og endre dem når minst én av aktivitetene tilhører eget firma.
     function actFirma(id) { return get(/databases/$(database)/documents/aktiviteter/$(id)).data.firma; }
     function avhOwner(d) { return actFirma(d.fra) == me().firma || actFirma(d.til) == me().firma; }
@@ -77,14 +71,12 @@ service cloud.firestore {
       allow update: if sys() || (member() && me().rolle == 'firmaadmin' && avhOwner(resource.data) && avhOwner(request.resource.data));
       allow delete: if sys() || (member() && me().rolle == 'firmaadmin' && avhOwner(resource.data));
     }
-
     // Endringslogg: alle som kan endre, skriver nye innslag i eget navn. Innslag kan ikke endres eller slettes. Bare systemadministratorer kan lese.
     match /endringslogg/{id} {
       allow read: if sys();
       allow create: if member() && me().rolle in ['systemadmin', 'firmaadmin'] && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
-
     // Dokumenter til metodebeskrivelsene (PDF/Word), lagret i biter under «deler».
     // Systemadministrator, eller firma-admin for firmaet som eier metodebeskrivelsen, kan laste opp og slette.
     function dokEier(d) { return sys() || (member() && me().rolle == 'firmaadmin' && d.get('firma', '') == me().firma); }
@@ -98,7 +90,6 @@ service cloud.firestore {
         allow write: if dokEier(get(/databases/$(database)/documents/mbdok/$(id)).data);
       }
     }
-
     match /aktiviteter/{id} {
       allow read: if member();
       // Firma-admin kan legge inn nye aktiviteter for eget firma (Statustavlen), og slette dem igjen.

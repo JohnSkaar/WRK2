@@ -140,8 +140,8 @@ td.empty{text-align:center;color:var(--muted);padding:30px}
 .kk-mark.locked{cursor:pointer}
 .kk-nr{font-size:12.5px;font-weight:700;font-family:ui-monospace,Menlo,monospace;padding:2px 6px;border-radius:9px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35);white-space:nowrap}
 .kk-nr{position:relative}
-.kk-dod{position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:3px;display:flex;gap:1px;pointer-events:none}
-.kk-dod .dod-icon{display:block;width:auto !important;height:var(--dh) !important;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
+.kk-dod{position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:3px;display:flex;gap:1px}
+.kk-dod .dod-icon{cursor:help;display:block;width:auto !important;height:var(--dh) !important;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 #kk-print .kp-dodleg{display:none}
 .kk-dod.kp-dod-etter{position:static;transform:none;margin-left:0}
 .kk-txt{font-size:11px;line-height:1.15;background:rgba(255,255,255,.9);padding:0 3px;border-radius:3px;white-space:nowrap;max-width:118px;overflow:hidden;text-overflow:ellipsis;color:#24292f}
@@ -843,7 +843,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-01.11';
+const APP_VERSION = '2026-10-01.12';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1709,7 +1709,7 @@ function kkMarkHtml(a, p, smal, sel, hint) {
   const tittel = `${a.id} ${a.navn} · ${a.omrade} · ${a.firma}\n${s === 'mangler' ? 'Mangler AT' : a.at.map(t => `${t.nr} ${t.navn} – ${atAktivIPerioden(t) ? 'godkjent i perioden' : 'gjelder ikke i perioden'}`).join('\n')}${canEditAct(a) ? '\n' + hint : ''}`;
   const nrTxt = s === 'mangler' ? (smal ? '⚠' : '⚠ AT?') : smal ? nrs[0] + (nrs.length > 1 ? '+' : '') : nrs.slice(0, 2).join(' · ') + (nrs.length > 2 ? ' +' + (nrs.length - 2) : '');
   return `<div class="kk-mark ${s}${smal ? ' kompakt' : ''}${sel === a.id ? ' selected' : ''}${canEditAct(a) ? '' : ' locked'}" data-akt="${esc(a.id)}" style="left:${p.x}%;top:${p.y}%" title="${esc(tittel)}">
-    <span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(nrTxt)}${kkDod(a, smal ? 18 : 22)}</span>
+    <span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(nrTxt)}${kkDod(a, smal ? 23 : 28)}</span>
     ${smal ? '' : `<span class="kk-txt">${esc(kort)}</span>`}</div>`;
 }
 // Utskrift: plan og snitt på ett liggende A4-ark, AT-oversikten på neste ark.
@@ -1726,7 +1726,7 @@ function kkUtskrift() {
   // På papiret viser markøren AT-nummeret og aktivitetsnummeret; aktiviteten står i kolonnen til høyre.
   const merke = (a, p, rad) => {
     const s = kkStatus(a), c = firmColor(a.firma), nrs = a.at.map(t => t.nr);
-    return `<div class="kk-mark kp-mark ${s}${rad ? ' kp-rad1' : ''}" style="left:${p.x}%;top:${p.y}%"><span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(s === 'mangler' ? '⚠' : nrs[0] + (nrs.length > 1 ? '+' : ''))}${rad ? '' : kkDod(a, 16)}</span><span class="kp-id">${esc(a.id)}</span>${rad ? kkDod(a, 16).replace('class="kk-dod"', 'class="kk-dod kp-dod-etter"') : ''}</div>`;
+    return `<div class="kk-mark kp-mark ${s}${rad ? ' kp-rad1' : ''}" style="left:${p.x}%;top:${p.y}%"><span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(s === 'mangler' ? '⚠' : nrs[0] + (nrs.length > 1 ? '+' : ''))}${rad ? '' : kkDod(a, 20)}</span><span class="kp-id">${esc(a.id)}</span>${rad ? kkDod(a, 20).replace('class="kk-dod"', 'class="kk-dod kp-dod-etter"') : ''}</div>`;
   };
   const planPos = a => a.kart || auto.get(a.id), snPos = snittPos(acts, planPos);
   const plan = (custom ? `<img src="${esc(custom)}" alt="Sonebilde">` : zoneSvg(counts))

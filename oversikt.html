@@ -49,6 +49,18 @@ table.plan{border-collapse:separate;border-spacing:0;width:max-content;min-width
 table.plan th{background:#f6f8fa;font-weight:600;font-size:12px;color:#444;text-align:left;padding:8px 6px;border-bottom:2px solid var(--line);position:sticky;top:0;z-index:5;white-space:nowrap;vertical-align:bottom}
 table.plan th.c,table.plan td.c{text-align:center}
 table.plan th.fu{background:#eef6ee}
+.fu-i{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1px solid #1a7f37;background:#fff;color:#1a7f37;font:italic 700 10px Georgia,serif;cursor:pointer;padding:0;vertical-align:middle;margin-left:2px}
+.fu-i.on{background:#1a7f37;color:#fff}
+.fu-km{font-size:11px;line-height:1;margin-top:2px;cursor:help}
+td.fu-kom-cell{background:#f6fbf6;vertical-align:top;padding:4px}
+.fu-kom{width:118px;font-size:11.5px;line-height:1.3;white-space:pre-wrap;overflow-wrap:anywhere}
+textarea.fu-kom{box-sizing:border-box;resize:vertical;font-family:inherit;padding:3px}
+#fu-info{position:fixed;z-index:200;width:380px;max-width:calc(100vw - 16px);background:#fff;border:1px solid #1a7f37;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px 12px;font-size:13px;cursor:default}
+#fu-info.pinned{cursor:pointer;border-width:2px}
+#fu-info h4{margin:0 0 6px;font-size:14px;color:#1a7f37}
+#fu-info ul{list-style:none;margin:0;padding:0}
+#fu-info li{display:flex;gap:6px;padding:2px 0;line-height:1.35}
+#fu-info .fu-hint{font-size:11px;color:#6a737d;margin-top:6px}
 table.plan td{padding:6px;border-bottom:1px solid #eef0f2;vertical-align:middle;background:#fff;white-space:nowrap}
 .col-ctrl{position:sticky;left:0;z-index:3;width:78px;min-width:78px}
 .col-akt{position:sticky;left:78px;z-index:3;min-width:230px;max-width:290px;white-space:normal !important;box-shadow:2px 0 0 var(--line)}
@@ -103,6 +115,7 @@ td.empty{text-align:center;color:var(--muted);padding:30px}
 
 /* AT-koordinering */
 .koord{display:grid;grid-template-columns:340px 1fr;gap:14px;align-items:start}
+@media(min-width:901px){.koord .at-list{position:sticky;top:52px;max-height:calc(100vh - 64px)}}
 @media(max-width:900px){.koord{grid-template-columns:1fr}}
 .at-list{max-height:78vh;overflow:auto;padding-right:4px}
 .at-card{border:1px solid var(--line);border-left:6px solid #999;border-radius:6px;padding:8px;margin-bottom:8px;background:#fff;cursor:grab;user-select:none;-webkit-user-select:none;display:flex;gap:8px}
@@ -549,7 +562,7 @@ td.firma-cell{white-space:normal;min-width:130px}
   <section class="page" id="page-statustavle">
     <div class="panel">
       <h2>Statustavle – 8 uker <span class="readonly-tag" id="sv-ro-tag">Kun visning</span></h2>
-      <p class="intro">Aktivitetene de neste 8 ukene, per sone. Fargen på stolpen er firmaet, og trafikklyset er totalstatusen for aktiviteten. Den er satt sammen av metodebeskrivelsen og alle forutsetningene, også på AT-ene. Det dårligste lyset gjelder. Hold over en aktivitet for å se hva som mangler og hva som er kommentert. Slå på «Hyperlink mot aktivitet» for å åpne aktiviteten i «Klargjøring av aktiviteter» med et trykk. Med «✏️ Rediger tidslinje» kan du flytte startdatoer, endre varighet og legge inn nye aktiviteter.</p>
+      <p class="intro">Aktivitetene de neste 8 ukene, per sone. Fargen på stolpen er firmaet, og trafikklyset er totalstatusen for aktiviteten. Den er satt sammen av metodebeskrivelsen og de sju forutsetningene på aktiviteten. Det dårligste lyset gjelder. Hold over en aktivitet for å se hva som mangler og hva som er kommentert. Slå på «Hyperlink mot aktivitet» for å åpne aktiviteten i «Klargjøring av aktiviteter» med et trykk. Med «✏️ Rediger tidslinje» kan du flytte startdatoer, endre varighet og legge inn nye aktiviteter.</p>
       <div class="toolbar">
         <div class="firm-filter" data-page="statustavle"></div>
         <button class="btn" data-action="ff-mine" data-page="statustavle">Bare mitt firma</button>
@@ -713,6 +726,16 @@ const LYS = {
   rod: {label: 'Rød – ikke avklart', kort: 'Rød', emoji: '🔴'}
 };
 const METODE_LYS = ['ikke', 'gronn', 'gul', 'rod'];
+// Sjekkpunkter per forutsetning (infotekst når en holder over eller trykker ⓘ i kolonneoverskriften).
+const FU_SJEKK = {
+  mannskap: ["Alle er meldt inn i HMSREG", "Alle har gjennomført AtensiSkills", "Alle har gjennomført Farlige mønstre", "Alle har gjennomført PSI", "Nødvendig fagkompetanse og sertifikater er dokumentert", "Bemanning og arbeidsledelse er tilstrekkelig", "Alle kjenner relevante risikoforhold, beredskapsrutiner og varslingslinjer", "Arbeidstillatelse er godkjent og tilgjengelig før oppstart"],
+  materialer: ["Riktig materielltype og spesifikasjon er avklart", "Nødvendig mengde er bestilt og tilgjengelig", "Leveringsdato og leveringssted er bekreftet", "Mottakskontroll er utført: mengde, tilstand og dokumentasjon", "Materiellet er merket, sporbarhet er ivaretatt der det kreves, og avvik er håndtert", "Materiellet er lagret forsvarlig og er tilgjengelig for arbeidslaget", "Sikkerhetsdatablader eller annen påkrevd produktdokumentasjon er tilgjengelig"],
+  foregaende: ["Nødvendige foregående aktiviteter er ferdigstilt og godkjent", "Grensesnitt mot andre fag og aktiviteter er avklart", "Påkrevd inspeksjon, testing eller frigivelse er utført", "Midlertidige installasjoner eller sikring fra tidligere arbeid er avklart", "Ingen samtidige aktiviteter hindrer eller gjør arbeidet uforsvarlig", "Arbeidsområdet er formelt overlevert dersom det kreves"],
+  plass: ["Arbeidsområdet er tilgjengelig og frigitt", "Adkomst, rømningsveier og transportvei er avklart", "Arbeidsområdet er ryddet og har tilstrekkelig plass", "Nødvendig avsperring, skilting og sikring er etablert", "Belysning, ventilasjon og underlag er egnet", "Nødstopp, brannslokking og førstehjelpsutstyr er tilgjengelig der det er relevant"],
+  informasjon: ["Gjeldende tegninger og arbeidsunderlag er tilgjengelige", "Dokumentene har riktig revisjon og er godkjent for bruk", "Arbeidsmetode og SJA er gjennomgått med laget", "Risikoer, barrierer og stoppkriterier er forstått", "Arbeidstillatelse og eventuelle vedlegg er gjennomgått", "Kontaktpersoner, samordning og varslingsrutiner er kjent", "Endringer eller avvik er meldt og avklart før arbeidet starter"],
+  ytre: ["Værforhold er vurdert, inkludert vind, nedbør, temperatur og sikt", "Påvirkning fra samtidige aktiviteter og andre entreprenører er avklart", "Trafikk, løft, støy, støv eller vibrasjoner er vurdert", "Ytre miljøkrav og eventuelle utslippsbegrensninger er ivaretatt", "Varsler eller operative begrensninger fra byggherre eller anlegg er sjekket", "Det finnes en plan dersom forholdene endrer seg"],
+  utstyr: ["Riktig utstyr og verktøy er tilgjengelig i nødvendig antall", "Utstyret er kontrollert og i forsvarlig stand", "Påkrevde sertifikater og periodiske kontroller er gyldige", "Måleutstyr har gyldig kalibrering der det kreves", "Verneutstyr passer til arbeidsoppgaven og er tilgjengelig", "Energiforsyning, slanger, kabler og tilkoblinger er kontrollert", "Feil eller mangler er meldt, og utstyr som ikke kan brukes er tatt ut av drift"]
+};
 function ikkeVurdert() { return Object.fromEntries(FORUTSETNINGER.map(([k]) => [k, 'ikke'])); }
 const STATUSER = ['Til utførelse', 'Pågår', 'Utført'];
 const STATUS_CLS = {'Til utførelse': 'st-plan', 'Pågår': 'st-go', 'Utført': 'st-done'};
@@ -788,7 +811,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-01.7';
+const APP_VERSION = '2026-10-01.8';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1170,7 +1193,7 @@ function commonCells(o, ed, firmaEd, kjede = '') {
     varighet: `<td class="c">${ed ? `<input type="number" min="1" class="w-num" data-field="varighet" value="${o.varighet}">` : o.varighet}</td>`,
     // Firmakolonnen viser bare hovedfirmaet (entreprenøren). UE-er vises under «Utførelse av firma» og i Statustavlen.
     firma: `<td class="firma-cell">${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}${ed && DATA.includes(o) ? `<div class="fu-goto"><button class="link-btn" data-action="fu-goto" data-id="${esc(o.id)}">UE-er →</button></div>` : ''}</td>`,
-    lys: FORUTSETNINGER.map(([k]) => `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}</td>`).join(''),
+    lys: FORUTSETNINGER.map(([k]) => { const km = (o.fuKommentar || {})[k]; return `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}${km ? `<div class="fu-km" title="${esc(km)}">💬</div>` : ''}</td>`; }).join(''),
     ansvar: ['ansvarUtforelse', 'ansvarGodkjenning'].map(f => `<td class="c">${ed
       ? `<select data-field="${f}" title="${f === 'ansvarUtforelse' ? 'Ansvarlig for utførelse' : 'Ansvarlig for godkjenning'}"><option value="" ${o[f] ? '' : 'selected'}>–</option>${[...new Set([...PERSONER, o[f]].filter(Boolean))].map(x => `<option value="${esc(x)}" ${x === o[f] ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`
       : o[f] ? `<span class="person" title="${f === 'ansvarUtforelse' ? 'Ansvarlig for utførelse' : 'Ansvarlig for godkjenning'}">${esc(o[f])}</span>` : '<span class="muted">–</span>'}</td>`).join(''),
@@ -1184,7 +1207,7 @@ function headerRow() {
     <th class="col-ctrl"></th>
     <th class="col-akt">Aktivitet</th><th>Område</th><th class="c">Startuke</th><th>Startdato</th><th class="c">Varighet<br><span class="muted">(dager)</span></th>
     <th>Firma</th><th class="c">Metode-<br>beskrivelse</th><th>AT</th>
-    ${FORUTSETNINGER.map(([, l]) => `<th class="c fu">${l.replace(' ', '<br>')}</th>`).join('')}
+    ${FORUTSETNINGER.map(([k, l]) => `<th class="c fu" data-fu="${k}">${l.replace(' ', '<br>')} <button type="button" class="fu-i" data-action="fuinfo" data-fu="${k}" title="Vis sjekkpunktene">i</button></th>`).join('')}
     <th>Risikonivå</th><th>Dødsrisiko</th><th>Status</th><th class="c">Ansvarlig<br>utførelse</th><th class="c">Ansvarlig<br>godkjenning</th><th>Kommentar</th>
   </tr>`;
 }
@@ -1233,12 +1256,19 @@ function detailRows(a, page) {
       <div class="sub">MB nr: <input type="text" class="w-nr" data-field="metode.nr" data-scope="act" value="${esc(a.metode.nr)}"></div>`
       : `<div class="mb-text">${a.metode.historikk ? esc(a.metode.historikk) : '<span class="muted">Ingen historikk registrert</span>'}</div>`}
   </td>`;
+  // Forutsetningene vurderes bare på aktiviteten. Under hver forutsetning er det et kommentarfelt for aktiviteten.
+  const fuCells = FORUTSETNINGER.map(([k, l]) => {
+    const v = (a.fuKommentar || {})[k] || '';
+    return `<td class="fu-kom-cell" rowspan="${span}">${actEd
+      ? `<textarea class="fu-kom" data-field="fuKommentar.${k}" data-scope="act" rows="4" maxlength="500" placeholder="Kommentar – ${esc(l.toLowerCase())}">${esc(v)}</textarea>`
+      : v ? `<div class="fu-kom">${esc(v)}</div>` : '<span class="muted">–</span>'}</td>`;
+  }).join('');
   let h = '';
   if (!n) {
     h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="">
       <td class="col-ctrl"><span class="conn">↳</span></td>
       <td class="col-akt"><span class="muted">Ingen AT registrert på aktiviteten</span></td>
-      <td colspan="5"></td>${metodeCell}<td class="at-nr-cell"><span class="muted">–</span></td><td colspan="13"></td>
+      <td colspan="5"></td>${metodeCell}<td class="at-nr-cell"><span class="muted">–</span></td>${fuCells}<td colspan="6"></td>
     </tr>`;
   }
   a.at.forEach((t, i) => {
@@ -1250,7 +1280,7 @@ function detailRows(a, page) {
       ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
       ${i === 0 ? metodeCell : ''}
       <td class="at-nr-cell">${ed ? `<input type="text" class="w-nr" data-field="nr" value="${esc(t.nr)}">` : `<span class="at-chip linked">${esc(t.nr)}</span>`}</td>
-      ${c.lys}
+      ${i === 0 ? fuCells : ''}
       <td>${cRisk(t.risikoniva, ed)}</td>
       <td>${cDod(t.dodsrisiko, ed)}</td>
       <td>${cStatus(t.status, ed)}</td>
@@ -1262,7 +1292,7 @@ function detailRows(a, page) {
     h += `<tr class="at-row editing" data-id="${esc(a.id)}" data-at="">
       <td class="col-ctrl"></td>
       <td class="col-akt"><button class="btn" data-action="add-at">+ Legg til AT</button></td>
-      <td colspan="5"></td><td colspan="14"></td>
+      <td colspan="5"></td><td></td><td colspan="6"></td>
     </tr>`;
   }
   return h;
@@ -1586,7 +1616,8 @@ function renderKoord() {
   const item = (a, extra = '') => `<div class="kk-item ${kkStatus(a)}${sel === a.id ? ' selected' : ''}" data-akt="${esc(a.id)}" style="border-left-color:${firmColor(a.firma)}">
       <b>${esc(a.id)}</b> ${esc(a.navn)}<div class="sub">${esc(a.omrade)} · ${fmtShort(a.startdato)}–${fmtShort(endDate(a))} · ${firmBadge(a.firma)}${a.kart || a.snittY !== undefined ? ` · <button class="link-btn" data-action="kk-auto" data-akt="${esc(a.id)}" title="Flyttet for hånd – legg tilbake automatisk">↺ auto</button>` : ''}${extra}</div></div>`;
   const mangler = acts.filter(a => !a.at.length);
-  document.getElementById('at-list').innerHTML = `<h3>AT-er og aktiviteter i perioden</h3>`
+  const listeEl = document.getElementById('at-list'), listeTop = listeEl.scrollTop;
+  listeEl.innerHTML = `<h3>AT-er og aktiviteter i perioden</h3>`
     + ats.map(t => {
       const aktiv = atAktivIPerioden(t), la = t.aktiviteter.map(actById).filter(a => a && iPer.has(a.id));
       return `<div class="kk-at${aktiv ? ' aktiv' : ''}">
@@ -1598,6 +1629,7 @@ function renderKoord() {
         <div class="sub">Knyttes til en AT under Metodebeskrivelser.</div>${mangler.map(a => item(a)).join('')}</div>` : '')
     + (utenAkt.length ? `<p class="sub" style="margin-top:8px">AT-er uten aktivitet i perioden: ${utenAkt.map(t => esc(t.nr)).join(', ')}</p>` : '')
     + (acts.length ? '' : '<p class="muted">Ingen aktiviteter i valgt periode.</p>');
+  listeEl.scrollTop = listeTop;
 
   // Kartet
   const mapWrap = document.getElementById('map-wrap');
@@ -1711,11 +1743,19 @@ window.addEventListener('resize', () => { if (currentTab === 'koordinering') { c
 
 // Velg / flytt markører
 let kkDrag = null;
-function kkMarkerIListen(id) {
+function kkMarkerIListen(id, y) {
   document.querySelectorAll('.kk-item.selected').forEach(x => x.classList.toggle('selected', x.dataset.akt === id));
-  const items = [...document.querySelectorAll(`.kk-item[data-akt="${CSS.escape(id)}"]`)];
-  items.forEach(x => x.classList.add('selected'));
-  if (items[0]) items[0].scrollIntoView({block: 'nearest', behavior: 'smooth'});
+  document.querySelectorAll(`.kk-item[data-akt="${CSS.escape(id)}"]`).forEach(x => x.classList.add('selected'));
+  kkListeTil(id, y);
+}
+// Ruller bare venstre kolonne (ikke vinduet), slik at aktiviteten havner på høyde med musepekeren.
+function kkListeTil(id, y, glatt = true) {
+  const list = document.getElementById('at-list');
+  const it = list && list.querySelector(`.kk-item[data-akt="${CSS.escape(id)}"]`); if (!it) return;
+  const lr = list.getBoundingClientRect(), ir = it.getBoundingClientRect();
+  const midt = y === undefined ? lr.top + lr.height / 2 : y;
+  const maal = Math.max(lr.top, Math.min(lr.bottom - ir.height, midt - ir.height / 2));
+  list.scrollTo({top: list.scrollTop + ir.top - maal, behavior: glatt ? 'smooth' : 'auto'});
 }
 document.addEventListener('pointerdown', e => {
   if (currentTab !== 'koordinering' || e.button > 0) return;
@@ -1726,7 +1766,7 @@ document.addEventListener('pointerdown', e => {
   }
   const m = e.target.closest('.kk-mark'); if (!m) return;
   const a = actById(m.dataset.akt); if (!a) return;
-  kkMarkerIListen(a.id);
+  kkMarkerIListen(a.id, e.clientY);
   const snitt = !!m.closest('#snitt-wrap');
   const tvilling = [...document.querySelectorAll(`.kk-mark[data-akt="${CSS.escape(a.id)}"]`)].find(x => x !== m);
   document.querySelectorAll('.kk-mark.selected').forEach(x => x.classList.remove('selected'));
@@ -1763,8 +1803,7 @@ function kkEnd(e, cancel) {
     save();
   }
   ui.koord.selAkt = d.a.id; renderKoord();
-  const it = document.querySelector(`.kk-item[data-akt="${CSS.escape(d.a.id)}"]`);
-  if (it) it.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+  kkListeTil(d.a.id, e.clientY);
 }
 document.addEventListener('pointerup', e => { if (kkDrag) kkEnd(e, false); });
 document.addEventListener('pointercancel', e => { if (kkDrag) kkEnd(e, true); });
@@ -2059,12 +2098,11 @@ const LYS_RANK = {gronn: 0, ikke: 1, gul: 2, rod: 3};
 const MANEDER = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 let svItems = [], svTapped = null;
 
-// Totalstatus: det dårligste lyset av metodebeskrivelsen og alle forutsetningene på aktiviteten og AT-ene.
+// Totalstatus: det dårligste lyset av metodebeskrivelsen og de sju forutsetningene på aktiviteten.
 // Grå betyr at noe ikke er vurdert, men at ingenting er rødt eller gult.
 function totalStatus(a) {
   const punkter = [{hva: 'Metodebeskrivelse', lys: LYS[a.metode.status] ? a.metode.status : 'ikke'}];
   FORUTSETNINGER.forEach(([k, l]) => punkter.push({hva: l, lys: a.forutsetninger[k] || 'ikke'}));
-  a.at.forEach(t => FORUTSETNINGER.forEach(([k, l]) => punkter.push({hva: l, lys: t.forutsetninger[k] || 'ikke', at: t.nr})));
   const lys = punkter.reduce((m, p) => LYS_RANK[p.lys] > LYS_RANK[m] ? p.lys : m, 'gronn');
   return {lys, punkter};
 }
@@ -2183,6 +2221,7 @@ function svTipHtml(it) {
   const kom = [];
   if (a.kommentar) kom.push(['Aktiviteten', a.kommentar]);
   if (a.metode.historikk) kom.push(['Metodebeskrivelse', a.metode.historikk]);
+  FORUTSETNINGER.forEach(([k, l]) => { const v = (a.fuKommentar || {})[k]; if (v) kom.push([l, v]); });
   a.at.forEach(t => { if (t.kommentar) kom.push([t.nr + ' ' + t.navn, t.kommentar]); });
   const chain = ueChainHtml(a, false) + chainHtml(actMbNrs(a));
   return `<h4>${esc(a.id)} ${esc(a.navn)}</h4>
@@ -3732,12 +3771,56 @@ function renderCurrent() {
 function showTab(tab) {
   if (!document.getElementById('page-' + tab) || (tab === 'skrastrek' && !SETTINGS.skrastrek) || (tab === 'koordinering' && SETTINGS.atkoord === false)) tab = 'statustavle';
   currentTab = tab;
+  if (typeof fuInfoSkjul === "function") fuInfoSkjul(true);
   ui.koord.drawing = null; ui.koord.tegn = null;
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + tab));
   document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);
   renderCurrent();
 }
+
+// ---------- infoboble med sjekkpunktene for en forutsetning ----------
+// Vises når en holder over kolonneoverskriften. ⓘ låser boblen til en trykker på boblen eller ⓘ igjen.
+let fuInfoLaast = null;
+function fuInfoVis(k, anker, laast) {
+  let el = document.getElementById('fu-info');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'fu-info'; document.body.appendChild(el);
+    el.addEventListener('click', () => fuInfoSkjul(true));
+  }
+  const l = (FORUTSETNINGER.find(([x]) => x === k) || [])[1] || k;
+  el.innerHTML = `<h4>${esc(l)}</h4><ul>${(FU_SJEKK[k] || []).map(t => `<li><span>☐</span><span>${esc(t)}</span></li>`).join('')}</ul>
+    <div class="fu-hint">${laast ? 'Trykk på boksen eller ⓘ for å lukke.' : 'Trykk ⓘ for å la boksen bli stående.'}</div>`;
+  el.classList.toggle('pinned', !!laast);
+  el.hidden = false;
+  const r = anker.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+  const x = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+  const y = r.bottom + 6 + h > window.innerHeight - 8 ? Math.max(8, r.top - h - 6) : r.bottom + 6;
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+  document.querySelectorAll('.fu-i.on').forEach(b => b.classList.remove('on'));
+  if (laast) document.querySelectorAll(`.fu-i[data-fu="${k}"]`).forEach(b => b.classList.add('on'));
+}
+function fuInfoSkjul(ogsaaLaast) {
+  if (fuInfoLaast && !ogsaaLaast) return;
+  fuInfoLaast = null;
+  const el = document.getElementById('fu-info'); if (el) el.hidden = true;
+  document.querySelectorAll('.fu-i.on').forEach(b => b.classList.remove('on'));
+}
+function fuInfoPinn(k, btn) {
+  if (fuInfoLaast === k) { fuInfoSkjul(true); return; }
+  fuInfoLaast = k;
+  fuInfoVis(k, btn.closest('th') || btn, true);
+}
+document.addEventListener('mouseover', e => {
+  if (fuInfoLaast) return;
+  const th = e.target.closest && e.target.closest('th.fu[data-fu]');
+  if (th) fuInfoVis(th.dataset.fu, th, false);
+});
+document.addEventListener('mouseout', e => {
+  if (fuInfoLaast) return;
+  const th = e.target.closest && e.target.closest('th.fu[data-fu]');
+  if (th && !th.contains(e.relatedTarget)) fuInfoSkjul(false);
+});
 
 // ---------- hendelser ----------
 function rerenderPage(page) { if (page === 'firma') { renderFirma(); return; } if (page === 'skrastrek') renderSkrastrek(); else if (page === 'statustavle') renderStatustavle(); else if (page === 'metoder') renderMetoder(); else renderTable(page); }
@@ -3754,7 +3837,7 @@ function canEditTarget(tg) { return tg.isAct ? canEditAct(tg.a) : canEditAT(tg.a
 function setPath(obj, path, v) {
   const parts = path.split('.');
   let o = obj;
-  for (let i = 0; i < parts.length - 1; i++) o = o[parts[i]];
+  for (let i = 0; i < parts.length - 1; i++) o = o[parts[i]] || (o[parts[i]] = {});
   o[parts[parts.length - 1]] = v;
 }
 function nextAtNr() {
@@ -3798,6 +3881,7 @@ document.addEventListener('click', e => {
   if (action === 'sv-undo') { svUndo(); return; }
   if (['sv-del', 'sv-open', 'sv-cancel'].includes(action)) { svDialogAction(action); return; }
   if (action.startsWith('svp-')) { svPopAction(action); return; }
+  if (action === 'fuinfo') { fuInfoPinn(btn.dataset.fu, btn); return; }
   if (action.startsWith('fu-')) { fuAction(action, btn); return; }
   if (action === 'logg-csv') { loggCsv(); return; }
   if (action === 'ff-mine') { ui[btn.dataset.page].firms = new Set([me().firma]); rerenderPage(btn.dataset.page); return; }

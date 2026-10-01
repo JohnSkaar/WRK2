@@ -139,6 +139,32 @@ td.empty{text-align:center;color:var(--muted);padding:30px}
 .kk-at.mangler{border:2px dashed #cf222e;background:#fff8f8}
 .kk-at-head{font-size:13.5px;margin-bottom:3px}
 .kk-item{border:1px solid var(--line);border-left:5px solid #999;border-radius:5px;padding:5px 7px;margin-top:5px;background:#fff;font-size:12.5px;cursor:pointer}
+#kk-print{display:none}
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  body.kk-printing>*:not(#kk-print){display:none !important}
+  body.kk-printing{background:#fff}
+  body.kk-printing #kk-print{display:block}
+  #kk-print *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+#kk-print{font-family:Arial,Helvetica,sans-serif;color:#1b1f24}
+#kk-print .kp-side{break-after:page;page-break-after:always}
+#kk-print .kp-side:last-child{break-after:auto;page-break-after:auto}
+#kk-print .kp-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #1b1f24;padding-bottom:2mm;margin-bottom:2mm}
+#kk-print .kp-head h1{font-size:15pt;margin:0}
+#kk-print .kp-head .kp-meta{font-size:9pt;color:#57606a;text-align:right}
+#kk-print .kp-st{font-size:9pt;margin:0 0 1mm;display:flex;gap:0 4px;flex-wrap:wrap}
+#kk-print .kp-leg2{margin-left:auto;font-size:7.5pt;color:#57606a}
+#kk-print .kp-st b{font-size:10pt}
+#kk-print .kp-lbl{font-size:8.5pt;font-weight:700;margin:1.5mm auto .5mm;width:225mm}
+#kk-print .map-wrap,#kk-print .snitt-wrap{width:225mm;margin:0 auto;border-radius:0}
+#kk-print table{width:99.5%;table-layout:fixed;border-collapse:collapse;font-size:8.5pt}
+#kk-print th,#kk-print td{border:1px solid #c9d1d9;padding:1.2mm 1.6mm;text-align:left;vertical-align:top}
+#kk-print th{background:#f0f2f4}
+#kk-print tr{break-inside:avoid}
+#kk-print .kp-ok{color:#1a7f37;font-weight:700}
+#kk-print .kp-nei{color:#cf222e;font-weight:700}
+#kk-print .kp-farge{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle}
 .kk-item.selected{background:#d8dce1 !important;outline:2px solid #8c959f}
 .snitt-wrap{position:relative;width:100%;margin-top:10px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
 .snitt-wrap.stort{width:1800px;max-width:none}
@@ -585,6 +611,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <label class="btn">Last opp sonebilde <input type="file" accept="image/*" id="map-upload" hidden></label>
         <button class="btn" data-action="map-reset" id="map-reset-btn">Bruk skjematisk sonekart</button>
         <label class="btn"><input type="checkbox" id="kk-stort"> Stort kart</label>
+        <button class="btn" data-action="kk-print" title="Plan og snitt på ett liggende A4-ark, med AT-oversikten på neste side">🖨 Skriv ut</button>
       </div>
       <div class="stats" id="stats-koord"></div>
     </div>
@@ -761,7 +788,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-01.6';
+const APP_VERSION = '2026-10-01.7';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1182,7 +1209,7 @@ function mainRow(a, page) {
       <button class="icon-btn expand" data-action="expand" title="${exp ? 'Skjul' : 'Vis'} AT-rader">${exp ? '−' : '+'}</button>
       ${editBtn}
     </td>
-    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : mondayOf(a.startdato) < mondayOf(TODAY) ? ` <span class="badge carry-tag" title="Startet ${fmtNo(a.startdato)} og pågår fortsatt">Videreført fra uke ${isoWeek(a.startdato)}</span>` : ''}</div></td>
+    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : ''}</div></td>
     ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
     <td class="c">${cLys('metode.status', a.metode.status, ed, METODE_LYS)}${actMbNrs(a).length ? `<div class="sub">MB ${esc(actMbNrs(a).join(', '))}</div>` : ''}</td>
     <td>${a.at.length ? a.at.map(t => `<span class="at-chip" data-action="goto-at" data-nr="${esc(t.nr)}" title="Gå til ${esc(t.nr)}">${esc(t.nr)}</span>`).join('<br>') : '<span class="muted">Ingen</span>'}</td>
@@ -1278,9 +1305,8 @@ function renderTable(page) {
   for (const k of order) {
     const acts = groups.get(k);
     const collapsed = st.collapsedWeeks.has(k);
-    const carried = k === mon ? acts.filter(a => mondayOf(a.startdato) < mon).length : 0;
     const label = k === 'arkiv' ? '📦 Arkiv · startet før denne uken og ikke aktive nå' : weekLabel(k);
-    h += `<tr class="week-row${k === 'arkiv' ? ' arkiv-row' : ''}" data-week="${k}"><td colspan="${NCOLS}"><span class="wk-label">${collapsed ? '＋' : '－'} ${label} <span class="muted">· ${acts.length} aktivitet${acts.length === 1 ? '' : 'er'}${carried ? `, hvorav ${carried} videreført fra tidligere uker` : ''}</span></span></td></tr>`;
+    h += `<tr class="week-row${k === 'arkiv' ? ' arkiv-row' : ''}" data-week="${k}"><td colspan="${NCOLS}"><span class="wk-label">${collapsed ? '＋' : '－'} ${label} <span class="muted">· ${acts.length} aktivitet${acts.length === 1 ? '' : 'er'}</span></span></td></tr>`;
     if (collapsed) continue;
     acts.forEach(a => { h += mainRow(a, page); if (st.expanded.has(a.id)) h += detailRows(a, page); });
   }
@@ -1615,6 +1641,51 @@ function kkMarkHtml(a, p, smal, sel, hint) {
   return `<div class="kk-mark ${s}${smal ? ' kompakt' : ''}${sel === a.id ? ' selected' : ''}${canEditAct(a) ? '' : ' locked'}" data-akt="${esc(a.id)}" style="left:${p.x}%;top:${p.y}%" title="${esc(tittel)}">
     <span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(nrTxt)}</span>
     ${smal ? '' : `<span class="kk-txt">${esc(kort)}</span>`}</div>`;
+}
+// Utskrift: plan og snitt på ett liggende A4-ark, AT-oversikten på neste ark.
+function kkUtskrift() {
+  const acts = kkAktive(), W = 850; // 225 mm ved 96 dpi
+  const auto = kkLayout(acts, W / MAP_W), counts = {};
+  acts.forEach(a => { counts[a.omrade] = (counts[a.omrade] || 0) + 1; });
+  const custom = loadMap();
+  const polys = acts.filter(a => Array.isArray(a.kartOmrade) && a.kartOmrade.length > 2).map(a => {
+    const c = firmColor(a.firma);
+    return `<polygon points="${a.kartOmrade.map(q => q.x + ',' + q.y).join(' ')}" fill="${c}" fill-opacity=".2" stroke="${kkStatus(a) === 'aktiv' ? '#1a7f37' : c}" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+  }).join('');
+  const planPos = a => a.kart || auto.get(a.id), snPos = snittPos(acts, planPos);
+  const plan = (custom ? `<img src="${esc(custom)}" alt="Sonebilde">` : zoneSvg(counts))
+    + `<svg class="map-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">${polys}</svg>`
+    + acts.map(a => kkMarkHtml(a, planPos(a), auto.kompakt.has(a.id) && !a.kart, null, '')).join('');
+  const snitt = snittSvg() + acts.map(a => kkMarkHtml(a, snPos.get(a.id), true, null, '')).join('');
+  const [fra, til] = periodRange();
+  const periode = ui.koord.week === 'alle' ? `Uke ${isoWeek(fra)}–${isoWeek(til)} (${fmtNo(fra)}–${fmtNo(til)})` : `Uke ${isoWeek(fra)} (${fmtNo(fra)}–${fmtNo(til)})`;
+  const st = {aktiv: 0, 'ikke-gyldig': 0, mangler: 0};
+  acts.forEach(a => st[kkStatus(a)]++);
+  const naa = new Date(), utskrevet = `${fmtNo(naa.toISOString().slice(0, 10))} kl. ${String(naa.getHours()).padStart(2, '0')}:${String(naa.getMinutes()).padStart(2, '0')}`;
+  const hode = side => `<div class="kp-head"><h1>AT-koordinering · ${esc(periode)}</h1><div class="kp-meta">WRK2 · skrevet ut ${utskrevet}${me().name ? ' av ' + esc(me().name) : ''} · side ${side}</div></div>`;
+  const iPer = new Set(acts.map(a => a.id));
+  const ats = ATS.filter(t => t.aktiviteter.some(id => iPer.has(id))).sort((x, y) => byNr(x.nr, y.nr));
+  const mangler = acts.filter(a => !a.at.length);
+  const aktLinje = a => `<div><span class="kp-farge" style="background:${firmColor(a.firma)}"></span>${esc(a.navn)} <span style="color:#57606a">· ${esc(a.omrade)} · ${fmtShort(a.startdato)}–${fmtShort(endDate(a))}${a.firma ? ' · ' + esc(a.firma) : ''}</span></div>`;
+  const rader = ats.map(t => {
+    const ok = atAktivIPerioden(t), la = t.aktiviteter.map(actById).filter(a => a && iPer.has(a.id));
+    return `<tr><td><b>${esc(t.nr)}</b></td><td>${esc(t.navn)}</td><td>${esc(t.firma || '')}</td>
+      <td class="${ok ? 'kp-ok' : 'kp-nei'}">${ok ? 'Godkjent' : 'Gjelder ikke'}${t.fra && t.til ? `<br><span style="font-weight:400;color:#57606a">${fmtShort(t.fra.slice(0, 10))}–${fmtShort(t.til.slice(0, 10))}</span>` : ''}</td>
+      <td>${la.map(aktLinje).join('')}</td></tr>`;
+  }).join('') + (mangler.length ? `<tr><td class="kp-nei">⚠ Mangler AT</td><td colspan="3">${mangler.length} aktivitet${mangler.length === 1 ? '' : 'er'} uten arbeidstillatelse</td><td>${mangler.map(aktLinje).join('')}</td></tr>` : '');
+  let el = document.getElementById('kk-print');
+  if (!el) { el = document.createElement('div'); el.id = 'kk-print'; document.body.appendChild(el); }
+  el.innerHTML = `<div class="kp-side">${hode(1)}
+      <p class="kp-st"><b>${acts.length}</b> aktiviteter · <span class="kp-ok">${st.aktiv} med godkjent AT</span> · ${st['ikke-gyldig']} med AT som ikke gjelder i perioden · <span class="kp-nei">${st.mangler} mangler AT</span><span class="kp-leg2">Grønn ramme = godkjent AT · stiplet grå = AT gjelder ikke · ⚠ = mangler AT · fargen er firmaet · snittet står loddrett under planen</span></p>
+      <div class="kp-lbl">Plan</div><div class="map-wrap">${plan}</div>
+      <div class="kp-lbl">Snitt vest–øst (høyde)</div><div class="snitt-wrap">${snitt}</div></div>
+    <div class="kp-side">${hode(2)}
+      <table><thead><tr><th style="width:16mm">AT</th><th style="width:55mm">Arbeid</th><th style="width:38mm">Firma</th><th style="width:26mm">Status</th><th>Aktiviteter</th></tr></thead>
+      <tbody>${rader || '<tr><td colspan="5">Ingen aktiviteter i valgt periode.</td></tr>'}</tbody></table></div>`;
+  document.body.classList.add('kk-printing');
+  const ferdig = () => { document.body.classList.remove('kk-printing'); window.removeEventListener('afterprint', ferdig); };
+  window.addEventListener('afterprint', ferdig);
+  setTimeout(() => { window.print(); setTimeout(ferdig, 500); }, 50);
 }
 // Verktøylinje over kartet: tegn område rundt valgt aktivitet/AT.
 function renderKkBar() {
@@ -3853,6 +3924,7 @@ document.addEventListener('click', e => {
   }
   if (action === 'kk-omr-slett') { const a = actById(ui.koord.selAkt); if (a && canEditAct(a) && confirm('Slette området?')) { delete a.kartOmrade; logg('Område slettet', a.id, ''); save(); renderKoord(); } return; }
   if (action === 'kk-lukk') { ui.koord.selAkt = null; renderKoord(); return; }
+  if (action === 'kk-print') { kkUtskrift(); return; }
   if (action === 'kk-auto') { const a = actById(btn.dataset.akt); if (a && canEditAct(a)) { delete a.kart; delete a.snittY; save(); renderKoord(); } return; }
   if (action === 'draw-cancel') { ui.koord.drawing = null; renderKoord(); return; }
   if (action === 'draw-done') {

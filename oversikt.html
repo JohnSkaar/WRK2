@@ -169,8 +169,20 @@ td.empty{text-align:center;color:var(--muted);padding:30px}
 #kk-print .kp-st{font-size:9pt;margin:0 0 1mm;display:flex;gap:0 4px;flex-wrap:wrap}
 #kk-print .kp-leg2{margin-left:auto;font-size:7.5pt;color:#57606a}
 #kk-print .kp-st b{font-size:10pt}
-#kk-print .kp-lbl{font-size:8.5pt;font-weight:700;margin:1.5mm auto .5mm;width:225mm}
-#kk-print .map-wrap,#kk-print .snitt-wrap{width:225mm;margin:0 auto;border-radius:0}
+#kk-print .kp-rad{display:flex;gap:4mm;align-items:flex-start}
+#kk-print .kp-tegn{flex:0 0 205mm;width:205mm}
+#kk-print .kp-gantt{flex:1 1 auto;min-width:0}
+#kk-print .kp-lbl{font-size:8.5pt;font-weight:700;margin:1.5mm 0 .5mm}
+#kk-print .map-wrap,#kk-print .snitt-wrap{width:205mm;margin:0;border-radius:0}
+#kk-print .kp-mark{transform:translate(-50%,-50%) scale(.8);gap:0;cursor:default}
+#kk-print .kp-mark .kk-nr{font-size:10px;padding:0 4px;border-width:1.5px;box-shadow:none}
+#kk-print .kp-mark.aktiv .kk-nr{border:2px solid #1a7f37;box-shadow:0 0 0 1px #fff}
+#kk-print .kp-mark.mangler .kk-nr{border:1.5px dashed #cf222e}
+#kk-print .kp-mark.kp-rad1{flex-direction:row;gap:2px}
+#kk-print .kp-id{font-size:8.5px;font-weight:700;line-height:1.1;background:rgba(255,255,255,.88);padding:0 2px;border-radius:2px;color:#1b1f24}
+#kk-print .kp-sub{font-weight:400;color:#57606a;font-size:7.5pt}
+#kk-print .kp-nr{white-space:nowrap;font-weight:700}
+#kk-print tr.kp-ny td{border-top:1.5px solid #8c959f}
 #kk-print table{width:99.5%;table-layout:fixed;border-collapse:collapse;font-size:8.5pt}
 #kk-print th,#kk-print td{border:1px solid #c9d1d9;padding:1.2mm 1.6mm;text-align:left;vertical-align:top}
 #kk-print th{background:#f0f2f4}
@@ -424,6 +436,14 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .at-box-head{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px;font-size:13px}
 .at-box-tools{margin-left:auto;display:flex;gap:2px}
 .at-handle{font-size:16px;touch-action:none}
+.mb-dok{margin:2px 0 8px}
+.mb-dok-rad{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;margin-bottom:3px}
+.mb-dok-lenke{border:none;background:none;padding:0;color:var(--accent);cursor:pointer;font:inherit;text-align:left}
+.mb-dok-lenke:hover{text-decoration:underline}
+.mb-dok-i{margin:3px 0 5px;font-size:12px;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.mb-drop{display:block;border:2px dashed #c9d1d9;border-radius:8px;padding:7px 10px;font-size:12.5px;color:#57606a;cursor:pointer;text-align:center;background:#fafbfc}
+.mb-drop:hover,.mb-card.fil-over .mb-drop{border-color:var(--accent);background:#eef5ff;color:var(--accent)}
+.mb-drop.laster{border-style:solid;cursor:progress}
 .mb-direct{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
 .mb-edit{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .mb-edit input,.mb-edit select{padding:6px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;flex:1;min-width:100px}
@@ -811,7 +831,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-01.8';
+const APP_VERSION = '2026-10-01.9';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -940,7 +960,7 @@ function buildData() {
 // ---------- lagring ----------
 let DATA = [], ATS = [], FIRMS = [], USERS = [], METHODS = [], currentUserId = null, SETTINGS = {};
 // Avhengigheter mellom aktiviteter ({id, fra, til, type: FS|SS|FF|SF|SAM, lag}) og endringslogg for Statustavlen.
-let AVH = [], LOGG = [];
+let AVH = [], LOGG = [], MBDOK = [];
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
 function readRaw(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -1063,6 +1083,7 @@ function load() {
   REGISTER = readJSON(REGISTER_KEY) || [];
   AVH = readJSON(AVH_KEY) || [];
   LOGG = readJSON(LOGG_KEY) || [];
+  MBDOK = readJSON(MBDOK_KEY) || [];
   if (!SETTINGS.fuIkkeVurdert) {
     // Engangsnullstilling: alle sju forutsetninger starter som «ikke vurdert».
     DATA.forEach(a => { a.forutsetninger = ikkeVurdert(); }); ATS.forEach(t => { t.forutsetninger = ikkeVurdert(); });
@@ -1234,7 +1255,7 @@ function mainRow(a, page) {
     </td>
     <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : ''}</div></td>
     ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
-    <td class="c">${cLys('metode.status', a.metode.status, ed, METODE_LYS)}${actMbNrs(a).length ? `<div class="sub">MB ${esc(actMbNrs(a).join(', '))}</div>` : ''}</td>
+    <td class="c">${cLys('metode.status', a.metode.status, ed, METODE_LYS)}${actMbNrs(a).length ? `<div class="sub">MB ${esc(actMbNrs(a).join(', '))} ${mbDokLenker(actMbNrs(a), true)}</div>` : ''}</td>
     <td>${a.at.length ? a.at.map(t => `<span class="at-chip" data-action="goto-at" data-nr="${esc(t.nr)}" title="Gå til ${esc(t.nr)}">${esc(t.nr)}</span>`).join('<br>') : '<span class="muted">Ingen</span>'}</td>
     ${c.lys}
     <td>${cRisk(a.risikoniva, ed)}</td>
@@ -1252,6 +1273,7 @@ function detailRows(a, page) {
   const span = Math.max(1, n) + (actEd ? 1 : 0);
   const metodeCell = `<td class="metode-box" rowspan="${span}">
     <div class="mb-title">Metodebeskrivelse – historikk<br>(felles for alle AT)</div>
+    ${actMbNrs(a).some(nr => mbDoker(nr).length) ? `<div class="mb-dok-i">${mbDokLenker(actMbNrs(a), false)}</div>` : ''}
     ${actEd ? `<textarea data-field="metode.historikk" data-scope="act" placeholder="F.eks. Innsendt 11.02, godkjent 12.03">${esc(a.metode.historikk)}</textarea>
       <div class="sub">MB nr: <input type="text" class="w-nr" data-field="metode.nr" data-scope="act" value="${esc(a.metode.nr)}"></div>`
       : `<div class="mb-text">${a.metode.historikk ? esc(a.metode.historikk) : '<span class="muted">Ingen historikk registrert</span>'}</div>`}
@@ -1276,7 +1298,7 @@ function detailRows(a, page) {
     const c = commonCells(t, ed, editing && canEditAct(a));
     h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(a.id)}-${esc(t.nr)}">
       <td class="col-ctrl">${actEd ? `<button class="icon-btn danger" data-action="del-at" title="Slett ${esc(t.nr)}">🗑</button> ` : ''}<span class="conn">↳</span></td>
-      <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(t.navn)}">` : esc(t.navn)}<div class="sub">${esc(t.nr)}${t.metode ? ` · MB ${esc(t.metode)}` : ''}${t.aktiviteter.length > 1 ? ` · også på ${esc(t.aktiviteter.filter(x => x !== a.id).join(', '))}` : ''}</div></td>
+      <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(t.navn)}">` : esc(t.navn)}<div class="sub">${esc(t.nr)}${t.metode ? ` · MB ${esc(t.metode)} ${mbDokLenker(t.metode, false)}` : ''}</div></td>
       ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
       ${i === 0 ? metodeCell : ''}
       <td class="at-nr-cell">${ed ? `<input type="text" class="w-nr" data-field="nr" value="${esc(t.nr)}">` : `<span class="at-chip linked">${esc(t.nr)}</span>`}</td>
@@ -1676,7 +1698,8 @@ function kkMarkHtml(a, p, smal, sel, hint) {
 }
 // Utskrift: plan og snitt på ett liggende A4-ark, AT-oversikten på neste ark.
 function kkUtskrift() {
-  const acts = kkAktive(), W = 850; // 225 mm ved 96 dpi
+  // Tegningene er 205 mm brede (775 px ved 96 dpi). Markørene er skalert ned til 80 % på papiret.
+  const acts = kkAktive(), W = 775;
   const auto = kkLayout(acts, W / MAP_W), counts = {};
   acts.forEach(a => { counts[a.omrade] = (counts[a.omrade] || 0) + 1; });
   const custom = loadMap();
@@ -1684,11 +1707,16 @@ function kkUtskrift() {
     const c = firmColor(a.firma);
     return `<polygon points="${a.kartOmrade.map(q => q.x + ',' + q.y).join(' ')}" fill="${c}" fill-opacity=".2" stroke="${kkStatus(a) === 'aktiv' ? '#1a7f37' : c}" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
   }).join('');
+  // På papiret viser markøren AT-nummeret og aktivitetsnummeret; aktiviteten står i kolonnen til høyre.
+  const merke = (a, p, rad) => {
+    const s = kkStatus(a), c = firmColor(a.firma), nrs = a.at.map(t => t.nr);
+    return `<div class="kk-mark kp-mark ${s}${rad ? ' kp-rad1' : ''}" style="left:${p.x}%;top:${p.y}%"><span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(s === 'mangler' ? '⚠' : nrs[0] + (nrs.length > 1 ? '+' : ''))}</span><span class="kp-id">${esc(a.id)}</span></div>`;
+  };
   const planPos = a => a.kart || auto.get(a.id), snPos = snittPos(acts, planPos);
   const plan = (custom ? `<img src="${esc(custom)}" alt="Sonebilde">` : zoneSvg(counts))
     + `<svg class="map-overlay" viewBox="0 0 100 100" preserveAspectRatio="none">${polys}</svg>`
-    + acts.map(a => kkMarkHtml(a, planPos(a), auto.kompakt.has(a.id) && !a.kart, null, '')).join('');
-  const snitt = snittSvg() + acts.map(a => kkMarkHtml(a, snPos.get(a.id), true, null, '')).join('');
+    + acts.map(a => merke(a, planPos(a), auto.kompakt.has(a.id) && !a.kart)).join('');
+  const snitt = snittSvg() + acts.map(a => merke(a, snPos.get(a.id), true)).join('');
   const [fra, til] = periodRange();
   const periode = ui.koord.week === 'alle' ? `Uke ${isoWeek(fra)}–${isoWeek(til)} (${fmtNo(fra)}–${fmtNo(til)})` : `Uke ${isoWeek(fra)} (${fmtNo(fra)}–${fmtNo(til)})`;
   const st = {aktiv: 0, 'ikke-gyldig': 0, mangler: 0};
@@ -1698,26 +1726,88 @@ function kkUtskrift() {
   const iPer = new Set(acts.map(a => a.id));
   const ats = ATS.filter(t => t.aktiviteter.some(id => iPer.has(id))).sort((x, y) => byNr(x.nr, y.nr));
   const mangler = acts.filter(a => !a.at.length);
-  const aktLinje = a => `<div><span class="kp-farge" style="background:${firmColor(a.firma)}"></span>${esc(a.navn)} <span style="color:#57606a">· ${esc(a.omrade)} · ${fmtShort(a.startdato)}–${fmtShort(endDate(a))}${a.firma ? ' · ' + esc(a.firma) : ''}</span></div>`;
+  // Side 2: én rad per aktivitet, gruppert per AT, med aktivitetsnummeret i egen kolonne.
+  const aktCeller = a => `<td class="kp-nr"><span class="kp-farge" style="background:${firmColor(a.firma)}"></span>${esc(a.id)}</td><td>${esc(a.navn)}</td><td>${esc(a.omrade)}</td><td class="kp-nr" style="font-weight:400">${fmtShort(a.startdato)}–${fmtShort(endDate(a))}</td><td>${esc(a.firma || '')}</td>`;
+  const gruppe = (hode4, la) => la.map((a, i) => `<tr${i === 0 ? ' class="kp-ny"' : ''}>${i === 0 ? hode4.replace(/<td/g, `<td rowspan="${la.length}"`) : ''}${aktCeller(a)}</tr>`).join('');
   const rader = ats.map(t => {
     const ok = atAktivIPerioden(t), la = t.aktiviteter.map(actById).filter(a => a && iPer.has(a.id));
-    return `<tr><td><b>${esc(t.nr)}</b></td><td>${esc(t.navn)}</td><td>${esc(t.firma || '')}</td>
-      <td class="${ok ? 'kp-ok' : 'kp-nei'}">${ok ? 'Godkjent' : 'Gjelder ikke'}${t.fra && t.til ? `<br><span style="font-weight:400;color:#57606a">${fmtShort(t.fra.slice(0, 10))}–${fmtShort(t.til.slice(0, 10))}</span>` : ''}</td>
-      <td>${la.map(aktLinje).join('')}</td></tr>`;
-  }).join('') + (mangler.length ? `<tr><td class="kp-nei">⚠ Mangler AT</td><td colspan="3">${mangler.length} aktivitet${mangler.length === 1 ? '' : 'er'} uten arbeidstillatelse</td><td>${mangler.map(aktLinje).join('')}</td></tr>` : '');
+    return gruppe(`<td><b>${esc(t.nr)}</b></td><td>${esc(t.navn)}<div class="kp-sub">${esc(t.firma || '')}</div></td>
+      <td class="${ok ? 'kp-ok' : 'kp-nei'}">${ok ? 'Godkjent' : 'Gjelder ikke'}${t.fra && t.til ? `<div class="kp-sub">${fmtShort(t.fra.slice(0, 10))}–${fmtShort(t.til.slice(0, 10))}</div>` : ''}</td>`, la);
+  }).join('') + (mangler.length ? gruppe(`<td class="kp-nei">⚠</td><td class="kp-nei">Mangler AT</td><td></td>`, mangler) : '');
   let el = document.getElementById('kk-print');
   if (!el) { el = document.createElement('div'); el.id = 'kk-print'; document.body.appendChild(el); }
   el.innerHTML = `<div class="kp-side">${hode(1)}
-      <p class="kp-st"><b>${acts.length}</b> aktiviteter · <span class="kp-ok">${st.aktiv} med godkjent AT</span> · ${st['ikke-gyldig']} med AT som ikke gjelder i perioden · <span class="kp-nei">${st.mangler} mangler AT</span><span class="kp-leg2">Grønn ramme = godkjent AT · stiplet grå = AT gjelder ikke · ⚠ = mangler AT · fargen er firmaet · snittet står loddrett under planen</span></p>
-      <div class="kp-lbl">Plan</div><div class="map-wrap">${plan}</div>
-      <div class="kp-lbl">Snitt vest–øst (høyde)</div><div class="snitt-wrap">${snitt}</div></div>
+      <p class="kp-st"><b>${acts.length}</b> aktiviteter · <span class="kp-ok">${st.aktiv} med godkjent AT</span> · ${st['ikke-gyldig']} med AT som ikke gjelder i perioden · <span class="kp-nei">${st.mangler} mangler AT</span><span class="kp-leg2">Markør: AT-nummer og aktivitetsnummer · grønn ramme = godkjent AT · ⚠ = mangler AT · fargen er firmaet</span></p>
+      <div class="kp-rad"><div class="kp-tegn">
+        <div class="kp-lbl">Plan</div><div class="map-wrap">${plan}</div>
+        <div class="kp-lbl">Snitt vest–øst (høyde) – står loddrett under planen</div><div class="snitt-wrap">${snitt}</div></div>
+        <div class="kp-gantt"><div class="kp-lbl">Aktiviteter og bindinger</div>${kkGanttSvg(acts, fra, til)}</div></div></div>
     <div class="kp-side">${hode(2)}
-      <table><thead><tr><th style="width:16mm">AT</th><th style="width:55mm">Arbeid</th><th style="width:38mm">Firma</th><th style="width:26mm">Status</th><th>Aktiviteter</th></tr></thead>
-      <tbody>${rader || '<tr><td colspan="5">Ingen aktiviteter i valgt periode.</td></tr>'}</tbody></table></div>`;
+      <table><thead><tr><th style="width:13mm">AT</th><th style="width:52mm">Arbeid</th><th style="width:22mm">Status</th><th style="width:16mm">Nr.</th><th>Aktivitet</th><th style="width:44mm">Sone</th><th style="width:23mm">Periode</th><th style="width:32mm">Firma</th></tr></thead>
+      <tbody>${rader || '<tr><td colspan="8">Ingen aktiviteter i valgt periode.</td></tr>'}</tbody></table></div>`;
   document.body.classList.add('kk-printing');
   const ferdig = () => { document.body.classList.remove('kk-printing'); window.removeEventListener('afterprint', ferdig); };
   window.addEventListener('afterprint', ferdig);
   setTimeout(() => { window.print(); setTimeout(ferdig, 500); }, 50);
+}
+// Forsiktig gantt til utskriften: nummer, navn og en stolpe for perioden. Etterfølgende aktiviteter står rett under
+// forgjengeren, rykket litt inn, og bindingene tegnes mellom stolpene (rødt hvis bindingen er brutt).
+function kkGanttSvg(acts, fra, til) {
+  const B = 70, H = 158, TOPP = 5, X0 = 38, X1 = B - .5;
+  const ids = new Set(acts.map(a => a.id)), avh = AVH.filter(d => ids.has(d.fra) && ids.has(d.til));
+  const etter = new Map(), harForg = new Set(avh.map(d => d.til));
+  avh.forEach(d => { if (!etter.has(d.fra)) etter.set(d.fra, []); etter.get(d.fra).push(d.til); });
+  const etterStart = (x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id);
+  const sortert = [...acts].sort(etterStart), rader = [], sett = new Set();
+  const legg = (a, dybde) => {
+    if (sett.has(a.id)) return; sett.add(a.id); rader.push({a, dybde: Math.min(dybde, 4)});
+    (etter.get(a.id) || []).map(actById).filter(Boolean).sort(etterStart).forEach(b => legg(b, dybde + 1));
+  };
+  sortert.filter(a => !harForg.has(a.id)).forEach(a => legg(a, 0));
+  sortert.forEach(a => legg(a, 0));
+  const plass = H - TOPP, rh = Math.max(3.2, Math.min(5, plass / Math.max(1, rader.length)));
+  const maks = Math.floor(plass / rh), vis = rader.length > maks ? rader.slice(0, maks - 1) : rader;
+  // Tidsaksen dekker hele spennet til aktivitetene (inntil 4 uker før og 9 uker etter), og valgt periode er skyggelagt.
+  const p0 = fra, p1 = til;
+  fra = mondayOf([...acts.map(a => a.startdato), p0].sort()[0]); if (fra < addDays(p0, -28)) fra = mondayOf(addDays(p0, -28));
+  til = [...acts.map(endDate), p1].sort().pop(); if (til > addDays(p0, 62)) til = addDays(p0, 62);
+  const dager = daysBetween(fra, til) + 1, xd = dato => X0 + (X1 - X0) * Math.max(0, Math.min(dager, daysBetween(fra, dato))) / dager;
+  const rad = new Map(vis.map((r, i) => [r.a.id, i])), ym = i => TOPP + rh * i + rh / 2;
+  const fs = Math.min(2.3, rh * .52);
+  let s = `<svg viewBox="0 0 ${B} ${H}" width="${B}mm" height="${H}mm" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif">`;
+  // Tidsakse: uker (8 uker) eller dager (én uke).
+  const steg = dager > 10 ? 7 : 1;
+  s += `<rect x="${xd(p0)}" y="${TOPP - 1}" width="${Math.max(.5, xd(addDays(p1, 1)) - xd(p0))}" height="${rh * vis.length + 1}" fill="#fff4c2" opacity=".7"/>`;
+  const hver = Math.max(1, Math.ceil(3.6 / ((X1 - X0) * steg / dager)));
+  for (let d = 0, n = 0; d < dager; d += steg, n++) {
+    const x = X0 + (X1 - X0) * d / dager, dato = addDays(fra, d);
+    if (n % hver) { s += `<line x1="${x}" y1="${TOPP - 1}" x2="${x}" y2="${TOPP + rh * vis.length}" stroke="#eef0f2" stroke-width=".15"/>`; continue; }
+    s += `<line x1="${x}" y1="${TOPP - 1}" x2="${x}" y2="${TOPP + rh * vis.length}" stroke="#e1e4e8" stroke-width=".15"/>
+      <text x="${x + .3}" y="${TOPP - 1.6}" font-size="1.9" fill="#6a737d">${steg === 7 ? 'u' + isoWeek(dato) : ['ma', 'ti', 'on', 'to', 'fr', 'lø', 'sø'][d % 7]}</text>`;
+  }
+  vis.forEach(({a, dybde}, i) => {
+    const y = ym(i), c = firmColor(a.firma), mangl = !a.at.length, inn = dybde * 1.8;
+    const navnTegn = Math.max(8, Math.floor((X0 - 10 - inn) / (fs * .5)));
+    const navn = a.navn.length > navnTegn ? a.navn.slice(0, navnTegn - 1) + '…' : a.navn;
+    if (i % 2) s += `<rect x="0" y="${y - rh / 2}" width="${X0 - .5}" height="${rh}" fill="#f0f2f4"/>`;
+    s += `<text x="0" y="${y + fs * .36}" font-size="${fs}" font-weight="700" fill="${mangl ? '#cf222e' : '#1b1f24'}">${esc(a.id)}</text>`
+      + (dybde ? `<text x="${8.6 + inn - 1.7}" y="${y + fs * .36}" font-size="${fs}" fill="#8c959f">↳</text>` : '')
+      + `<text x="${8.6 + inn}" y="${y + fs * .36}" font-size="${fs}" fill="#24292f">${esc(navn)}</text>`;
+    const xa = xd(a.startdato), xb = Math.max(xa + .8, xd(addDays(endDate(a), 1)));
+    s += `<rect x="${xa}" y="${y - rh * .28}" width="${xb - xa}" height="${rh * .56}" rx=".5" fill="${c}"${mangl ? ' stroke="#cf222e" stroke-width=".3" stroke-dasharray=".8 .5"' : ''}/>`;
+  });
+  avh.forEach(d => {
+    if (!rad.has(d.fra) || !rad.has(d.til)) return;
+    const p = actById(d.fra), q = actById(d.til), i = rad.get(d.fra), j = rad.get(d.til);
+    const ende = a => Math.max(xd(a.startdato) + .8, xd(addDays(endDate(a), 1)));
+    const [ut, inn] = {SS: [xd(p.startdato), xd(q.startdato)], SAM: [xd(p.startdato), xd(q.startdato)], FF: [ende(p), ende(q)], SF: [xd(p.startdato), ende(q)]}[d.type] || [ende(p), xd(q.startdato)];
+    const farge = avhBrudd(d) ? '#cf222e' : '#57606a', y1 = ym(i), y2 = ym(j), xm = Math.min(ut + .9, X1);
+    s += `<path d="M${ut} ${y1} H${xm} V${y2 - (y2 > y1 ? rh * .3 : -rh * .3)} H${inn}" fill="none" stroke="${farge}" stroke-width=".3"${d.type === 'SAM' ? ' stroke-dasharray=".8 .5"' : ''}/>`
+      + `<path d="M${inn} ${y2 - (y2 > y1 ? rh * .3 : -rh * .3)} l-.7 -.45 v.9 z" fill="${farge}"/>`;
+  });
+  if (vis.length < rader.length) s += `<text x="0" y="${TOPP + rh * vis.length + rh * .7}" font-size="2" fill="#6a737d">+ ${rader.length - vis.length} aktiviteter til – se side 2</text>`;
+  if (avh.length) s += `<text x="0" y="${H - .5}" font-size="1.8" fill="#6a737d">Linjer = bindinger (stiplet = samtidighet, rød = brutt). ↳ = etterfølgende aktivitet.</text>`;
+  return s + '</svg>';
 }
 // Verktøylinje over kartet: tegn område rundt valgt aktivitet/AT.
 function renderKkBar() {
@@ -3131,6 +3221,116 @@ function nextAtNr2() {
   return 'AT' + (max + 1);
 }
 
+// ---------- dokumenter til metodebeskrivelsene (PDF/Word) ----------
+// Lastes opp under Metodebeskrivelser og følger metodebeskrivelsen inn i Klargjøring og Totaloversikt som en lenke.
+// I skyen lagres filen i biter i Firestore (mbdok/{id}/deler), i demo-modus i nettleserens IndexedDB.
+const MBDOK_KEY = 'wrk2_mbdok', MBDOK_MAKS = 15 * 1024 * 1024, MBDOK_TYPER = /\.(pdf|docx?|odt|rtf)$/i;
+const mbDoker = nr => MBDOK.filter(d => d.nr === nr && d.ferdig !== false).sort((x, y) => x.navn.localeCompare(y.navn, 'nb'));
+const kanLasteOppMb = m => !!m && !m.ukjent && (isSys() || (me().rolle === 'firmaadmin' && !!m.firma && canEditFirm(m.firma)));
+const fmtStr = b => b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB';
+const dokIkon = navn => /\.pdf$/i.test(navn) ? '📕' : '📘';
+// Lenker til dokumentene for en eller flere metodebeskrivelser. kort = bare ikonet.
+const dokLenke = (d, kort) => `<button type="button" class="mb-dok-lenke" data-action="mbdok-open" data-dok="${esc(d.id)}" title="Åpne ${esc(d.navn)} (MB ${esc(d.nr)}, ${fmtStr(d.str)})">${dokIkon(d.navn)}${kort ? '' : ' ' + esc(d.navn)}</button>`;
+function mbDokLenker(nrs, kort) { return [].concat(nrs).flatMap(mbDoker).map(d => dokLenke(d, kort)).join(' '); }
+function mbDokBoks(m) {
+  const kan = kanLasteOppMb(m), dok = mbDoker(m.nr), laster = ui.metoder.laster === m.nr;
+  if (!kan && !dok.length) return '';
+  return `<div class="mb-dok" data-mbdok="${esc(m.nr)}">
+    ${dok.map(d => `<div class="mb-dok-rad">${dokLenke(d, false)}
+      <span class="sub">${fmtStr(d.str)} · ${fmtNo(d.tid.slice(0, 10))}${d.av ? ' · ' + esc(d.av) : ''}</span>
+      ${kan ? `<button class="mb-x" data-action="mbdok-del" data-dok="${esc(d.id)}" title="Slett dokumentet">🗑</button>` : ''}</div>`).join('')}
+    ${kan ? `<label class="mb-drop${laster ? ' laster' : ''}">${laster ? '⏳ Laster opp …' : `📎 Dra PDF/Word hit eller <u>velg fil</u> <span class="sub">(maks 15 MB)</span>`}
+      <input type="file" accept=".pdf,.doc,.docx,.odt,.rtf" multiple hidden data-mbfil="${esc(m.nr)}"></label>` : ''}
+  </div>`;
+}
+function idb() {
+  return new Promise((ok, feil) => {
+    const r = indexedDB.open('wrk2', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('mbdok');
+    r.onsuccess = () => ok(r.result); r.onerror = () => feil(r.error);
+  });
+}
+async function idbSett(k, v) {
+  const db = await idb();
+  return new Promise((ok, feil) => {
+    const tx = db.transaction('mbdok', 'readwrite'), os = tx.objectStore('mbdok');
+    v === undefined ? os.delete(k) : os.put(v, k);
+    tx.oncomplete = () => ok(); tx.onerror = () => feil(tx.error);
+  });
+}
+async function idbHent(k) {
+  const db = await idb();
+  return new Promise((ok, feil) => { const r = db.transaction('mbdok').objectStore('mbdok').get(k); r.onsuccess = () => ok(r.result); r.onerror = () => feil(r.error); });
+}
+async function mbDokLastOpp(nr, filer) {
+  const m = methodByNr(nr); if (!kanLasteOppMb(m)) return;
+  ui.metoder.laster = nr; renderMetoder();
+  for (const f of filer) {
+    if (!MBDOK_TYPER.test(f.name)) { alert(`«${f.name}» er ikke en PDF- eller Word-fil.`); continue; }
+    if (f.size > MBDOK_MAKS) { alert(`«${f.name}» er ${fmtStr(f.size)}. Største tillatte størrelse er 15 MB.`); continue; }
+    const gammel = MBDOK.find(d => d.nr === nr && d.navn === f.name);
+    const d = {id: uid() + uid(), nr, navn: f.name, type: f.type || '', str: f.size, tid: new Date().toISOString(), av: me().name || '', firma: m.firma || ''};
+    try {
+      if (CLOUD) await window.cloudMbDokLagre(d, f);
+      else { await idbSett(d.id, f); MBDOK.push(d); writeRaw(MBDOK_KEY, JSON.stringify(MBDOK)); }
+      if (gammel) await mbDokFjern(gammel.id, true);
+      logg('Dokument lastet opp', '', `MB ${nr}: ${f.name} (${fmtStr(f.size)})${gammel ? ' – erstattet forrige versjon' : ''}`);
+    } catch (e) { alert(`Kunne ikke laste opp «${f.name}»: ${e.message || e}`); }
+  }
+  ui.metoder.laster = null; renderCurrent();
+}
+async function mbDokFjern(id, stille) {
+  const d = MBDOK.find(x => x.id === id); if (!d) return;
+  if (!stille && !confirm(`Slette «${d.navn}» fra MB ${d.nr}?`)) return;
+  try {
+    if (CLOUD) await window.cloudMbDokSlett(d);
+    else { await idbSett(id, undefined); MBDOK = MBDOK.filter(x => x !== d); writeRaw(MBDOK_KEY, JSON.stringify(MBDOK)); }
+  } catch (e) { alert('Kunne ikke slette dokumentet: ' + (e.message || e)); return; }
+  mbDokCache.delete(id);
+  if (!stille) { logg('Dokument slettet', '', `MB ${d.nr}: ${d.navn}`); renderCurrent(); }
+}
+const mbDokCache = new Map();
+async function mbDokApne(id) {
+  const d = MBDOK.find(x => x.id === id); if (!d) return;
+  const pdf = /\.pdf$/i.test(d.navn);
+  // PDF åpnes i ny fane (vinduet åpnes med en gang, ellers stopper nettleseren det); Word lastes ned.
+  const w = pdf ? window.open('', '_blank') : null;
+  if (w) w.document.write(`<title>${esc(d.navn)}</title><p style="font-family:Arial,sans-serif">Henter ${esc(d.navn)} …</p>`);
+  try {
+    let blob = mbDokCache.get(id);
+    if (!blob) {
+      blob = CLOUD ? await window.cloudMbDokHent(d) : await idbHent(id);
+      if (!blob) throw new Error('filen finnes ikke i denne nettleseren');
+      mbDokCache.set(id, blob);
+    }
+    const url = URL.createObjectURL(pdf && blob.type !== 'application/pdf' ? new Blob([blob], {type: 'application/pdf'}) : blob);
+    if (w) w.location.href = url;
+    else { const a = document.createElement('a'); a.href = url; a.download = d.navn; document.body.appendChild(a); a.click(); a.remove(); }
+    setTimeout(() => URL.revokeObjectURL(url), 10 * 60000);
+  } catch (e) { if (w) w.close(); alert('Kunne ikke åpne dokumentet: ' + (e.message || e)); }
+}
+// Slipp av filer på en metodebeskrivelse. Filer som slippes andre steder, åpnes ikke av nettleseren.
+const harFiler = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+document.addEventListener('dragover', e => {
+  if (!harFiler(e)) return;
+  e.preventDefault();
+  const kort = e.target.closest && e.target.closest('.mb-card'), boks = kort && kort.querySelector('.mb-drop');
+  document.querySelectorAll('.mb-card.fil-over').forEach(x => { if (x !== kort) x.classList.remove('fil-over'); });
+  if (boks) { kort.classList.add('fil-over'); e.dataTransfer.dropEffect = 'copy'; } else e.dataTransfer.dropEffect = 'none';
+});
+document.addEventListener('dragleave', e => { if (harFiler(e) && !e.relatedTarget) document.querySelectorAll('.mb-card.fil-over').forEach(x => x.classList.remove('fil-over')); });
+document.addEventListener('drop', e => {
+  if (!harFiler(e)) return;
+  e.preventDefault();
+  document.querySelectorAll('.mb-card.fil-over').forEach(x => x.classList.remove('fil-over'));
+  const kort = e.target.closest && e.target.closest('.mb-card');
+  if (kort && kort.querySelector('.mb-drop')) mbDokLastOpp(kort.dataset.nr, [...e.dataTransfer.files]);
+});
+document.addEventListener('change', e => {
+  const nr = e.target.dataset && e.target.dataset.mbfil;
+  if (nr !== undefined && e.target.files.length) { const filer = [...e.target.files]; e.target.value = ''; mbDokLastOpp(nr, filer); }
+});
+
 function renderMetoder() {
   const st = ui.metoder, sys = isSys();
   const q = {firms: null, search: st.search};
@@ -3177,6 +3377,7 @@ function renderMetoder() {
           <div class="mb-head-r"><span class="badge st-plan" title="AT-er">${ats.length} AT</span>${sys && !m.ukjent ? `<button class="mb-x" data-action="mb-edit" title="Endre tekst og entreprenør">✏️</button><button class="mb-x" data-action="mb-del" title="Slett metodebeskrivelsen">🗑</button>` : ''}</div></div>`;
     return `<div class="mb-card${m.ukjent ? ' ukjent' : ''}" data-nr="${esc(m.nr)}">
       ${head}
+      ${m.ukjent ? '' : mbDokBoks(m)}
       ${ats.map(atBox).join('') || '<p class="muted sub" style="margin:4px 0">Ingen AT-er ennå.</p>'}
       ${direct.length ? `<div class="mb-direct"><span class="sub">Knyttet direkte uten AT:</span><div class="mb-chips">${direct.map(a => actChip(a, {can: canEditAct(a), action: 'mb-unlink', data: `data-from="${esc(m.nr)}"`})).join('')}</div></div>` : ''}
       ${!m.ukjent && (sys || canEditFirm(m.firma)) ? `<button class="btn small-dark" data-action="at-new">+ Ny AT</button>` : ''}
@@ -4133,6 +4334,8 @@ document.addEventListener('click', e => {
     METHODS = METHODS.filter(m => m.nr !== nr);
     save(); renderMetoder(); return;
   }
+  if (action === 'mbdok-open') { mbDokApne(btn.dataset.dok); return; }
+  if (action === 'mbdok-del') { mbDokFjern(btn.dataset.dok); return; }
   if (action === 'mb-edit') { ui.metoder.editMb = btn.closest('.mb-card').dataset.nr; renderMetoder(); return; }
   if (action === 'mb-cancel') { ui.metoder.editMb = null; renderMetoder(); return; }
   if (action === 'mb-save') {

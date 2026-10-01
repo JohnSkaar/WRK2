@@ -85,6 +85,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Dokumenter til metodebeskrivelsene (PDF/Word), lagret i biter under «deler».
+    // Systemadministrator, eller firma-admin for firmaet som eier metodebeskrivelsen, kan laste opp og slette.
+    function dokEier(d) { return sys() || (member() && me().rolle == 'firmaadmin' && d.get('firma', '') == me().firma); }
+    match /mbdok/{id} {
+      allow read: if member();
+      allow create: if dokEier(request.resource.data);
+      allow update: if dokEier(resource.data) && dokEier(request.resource.data);
+      allow delete: if dokEier(resource.data);
+      match /deler/{n} {
+        allow read: if member();
+        allow write: if dokEier(get(/databases/$(database)/documents/mbdok/$(id)).data);
+      }
+    }
+
     match /aktiviteter/{id} {
       allow read: if member();
       // Firma-admin kan legge inn nye aktiviteter for eget firma (Statustavlen), og slette dem igjen.

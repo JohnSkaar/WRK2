@@ -6,7 +6,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
   getFirestore, connectFirestoreEmulator, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc, getDocs, writeBatch,
-  addDoc, query, orderBy, limit
+  addDoc, query, orderBy, limit, Bytes
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const db = getFirestore(app);
@@ -317,7 +317,35 @@ function startSync(uid) {
     if (sysOrAdmin()) showToast('Avhengigheter kan ikke lagres før sikkerhetsreglene i Firebase er publisert på nytt (firestore.rules fra GitHub).');
   }));
   unsubs.push(onSnapshot(collection(db, 'aktiviteter'), s => { st.akt = s.docs.map(d => d.data()); apply(); }, fail));
+  // Dokumenter til metodebeskrivelsene (bare metadata; selve filen hentes når den åpnes).
+  unsubs.push(onSnapshot(collection(db, 'mbdok'), s => {
+    window.cloudMbDokDenied = false; MBDOK = s.docs.map(d => ({...d.data(), id: d.id}));
+    if (started) scheduleRender();
+  }, () => { window.cloudMbDokDenied = true; MBDOK = []; }));
 }
+
+// Filene deles i biter under 1 MB, siden et Firestore-dokument kan være maks 1 MiB.
+const DOK_DEL = 900000;
+window.cloudMbDokLagre = async (d, fil) => {
+  if (window.cloudMbDokDenied) throw new Error('sikkerhetsreglene i Firebase må publiseres på nytt (firestore.rules fra GitHub) før dokumenter kan lastes opp.');
+  const buf = new Uint8Array(await fil.arrayBuffer()), n = Math.max(1, Math.ceil(buf.length / DOK_DEL));
+  const ref = doc(db, 'mbdok', d.id);
+  await setDoc(ref, {...d, deler: n, ferdig: false});
+  await Promise.all(Array.from({length: n}, (_, i) =>
+    setDoc(doc(db, 'mbdok', d.id, 'deler', String(i)), {i, data: Bytes.fromUint8Array(buf.subarray(i * DOK_DEL, (i + 1) * DOK_DEL))})));
+  await setDoc(ref, {...d, deler: n, ferdig: true});
+};
+window.cloudMbDokHent = async d => {
+  const s = await getDocs(collection(db, 'mbdok', d.id, 'deler'));
+  const deler = s.docs.map(x => x.data()).sort((x, y) => x.i - y.i);
+  if (deler.length !== d.deler) throw new Error('dokumentet er ikke ferdig lastet opp');
+  return new Blob(deler.map(x => x.data.toUint8Array()), {type: d.type || (/\.pdf$/i.test(d.navn) ? 'application/pdf' : 'application/octet-stream')});
+};
+window.cloudMbDokSlett = async d => {
+  const s = await getDocs(collection(db, 'mbdok', d.id, 'deler'));
+  await Promise.all(s.docs.map(x => deleteDoc(x.ref)));
+  await deleteDoc(doc(db, 'mbdok', d.id));
+};
 
 // Import av Sitedrive-planen: alle endringer skrives i én batch, slik at øyeblikksbildene ikke blander gammel og ny plan.
 async function importPlan() {

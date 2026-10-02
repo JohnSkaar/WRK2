@@ -87,7 +87,6 @@ service cloud.firestore {
         && request.resource.data.firma == resource.data.firma);
       allow delete: if sys() || (member() && me().rolle == 'firmaadmin' && resource.data.firma == me().firma);
     }
-
     // Dokumenter til metodebeskrivelsene (PDF/Word), lagret i biter under «deler».
     // Systemadministrator, eller firma-admin for firmaet som eier metodebeskrivelsen, kan laste opp og slette.
     function dokEier(d) { return sys() || (member() && me().rolle == 'firmaadmin' && d.get('firma', '') == me().firma); }
@@ -98,21 +97,3 @@ service cloud.firestore {
       allow delete: if dokEier(resource.data);
       match /deler/{n} {
         allow read: if member();
-        allow write: if dokEier(get(/databases/$(database)/documents/mbdok/$(id)).data);
-      }
-    }
-    match /aktiviteter/{id} {
-      allow read: if member();
-      // Firma-admin kan legge inn nye aktiviteter for eget firma (Statustavlen), og slette dem igjen.
-      allow create: if sys() || (member() && me().rolle == 'firmaadmin'
-        && request.resource.data.firma == me().firma && request.resource.data.get('kilde', '') == 'WRK2');
-      allow delete: if sys() || (member() && me().rolle == 'firmaadmin'
-        && resource.data.firma == me().firma && resource.data.get('kilde', '') == 'WRK2');
-      // Firma-admin kan endre aktiviteter som eies av eget firma eller har AT-er fra eget firma, men ikke flytte dem til et annet firma.
-      allow update: if sys() || (member() && me().rolle == 'firmaadmin'
-        && (resource.data.firma == me().firma || me().firma in resource.data.get('atFirmaer', []))
-        && request.resource.data.firma == resource.data.firma
-        && request.resource.data.id == resource.data.id);
-    }
-  }
-}

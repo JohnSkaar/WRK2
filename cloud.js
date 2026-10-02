@@ -189,13 +189,13 @@ function stable(v) {
   if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
-const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, mbrydd: SETTINGS.mbrydd || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0});
+const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, mbrydd: SETTINGS.mbrydd || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0, hindsett: SETTINGS.hindsett || 0, firmafane: SETTINGS.firmafane === true});
 const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle, ...(u.pending && u.kode ? {kode: u.kode} : {})});
 const codeDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
 
 // ---------- innlogget bruker ----------
 let unsubs = [], started = false, myUid = null;
-let base = {akt: new Map(), ats: new Map(), avh: new Map(), firms: '', metoder: '', register: '', settings: '', users: new Map()};
+let base = {akt: new Map(), ats: new Map(), avh: new Map(), hind: new Map(), firms: '', metoder: '', register: '', settings: '', users: new Map()};
 let readOnly = '';
 
 onAuthStateChanged(auth, user => handleUser(user));
@@ -248,12 +248,12 @@ async function ensureProfile(user) {
 
 function startSync(uid) {
   myUid = uid;
-  const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false, avh: null};
-  let importing = false, importingAt = false, rydding = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
+  const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false, avh: null, hind: null};
+  let importing = false, importingAt = false, rydding = false, hindLagt = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
   const fail = err => { view('error', 'Mistet kontakten med databasen: ' + errText(err)); };
 
   const apply = async () => {
-    if (!st.users || !st.firms || !st.metoder || !st.register || !st.settings || !st.akt || !st.ats || !st.avh) return;
+    if (!st.users || !st.firms || !st.metoder || !st.register || !st.settings || !st.akt || !st.ats || !st.avh || !st.hind) return;
     const meDoc = st.users.find(u => u.id === uid);
     if (!meDoc) { unsubs.forEach(f => f()); unsubs = []; view('noaccess', auth.currentUser ? auth.currentUser.email : ''); return; }
     const sys = meDoc.rolle === 'systemadmin';
@@ -278,7 +278,7 @@ function startSync(uid) {
       ({ats} = splitLegacy(migrate(acts)));
       readOnly = st.atsDenied ? 'sikkerhetsreglene i Firebase må oppdateres (se firestore.rules).' : 'en systemadministrator må logge inn én gang for å oppgradere databasen.';
     }
-    DATA = acts; ATS = ats; AVH = st.avh.map(d => ({...d}));
+    DATA = acts; ATS = ats; AVH = st.avh.map(d => ({...d})); HIND = st.hind.map(d => JSON.parse(JSON.stringify(d)));
     FIRMS = st.firms.length ? st.firms : DEFAULT_FIRMS.map(f => ({...f}));
     METHODS = st.metoder.length ? st.metoder : DEFAULT_METHODS.map(m => ({...m}));
     REGISTER = st.register;
@@ -290,6 +290,7 @@ function startSync(uid) {
       akt: new Map(DATA.map(a => [a.id, stable(toDoc(a))])),
       ats: new Map(ATS.map(t => [t.id, stable(toATDoc(t))])),
       avh: new Map(AVH.map(d => [d.id, stable(d)])),
+      hind: new Map(HIND.map(h => [h.id, stable(h)])),
       firms: stable(FIRMS), metoder: stable(METHODS), register: stable(REGISTER), settings: stable(settingsDoc()),
       users: new Map(USERS.map(u => [u.id, stable(userDoc(u))]))
     };
@@ -302,6 +303,8 @@ function startSync(uid) {
     // Deretter byttes AT-ene ut med de gjeldende fra AT-systemet, også i én samlet skriving.
     else if (sys && !readOnly && !importingAt && (st.settings.plansett || 0) >= PLANSETT && (st.settings.atsett || 0) < ATSETT) { importingAt = true; await importAts(); }
     else if (sys && !readOnly && !rydding && (st.settings.atsett || 0) >= ATSETT && (st.settings.mbrydd || 0) < MBRYDD) { rydding = true; await ryddMb(); }
+    // Sakene fra leveransemøtet 30.09 legges inn i Hindringer prioritet én gang, når sikkerhetsreglene tillater det.
+    else if (sys && !readOnly && !hindLagt && !window.cloudHindDenied && (st.settings.mbrydd || 0) >= MBRYDD && (st.settings.hindsett || 0) < HINDSETT) { hindLagt = true; await importHind(); }
   };
 
   unsubs.push(onSnapshot(collection(db, 'users'), s => { st.users = s.docs.map(d => ({id: d.id, ...d.data()})); apply(); }, fail));
@@ -317,6 +320,11 @@ function startSync(uid) {
     if (sysOrAdmin()) showToast('Avhengigheter kan ikke lagres før sikkerhetsreglene i Firebase er publisert på nytt (firestore.rules fra GitHub).');
   }));
   unsubs.push(onSnapshot(collection(db, 'aktiviteter'), s => { st.akt = s.docs.map(d => d.data()); apply(); }, fail));
+  // Hindringer: blir tom liste hvis sikkerhetsreglene ikke er oppdatert ennå.
+  unsubs.push(onSnapshot(collection(db, 'hindringer'), s => { window.cloudHindDenied = false; st.hind = s.docs.map(d => d.data()); apply(); }, () => {
+    window.cloudHindDenied = true; st.hind = []; apply();
+    if (sysOrAdmin()) showToast('Hindringer kan ikke lagres før sikkerhetsreglene i Firebase er publisert på nytt (firestore.rules fra GitHub).');
+  }));
   // Dokumenter til metodebeskrivelsene (bare metadata; selve filen hentes når den åpnes).
   unsubs.push(onSnapshot(collection(db, 'mbdok'), s => {
     window.cloudMbDokDenied = false; MBDOK = s.docs.map(d => ({...d.data(), id: d.id}));
@@ -377,6 +385,15 @@ async function ryddMb() {
   catch (err) { showToast('Ryddingen feilet: ' + errText(err)); }
 }
 
+async function importHind() {
+  const nye = applyHindsett();
+  const batch = writeBatch(db);
+  nye.forEach(h => batch.set(doc(db, 'hindringer', h.id), h));
+  batch.set(doc(db, 'config', 'settings'), settingsDoc());
+  try { await batch.commit(); if (nye.length) showToast(`${nye.length} saker fra leveransemøtet 30.09 er lagt inn under Hindringer prioritet.`); }
+  catch (err) { showToast('Innleggingen av hindringer feilet: ' + errText(err)); }
+}
+
 async function importAts() {
   // Alle AT-dokumenter i databasen hentes, så også AT-er som ikke er lastet i denne økten blir fjernet.
   let gamle = ATS.map(t => t.id);
@@ -424,6 +441,9 @@ const sysOrAdmin = () => ['systemadmin', 'firmaadmin'].includes((USERS.find(u =>
 const avhFail = err => showToast(err && err.code === 'permission-denied'
   ? 'Avhengigheten ble ikke lagret: sikkerhetsreglene i Firebase må publiseres på nytt (firestore.rules fra GitHub), eller du mangler tilgang til begge aktivitetene.'
   : 'Kunne ikke lagre avhengigheten: ' + errText(err));
+const hindFail = err => showToast(err && err.code === 'permission-denied'
+  ? 'Hindringen ble ikke lagret: sikkerhetsreglene i Firebase må publiseres på nytt (firestore.rules fra GitHub), eller den gjelder ikke ditt firma.'
+  : 'Kunne ikke lagre hindringen: ' + errText(err));
 const saveFail = err => showToast('Kunne ikke lagre: ' + errText(err) + ' Endringen er rullet tilbake.');
 window.cloudSync = () => {
   if (!started) return;
@@ -446,6 +466,12 @@ window.cloudSync = () => {
     if (base.avh.get(id) !== s) { base.avh.set(id, s); setDoc(doc(db, 'avhengigheter', id), d).catch(avhFail); }
   }
   for (const id of [...base.avh.keys()]) if (!curAvh.has(id)) { base.avh.delete(id); deleteDoc(doc(db, 'avhengigheter', id)).catch(avhFail); }
+  const curHind = new Map(HIND.map(h => [h.id, JSON.parse(JSON.stringify(h))]));
+  for (const [id, d] of curHind) {
+    const s = stable(d);
+    if (base.hind.get(id) !== s) { base.hind.set(id, s); setDoc(doc(db, 'hindringer', id), d).catch(hindFail); }
+  }
+  for (const id of [...base.hind.keys()]) if (!curHind.has(id)) { base.hind.delete(id); deleteDoc(doc(db, 'hindringer', id)).catch(hindFail); }
   if (!isSys()) return;
   if (stable(REGISTER) !== base.register) { base.register = stable(REGISTER); setDoc(doc(db, 'config', 'firmaregister'), {list: REGISTER}).catch(saveFail); }
   if (stable(METHODS) !== base.metoder) { base.metoder = stable(METHODS); setDoc(doc(db, 'config', 'metoder'), {list: METHODS}).catch(saveFail); }

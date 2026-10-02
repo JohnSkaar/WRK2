@@ -344,6 +344,41 @@ table.logg td.h{white-space:nowrap;font-weight:600}
 .sv-dlg input,.sv-dlg select{display:block;width:100%;box-sizing:border-box;margin-top:3px;padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:14px;font-weight:400}
 .sv-dlg input[readonly]{background:#f6f8fa;color:var(--muted)}
 .sv-dlg-row{display:flex;gap:10px}
+.hi-dlg{width:680px}
+.hi-dlg textarea{display:block;width:100%;box-sizing:border-box;margin-top:3px;padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font:inherit;font-size:13.5px;font-weight:400}
+.hi-chips{display:flex;flex-wrap:wrap;gap:5px;margin:-4px 0 6px}
+.hi-chip{border:1px solid var(--line);border-left:4px solid #888;border-radius:6px;padding:2px 6px;font-size:12.5px;background:#fafbfc}
+.hi-treffliste{max-height:190px;overflow:auto;margin:4px 0 10px}
+.hi-treff{display:block;width:100%;text-align:left;border:1px solid var(--line);border-left:4px solid #888;border-radius:6px;background:#fff;padding:4px 8px;margin-bottom:3px;cursor:pointer;font:inherit;font-size:13px}
+.hi-treff:hover{background:#eef5ff}
+.hi-gruppe h3{font-size:15px;margin:14px 2px 8px}
+.hi-kort{background:#fff;border:1px solid var(--line);border-left:6px solid #d4a72c;border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.hi-kort.forfalt,.hi-kort.kollisjon{border-left-color:#cf222e}
+.hi-kort.avklart{border-left-color:#1a7f37;opacity:.8}
+.hi-topp{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hi-tittel{font-size:15px;flex:1;min-width:200px}
+.hi-prio.hoy{background:#ffebe9;color:#cf222e}.hi-prio.middels{background:#fff8c5;color:#7d4e00}.hi-prio.lav{background:#eef1f4;color:#57606a}
+.hi-type{background:#ddf4ff;color:#0a3069}
+.hi-frist{font-size:13px;white-space:nowrap}
+.hi-frist.forfalt b{color:#cf222e}
+.hi-forslag{font-size:11px;border:1px dashed #8c959f;border-radius:4px;padding:0 4px;color:#57606a;cursor:help}
+.hi-varsel{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0 0;font-size:12.5px;color:#cf222e;font-weight:600}
+.hi-kort.pagar .hi-varsel{color:#9a6700}
+.hi-kropp{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;margin-top:8px}
+@media(max-width:900px){.hi-kropp{grid-template-columns:1fr}}
+.hi-lbl{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#57606a;margin:2px 0 4px}
+.hi-punkt{display:flex;gap:6px;align-items:flex-start;font-size:13.5px;padding:2px 0;cursor:pointer}
+.hi-punkt input{margin-top:3px}
+.hi-punkt.ferdig span{text-decoration:line-through;color:#8c959f}
+.hi-besk{margin-top:8px;font-size:12.5px;color:#57606a;border-top:1px dashed var(--line);padding-top:6px}
+.hi-ansvar{display:flex;flex-direction:column;gap:2px;font-size:13px;margin-bottom:8px}
+.hi-mangler{color:#cf222e;font-size:12.5px}
+.hi-akt{display:block;width:100%;text-align:left;border:1px solid var(--line);border-left:4px solid #888;border-radius:6px;background:#fafbfc;padding:3px 8px;margin-bottom:4px;font:inherit;font-size:12.5px;cursor:pointer}
+button.hi-akt:hover{background:#eef5ff}
+.hi-fot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;border-top:1px solid #eef0f2;padding-top:7px}
+.hi-akttreff .hi-akt-rad{display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.hi-akttreff .hi-akt{width:auto;flex:1;min-width:260px;cursor:default}
+.hi-merke{border:1px solid #cf222e;color:#cf222e;background:#fff;border-radius:10px;font-size:11px;font-weight:700;padding:0 6px;cursor:pointer;margin-left:4px}
 .sv-dlg-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
 @media(max-width:600px){.sv-dlg-row{flex-direction:column;gap:0}}
 .sv-lab{position:absolute;height:22px;line-height:22px;font-size:11.5px;white-space:nowrap;color:#24292f;cursor:pointer;z-index:1;text-shadow:0 0 3px #fff,0 0 3px #fff}
@@ -496,6 +531,7 @@ td.firma-cell{white-space:normal;min-width:130px}
 </header>
 <nav class="tabs">
   <button data-tab="statustavle">Statustavle</button>
+  <button data-tab="hindringer">Hindringer prioritet</button>
   <button data-tab="metoder">Metodebeskrivelser</button>
   <button data-tab="firma">Utførelse av firma</button>
   <button data-tab="klargjoring">Klargjøring av aktiviteter</button>
@@ -505,6 +541,44 @@ td.firma-cell{white-space:normal;min-width:130px}
   <button data-tab="admin">Admin</button>
 </nav>
 <main>
+  <section class="page" id="page-hindringer">
+    <div class="panel">
+      <h2>Hindringer prioritet</h2>
+      <p class="intro">Det som gjenstår å få avklart før aktivitetene kan gå som planlagt. Noter det som ikke fungerer, må avklares eller kan bli endret, knytt det til aktivitetene det gjelder, og sett frist, hvem som følger opp og hvem som tar beslutningen.
+        Lista er sortert etter hva som haster: frist passert, aktivitet som starter før fristen, aktiviteter som allerede pågår, og deretter nærmeste frist eller oppstart. Åpne hindringer gir gult eller rødt lys på aktiviteten i Statustavlen.</p>
+      <div class="toolbar">
+        <input type="search" id="hi-sok" placeholder="Søk aktivitet, ID, ansvarlig, tekst …" style="min-width:280px">
+        <select id="hi-vis" title="Vis"><option value="apne">Åpne hindringer</option><option value="alle">Alle</option><option value="avklart">Avklarte</option></select>
+        <button class="btn" data-action="hi-mine" id="hi-mine" title="Der du er ansvarlig eller beslutter, eller som gjelder ditt firma">Bare mine</button>
+        <button class="btn primary" data-action="hi-ny" id="hi-ny">+ Ny hindring</button>
+      </div>
+      <div class="stats" id="stats-hindringer"></div>
+    </div>
+    <div id="hi-liste"></div>
+    <dialog class="sv-dlg hi-dlg" id="hi-dlg">
+      <form id="hi-form" method="dialog">
+        <h3 id="hi-dlg-title">Ny hindring</h3>
+        <label>Hva gjelder det?<input type="text" id="hif-tittel" maxlength="140" required placeholder="F.eks. Bunnledninger – renner i kjeller"></label>
+        <div class="sv-dlg-row"><label>Type<select id="hif-type"></select></label><label>Prioritet<select id="hif-prio"></select></label><label>Siste frist<input type="date" id="hif-frist"></label></div>
+        <div class="sv-dlg-row"><label>Ansvarlig for oppfølging<input type="text" id="hif-ansvarlig" list="hif-personer" maxlength="80" placeholder="Navn"></label>
+          <label>Beslutning tas av<input type="text" id="hif-beslutter" list="hif-personer" maxlength="80" placeholder="Navn eller rolle, f.eks. Byggherre"></label></div>
+        <datalist id="hif-personer"></datalist>
+        <label>Gjenstår (ett punkt per linje)<textarea id="hif-gjen" rows="4" placeholder="Det som må gjøres for å få saken avklart"></textarea></label>
+        <label>Status / beskrivelse<textarea id="hif-besk" rows="3" placeholder="Hva er situasjonen nå?"></textarea></label>
+        <label>Aktiviteter</label>
+        <div id="hif-akt" class="hi-chips"></div>
+        <input type="search" id="hif-sok" placeholder="Søk aktivitet å koble til (ID, navn, sone, firma) …">
+        <div id="hif-treff" class="hi-treffliste"></div>
+        <div class="sv-dlg-actions">
+          <button type="button" class="btn danger" data-action="hif-del" id="hif-del">🗑 Slett</button>
+          <span style="flex:1"></span>
+          <button type="button" class="btn" data-action="hif-avbryt">Avbryt</button>
+          <button type="submit" class="btn primary">Lagre</button>
+        </div>
+      </form>
+    </dialog>
+  </section>
+
   <section class="page" id="page-klargjoring">
     <div class="panel">
       <h2>Klargjøring av aktiviteter</h2>
@@ -593,7 +667,7 @@ td.firma-cell{white-space:normal;min-width:130px}
   <section class="page" id="page-statustavle">
     <div class="panel">
       <h2>Statustavle – 8 uker <span class="readonly-tag" id="sv-ro-tag">Kun visning</span></h2>
-      <p class="intro">Aktivitetene de neste 8 ukene, per sone. Fargen på stolpen er firmaet, og trafikklyset er totalstatusen for aktiviteten. Den er satt sammen av metodebeskrivelsen og de sju forutsetningene på aktiviteten. Det dårligste lyset gjelder. Hold over en aktivitet for å se hva som mangler og hva som er kommentert. Slå på «Hyperlink mot aktivitet» for å åpne aktiviteten i «Klargjøring av aktiviteter» med et trykk. Med «✏️ Rediger tidslinje» kan du flytte startdatoer, endre varighet og legge inn nye aktiviteter.</p>
+      <p class="intro">Aktivitetene de neste 8 ukene, per sone. Fargen på stolpen er firmaet, og trafikklyset er totalstatusen for aktiviteten. Den er satt sammen av metodebeskrivelsen, de sju forutsetningene og åpne hindringer på aktiviteten. Det dårligste lyset gjelder. Hold over en aktivitet for å se hva som mangler og hva som er kommentert. Slå på «Hyperlink mot aktivitet» for å åpne aktiviteten i «Klargjøring av aktiviteter» med et trykk. Med «✏️ Rediger tidslinje» kan du flytte startdatoer, endre varighet og legge inn nye aktiviteter.</p>
       <div class="toolbar">
         <div class="firm-filter" data-page="statustavle"></div>
         <button class="btn" data-action="ff-mine" data-page="statustavle">Bare mitt firma</button>
@@ -843,7 +917,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-01.13';
+const APP_VERSION = '2026-10-02.1';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -972,7 +1046,7 @@ function buildData() {
 // ---------- lagring ----------
 let DATA = [], ATS = [], FIRMS = [], USERS = [], METHODS = [], currentUserId = null, SETTINGS = {};
 // Avhengigheter mellom aktiviteter ({id, fra, til, type: FS|SS|FF|SF|SAM, lag}) og endringslogg for Statustavlen.
-let AVH = [], LOGG = [], MBDOK = [];
+let AVH = [], LOGG = [], MBDOK = [], HIND = [];
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
 function readRaw(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -1096,6 +1170,7 @@ function load() {
   AVH = readJSON(AVH_KEY) || [];
   LOGG = readJSON(LOGG_KEY) || [];
   MBDOK = readJSON(MBDOK_KEY) || [];
+  HIND = readJSON(HIND_KEY) || [];
   if (!SETTINGS.fuIkkeVurdert) {
     // Engangsnullstilling: alle sju forutsetninger starter som «ikke vurdert».
     DATA.forEach(a => { a.forutsetninger = ikkeVurdert(); }); ATS.forEach(t => { t.forutsetninger = ikkeVurdert(); });
@@ -1108,6 +1183,7 @@ function load() {
   applyPlansett();
   applyAtsett();
   applyMbrydd();
+  applyHindsett();
   save();
 }
 function save() {
@@ -1118,6 +1194,7 @@ function save() {
   writeRaw(METHODS_KEY, JSON.stringify(METHODS));
   writeRaw(REGISTER_KEY, JSON.stringify(REGISTER));
   writeRaw(AVH_KEY, JSON.stringify(AVH));
+  writeRaw(HIND_KEY, JSON.stringify(HIND));
   writeRaw(USERS_KEY, JSON.stringify(USERS));
   writeRaw(CURRENT_KEY, currentUserId);
   writeRaw(SETTINGS_KEY, JSON.stringify(SETTINGS));
@@ -1188,6 +1265,7 @@ function renderUserBar() {
 const ui = {
   klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set(), showArchive: false},
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
+  hindringer: {search: '', vis: 'apne', mine: false, apen: new Set()},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
   statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: [], lenke: false, avh: false},
   metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set(), atFirma: null},
@@ -1265,7 +1343,7 @@ function mainRow(a, page) {
       <button class="icon-btn expand" data-action="expand" title="${exp ? 'Skjul' : 'Vis'} AT-rader">${exp ? '−' : '+'}</button>
       ${editBtn}
     </td>
-    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : ''}</div></td>
+    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : ''}${hindForAkt(a.id).length ? ` <button class="hi-merke" data-action="hi-til" data-akt="${esc(a.id)}" title="${esc(hindForAkt(a.id).map(h => h.tittel).join('\n'))}">⛔ ${hindForAkt(a.id).length} hindring${hindForAkt(a.id).length === 1 ? '' : 'er'}</button>` : ''}</div></td>
     ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
     <td class="c">${cLys('metode.status', a.metode.status, ed, METODE_LYS)}${actMbNrs(a).length ? `<div class="sub">MB ${esc(actMbNrs(a).join(', '))} ${mbDokLenker(actMbNrs(a), true)}</div>` : ''}</td>
     <td>${a.at.length ? a.at.map(t => `<span class="at-chip" data-action="goto-at" data-nr="${esc(t.nr)}" title="Gå til ${esc(t.nr)}">${esc(t.nr)}</span>`).join('<br>') : '<span class="muted">Ingen</span>'}</td>
@@ -2205,11 +2283,12 @@ const LYS_RANK = {gronn: 0, ikke: 1, gul: 2, rod: 3};
 const MANEDER = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 let svItems = [], svTapped = null;
 
-// Totalstatus: det dårligste lyset av metodebeskrivelsen og de sju forutsetningene på aktiviteten.
+// Totalstatus: det dårligste lyset av metodebeskrivelsen, de sju forutsetningene og åpne hindringer på aktiviteten.
 // Grå betyr at noe ikke er vurdert, men at ingenting er rødt eller gult.
 function totalStatus(a) {
   const punkter = [{hva: 'Metodebeskrivelse', lys: LYS[a.metode.status] ? a.metode.status : 'ikke'}];
   FORUTSETNINGER.forEach(([k, l]) => punkter.push({hva: l, lys: a.forutsetninger[k] || 'ikke'}));
+  hindForAkt(a.id).forEach(h => punkter.push({hva: 'Hindring: ' + h.tittel, lys: hindVurder(h).lys}));
   const lys = punkter.reduce((m, p) => LYS_RANK[p.lys] > LYS_RANK[m] ? p.lys : m, 'gronn');
   return {lys, punkter};
 }
@@ -3241,6 +3320,283 @@ function nextAtNr2() {
   return 'AT' + (max + 1);
 }
 
+// ---------- Hindringer prioritet ----------
+// Ting som ikke fungerer, må avklares eller kan bli endret. Hver hindring knyttes til aktiviteter, med frist,
+// ansvarlig for oppfølging og hvem som tar beslutningen. Lista sorteres etter hva som haster.
+const HIND_KEY = 'wrk2_hindringer', HINDSETT = 1;
+const HIND_TYPER = ['Avklaring', 'Beslutning', 'Hindring', 'Endring'];
+const HIND_PRIO = {hoy: 'Høy', middels: 'Middels', lav: 'Lav'};
+const HIND_KILDE_3009 = 'Leveransemøte fase 2, 30.09.2026';
+// Startdata: sakene fra oppfølgingsmøtet for leveranseliste og -status, fase 2, 30.09.2026.
+// [tittel, type, prioritet, status, gjenstår[], aktiviteter [[id, navn]], ansvarlig, beslutter, frist, fristForslag]
+const HIND_START = [
+  ['Naturgass- og trykkluftledninger', 'Avklaring', 'middels',
+    'Oppdatert underlag er sendt ut eller ferdigstilles. Konstruksjonsgjennomgang planlegges denne uken. Grunnlaget skal vise både ny og eksisterende infrastruktur for å sikre byggbarhetsvurdering.',
+    ['Opprette granskningspakke med relevante tegninger og eksisterende infrastruktur', 'Gjennomføre konstruksjonsgjennomgang før videre behandling', 'Avklare deltakere og ansvar for granskningsgjennomgangen', 'Følge opp dokumentkontroll og etablering av granskningspakke'],
+    [['A087', 'Grave for naturgass (vestside'], ['A088', 'Grave for naturgass (kryssing'], ['A089', 'Grave for Naturgassledning'], ['A091', '16-C010 Naturgass ledning'], ['A093', '16-C010 Naturgass avgrening'], ['A095', '16-C010 Naturgass avgrening'], ['A006', 'Kum for Trykkluft']],
+    'Jørgen Narvestad', '', '2026-10-16', true],
+  ['Brannhydranter – plassering', 'Avklaring', 'lav',
+    'Løsningen er avklart og sendt til arbeidsgrunnlag. Det gjenstår kun mindre justeringer av plassering enkelte steder.',
+    ['Finjustere plasseringer der eksisterende vei og terreng krever tilpasninger'],
+    [['A085', 'Tilbakefylling hovedgrøft']], '', '', '2026-10-09', true],
+  ['Flomvei – revidert løsning', 'Avklaring', 'middels',
+    'Revidert flomveiløsning er sendt ut. Konstruksjonsgjennomgang vurderes for å sikre byggbarhet og dokumentasjon mot utførende.',
+    ['Kalle inn til kort konstruksjonsgjennomgang', 'Dokumentere at utførende har gjennomgått og forstått løsningen'],
+    [['A085', 'Tilbakefylling hovedgrøft']], '', '', '2026-10-09', true],
+  ['Trekkerør og bunnledninger – renner i kjeller og ved porter', 'Beslutning', 'hoy',
+    'Avklaringer pågår for renner i kjeller og ved porter. Bunnledninger under bygget er under revisjon. Beslutning avventes fra prosessutstyrssiden før endelig løsning fastlegges.',
+    ['Avklare hvilke rennetyper som skal benyttes i kjeller og ved porter', 'Verifisere at løsningene er i samsvar med prosessforutsetningene', 'Følge opp avklaringer når prosessleverandør er på plass'],
+    [['A051', 'Meisling for bunnledninger'], ['A134', 'Teknisk i grunn'], ['A119', 'Oppfylling av gulv og grøfter'], ['A128', 'Oppfylling av gulv og grøfter']],
+    '', 'Prosessutstyrssiden', '2026-10-02', true],
+  ['Portåpninger og utsparinger – drossrom', 'Avklaring', 'middels',
+    'Portåpningene til drossrommene er avklart. Tegningsgrunnlaget er ferdigstilt og kan sendes ut. Åpningsmålene er verifisert og påvirker ikke videre prosjektering.',
+    ['Sende ut porttegningene denne uken'],
+    [['A039', 'Vegger og dekker drossrom'], ['A031', 'Fundamentering drossrom']], 'Kjetil Rongved Sandven', '', '2026-10-02', false],
+  ['Fundamenter lagerhall – senke fundamentnivå?', 'Beslutning', 'hoy',
+    'Det vurderes om fundamenter skal senkes for å redusere behovet for oppfylling. Kostnads- og fremdriftskonsekvenser vurderes opp mot omprosjektering, armering og utførelse. Det er behov for en snarlig beslutning.',
+    ['Utarbeide beslutningsunderlag som viser konsekvenser ved å senke eller beholde fundamentnivåene', 'Gjennomføre beslutningsmøte med relevante parter etter at underlaget foreligger', 'Avklare påvirkning på armering og innkjøp før endelig beslutning'],
+    [['A138', 'Magring kjeller'], ['A139', 'Boring fjellbolter kjeller'], ['A137', 'Rensk til fjell']], '', 'Beslutningsmøte med relevante parter', '2026-10-16', true],
+  ['Innstøpningsgods og boltegrupper', 'Avklaring', 'middels',
+    'Arbeidet med samlet oversikt over innstøpningsgods pågår. Nødvendig underlag foreligger og leveranser er under arbeid. Det er reist spørsmål om alternative standarder for boltegrupper.',
+    ['Videreutvikle arbeidsdokument for innstøpningsgods, ansvar og innkjøpsstatus', 'Registrere ansvarlige personer og innkjøpsunderlag i felles oversikt', 'Følge opp eventuell vurdering av alternativ standard for boltegrupper', 'Kommunisere at prosjekteringen videreføres etter gjeldende spesifikasjoner inntil annet besluttes'],
+    [['A083', 'Punktfundamenter'], ['A039', 'Vegger og dekker drossrom'], ['A098', 'Preheater, Drosspress'], ['A101', 'Vitnepunkt innstøpning drossrom']], '', '', '2026-10-09', true],
+  ['Inntransport av Danieli-utstyr', 'Beslutning', 'hoy',
+    'Konsekvensen ved å ikke stoppe veggstøp er vurdert. Påvirkningen begrenser seg til en bjelke og to strekkstag i et fundament, og saken vurderes som relativt ukomplisert. Det ønskes rask beslutning. Koblingen til gewistagene er foreløpig – bekreft hvilket fundament det gjelder.',
+    ['Innhente endelig beslutning fra byggherre', 'Implementere valgt løsning i konstruksjonsunderlaget'],
+    [['A041', 'Trekking gewistag'], ['A097', 'Trekking gewistag']], '', 'Byggherre', '2026-10-09', true],
+  ['Gulv og gulvoppbygging – fuger og stålvinkler', 'Avklaring', 'middels',
+    'Foreslått gulvoppbygging baseres på 0–32-masse og plastmembran. Endelig utforming er ikke avsluttet. Det er reist spørsmål om stålvinkler i fuger, omfang av fuger og betong med redusert svinn for å begrense antall fuger.',
+    ['Oppdatere snitt og dokumentasjon for gulvoppbygging', 'Verifisere at foreslåtte masser kan benyttes', 'Utarbeide beslutningsunderlag for fugeløsninger og stålvinkler', 'Sammenligne kostnader og konsekvenser mellom tradisjonell løsning og alternative gulvkonsepter med færre fuger', 'Kontrollere hvilke forutsetninger som lå til grunn i målprisen og tidligere leveranser'],
+    [['A119', 'Oppfylling av gulv og grøfter'], ['A128', 'Oppfylling av gulv og grøfter'], ['A120', 'Finavretting']], '', '', '2026-10-30', true]
+];
+// Finner aktiviteten: samme ID og navn, ellers første aktivitet med navnet (ID-ene kan avvike mellom databaser).
+function hindFinnAkt(id, navn) {
+  const n = sdNorm(navn), passer = a => sdNorm(a.navn).startsWith(n) || n.startsWith(sdNorm(a.navn));
+  const a = actById(id);
+  if (a && passer(a)) return a.id;
+  const b = DATA.find(x => passer(x) && x.id !== id && !erArkiv(x));
+  return b ? b.id : (a ? a.id : null);
+}
+function applyHindsett() {
+  if ((SETTINGS.hindsett || 0) >= HINDSETT) return [];
+  const tid = '2026-09-30T13:15:00.000Z', nye = [];
+  HIND_START.forEach(([tittel, type, prioritet, beskrivelse, gjenstar, akt, ansvarlig, beslutter, frist, fristForslag], i) => {
+    const id = 'H30-' + (i + 1);
+    if (HIND.some(h => h.id === id)) return;
+    const h = {id, tittel, type, prioritet, beskrivelse, gjenstar: gjenstar.map(tekst => ({tekst, ferdig: false})),
+      aktiviteter: [...new Set(akt.map(([aid, navn]) => hindFinnAkt(aid, navn)).filter(Boolean))],
+      ansvarlig, beslutter, frist, fristForslag, status: 'apen', kilde: HIND_KILDE_3009, opprettet: tid, av: 'Fra møtereferat', firma: 'Skanska'};
+    h.aktFirmaer = hindAktFirmaer(h);
+    HIND.push(h); nye.push(h);
+  });
+  SETTINGS.hindsett = HINDSETT;
+  return nye;
+}
+const hindAktFirmaer = h => [...new Set(h.aktiviteter.map(actById).filter(Boolean).map(a => a.firma))];
+const kanNyHind = () => isSys() || me().rolle === 'firmaadmin';
+const kanEndreHind = h => isSys() || (me().rolle === 'firmaadmin' && (h.firma === me().firma || (h.aktFirmaer || []).includes(me().firma)));
+const kanSletteHind = h => isSys() || (me().rolle === 'firmaadmin' && h.firma === me().firma);
+const hindForAkt = id => HIND.filter(h => h.status !== 'avklart' && h.aktiviteter.includes(id));
+// Hvor mye haster det? forfalt: fristen er passert · kollisjon: en aktivitet starter før fristen ·
+// pagar: en aktivitet er allerede i gang · apen: ellers. Avklarte er «avklart».
+function hindVurder(h) {
+  const akt = h.aktiviteter.map(actById).filter(Boolean);
+  if (h.status === 'avklart') return {niva: 'avklart', lys: 'gronn', akt, varsler: []};
+  const varsler = [];
+  const forfalt = h.frist && h.frist < TODAY;
+  if (forfalt) varsler.push(`Fristen gikk ut ${fmtNo(h.frist)}`);
+  const kollisjon = h.frist ? akt.filter(a => a.startdato >= TODAY && a.startdato <= h.frist) : [];
+  kollisjon.forEach(a => varsler.push(`${a.id} starter ${fmtShort(a.startdato)} – før fristen`));
+  const pagar = akt.filter(a => a.startdato < TODAY && endDate(a) >= TODAY);
+  if (pagar.length) varsler.push(`${pagar.map(a => a.id).join(', ')} pågår allerede`);
+  const niva = forfalt ? 'forfalt' : kollisjon.length ? 'kollisjon' : pagar.length ? 'pagar' : 'apen';
+  const forste = akt.map(a => a.startdato).sort()[0] || '';
+  // Behovsdato: det som kommer først av fristen og oppstarten til en aktivitet som ikke har startet.
+  const behov = [h.frist, ...akt.filter(a => a.startdato >= TODAY).map(a => a.startdato)].filter(Boolean).sort()[0] || '9999';
+  return {niva, lys: niva === 'forfalt' || niva === 'kollisjon' ? 'rod' : 'gul', akt, varsler, forste, behov};
+}
+const HIND_RANG = {forfalt: 0, kollisjon: 1, pagar: 2, apen: 2, avklart: 9}, PRIO_RANG = {hoy: 0, middels: 1, lav: 2};
+function hindGruppe(h, v) {
+  if (v.niva === 'avklart') return 'avklart';
+  if (v.niva === 'forfalt' || v.niva === 'kollisjon' || h.prioritet === 'hoy' || v.behov <= addDays(TODAY, 7)) return 'haster';
+  if (v.behov <= addDays(TODAY, 28)) return 'snart';
+  return 'senere';
+}
+const HIND_GRUPPER = [['haster', '🔴 Haster nå', 'Frist passert, aktivitet starter før fristen, høy prioritet eller behov innen 7 dager'],
+  ['snart', '🟡 Neste 4 uker', 'Frist eller oppstart innen 4 uker'], ['senere', '⚪ Senere', 'Frist eller oppstart om mer enn 4 uker'], ['avklart', '✅ Avklart', '']];
+const dagerTil = d => daysBetween(TODAY, d);
+const omDager = d => { const n = dagerTil(d); return n === 0 ? 'i dag' : n === 1 ? 'i morgen' : n > 0 ? `om ${n} d` : `${-n} d siden`; };
+
+function hindTreff(h, q) {
+  if (!q) return true;
+  const akt = h.aktiviteter.map(actById).filter(Boolean);
+  return [h.tittel, h.beskrivelse, h.type, h.ansvarlig, h.beslutter, h.kilde, ...h.gjenstar.map(g => g.tekst),
+    ...akt.flatMap(a => [a.id, a.navn, a.omrade, a.firma])].some(s => String(s || '').toLowerCase().includes(q));
+}
+function renderHindringer() {
+  const st = ui.hindringer, q = st.search.trim().toLowerCase();
+  document.getElementById('hi-ny').hidden = !kanNyHind();
+  document.getElementById('hi-vis').value = st.vis;
+  document.getElementById('hi-mine').classList.toggle('on', st.mine);
+  const navn = (me().name || '').toLowerCase();
+  const mine = h => !st.mine || [h.ansvarlig, h.beslutter].some(x => x && navn && x.toLowerCase().includes(navn)) || h.firma === me().firma || (h.aktFirmaer || []).includes(me().firma);
+  const alle = HIND.map(h => ({h, v: hindVurder(h)}));
+  const liste = alle.filter(({h}) => (st.vis === 'alle' || (st.vis === 'avklart') === (h.status === 'avklart')) && mine(h) && hindTreff(h, q))
+    .sort((x, y) => HIND_RANG[x.v.niva] - HIND_RANG[y.v.niva] || (x.v.behov || '').localeCompare(y.v.behov || '') || PRIO_RANG[x.h.prioritet] - PRIO_RANG[y.h.prioritet]);
+  const apne = alle.filter(x => x.h.status !== 'avklart');
+  const n = k => apne.filter(x => x.v.niva === k).length;
+  const gjen = apne.reduce((s, x) => s + x.h.gjenstar.filter(g => !g.ferdig).length, 0);
+  document.getElementById('stats-hindringer').innerHTML = `<span><b>${apne.length}</b> åpne</span>
+    <span style="color:var(--red)"><b>${n('forfalt')}</b> frist passert</span><span style="color:var(--red)"><b>${n('kollisjon')}</b> der aktivitet starter før fristen</span>
+    <span><b>${n('pagar')}</b> på aktiviteter som pågår</span><span><b>${gjen}</b> punkter gjenstår</span><span><b>${alle.length - apne.length}</b> avklart</span>`;
+  // Søker en etter en aktivitet, vises den også selv om den ikke har hindringer, slik at en kan legge inn en ny.
+  const aktTreff = q.length >= 2 ? DATA.filter(a => !erArkiv(a) && [a.id, a.navn].some(s => s.toLowerCase().includes(q))).slice(0, 8) : [];
+  const aktBoks = aktTreff.length ? `<div class="panel hi-akttreff"><b>Aktiviteter som passer søket</b>${aktTreff.map(a => {
+    const k = hindForAkt(a.id).length;
+    return `<div class="hi-akt-rad"><span class="hi-akt" style="border-left-color:${firmColor(a.firma)}"><b>${esc(a.id)}</b> ${esc(a.navn)} <span class="sub">${esc(a.omrade)} · ${fmtShort(a.startdato)}–${fmtShort(endDate(a))}</span></span>
+      <span class="sub">${k ? `${k} åpen${k === 1 ? '' : 'e'} hindring${k === 1 ? '' : 'er'}` : 'Ingen åpne hindringer'}</span>
+      ${kanNyHind() ? `<button class="btn" data-action="hi-ny" data-akt="${esc(a.id)}">+ Ny hindring</button>` : ''}</div>`;
+  }).join('')}</div>` : '';
+  const kort = ({h, v}) => {
+    const kan = kanEndreHind(h), igjen = h.gjenstar.filter(g => !g.ferdig), ferdig = h.gjenstar.length - igjen.length;
+    const vis = st.apen.has(h.id) ? h.gjenstar : igjen;
+    return `<div class="hi-kort ${v.niva}" data-hind="${esc(h.id)}">
+      <div class="hi-topp">
+        <span class="badge hi-prio ${h.prioritet}">${esc(HIND_PRIO[h.prioritet] || h.prioritet)}</span><span class="badge hi-type">${esc(h.type)}</span>
+        <b class="hi-tittel">${esc(h.tittel)}</b>
+        <span class="hi-frist ${v.niva}">${h.frist ? `Frist <b>${fmtShort(h.frist)}</b> <span class="sub">(${omDager(h.frist)})</span>${h.fristForslag ? ' <span class="hi-forslag" title="Foreslått ut fra planen – bekreft eller endre">forslag</span>' : ''}` : '<span class="sub">Ingen frist</span>'}</span>
+      </div>
+      ${v.varsler.length ? `<div class="hi-varsel">${v.varsler.map(t => `<span>⚠ ${esc(t)}</span>`).join('')}</div>` : ''}
+      <div class="hi-kropp">
+        <div class="hi-gjen"><div class="hi-lbl">Gjenstår ${h.gjenstar.length ? `<span class="sub">${ferdig} av ${h.gjenstar.length} utført</span>` : ''}</div>
+          ${vis.length ? vis.map(g => `<label class="hi-punkt${g.ferdig ? ' ferdig' : ''}"><input type="checkbox" data-hi-punkt="${esc(h.id)}" data-i="${h.gjenstar.indexOf(g)}" ${g.ferdig ? 'checked' : ''} ${kan ? '' : 'disabled'}> <span>${esc(g.tekst)}</span></label>`).join('')
+            : `<div class="sub">${h.gjenstar.length ? 'Alle punkter er utført.' : 'Ingen punkter registrert.'}</div>`}
+          ${ferdig ? `<button class="link-btn" data-action="hi-vis-ferdige" data-hind="${esc(h.id)}">${st.apen.has(h.id) ? 'Skjul utførte' : `Vis ${ferdig} utført${ferdig === 1 ? '' : 'e'}`}</button>` : ''}
+          ${h.beskrivelse ? `<div class="hi-besk">${esc(h.beskrivelse)}</div>` : ''}
+        </div>
+        <div class="hi-side">
+          <div class="hi-lbl">Ansvar</div>
+          <div class="hi-ansvar"><span title="Ansvarlig for oppfølging">👤 ${h.ansvarlig ? esc(h.ansvarlig) : '<span class="hi-mangler">Ikke satt</span>'}</span>
+            <span title="Beslutning tas av">⚖️ ${h.beslutter ? esc(h.beslutter) : '<span class="sub">–</span>'}</span></div>
+          <div class="hi-lbl">Aktiviteter</div>
+          ${v.akt.length ? v.akt.slice(0, st.apen.has(h.id + ':akt') ? 99 : 4).map(a => `<button class="hi-akt" data-action="hi-goto" data-akt="${esc(a.id)}" style="border-left-color:${firmColor(a.firma)}" title="Åpne i Klargjøring av aktiviteter">
+              <b>${esc(a.id)}</b> ${esc(a.navn)}<br><span class="sub">${esc(a.omrade)} · ${a.startdato < TODAY ? (endDate(a) >= TODAY ? 'pågår' : 'avsluttet') : 'starter ' + fmtShort(a.startdato) + ' (' + omDager(a.startdato) + ')'}</span></button>`).join('')
+            + (v.akt.length > 4 ? `<button class="link-btn" data-action="hi-vis-akt" data-hind="${esc(h.id)}">${st.apen.has(h.id + ':akt') ? 'Vis færre' : `+ ${v.akt.length - 4} aktiviteter til`}</button>` : '') : '<span class="hi-mangler">Ingen aktivitet koblet</span>'}
+        </div>
+      </div>
+      <div class="hi-fot"><span class="sub">${esc(h.kilde || '')}${h.kilde ? ' · ' : ''}${h.av ? 'lagt inn av ' + esc(h.av) : ''}${h.avklart ? ` · avklart ${fmtNo(h.avklart.tid.slice(0, 10))}${h.avklart.av ? ' av ' + esc(h.avklart.av) : ''}` : ''}</span>
+        <span style="flex:1"></span>
+        ${kan ? `<button class="btn" data-action="hi-endre" data-hind="${esc(h.id)}">✏️ Endre</button>
+          <button class="btn${h.status === 'avklart' ? '' : ' primary'}" data-action="hi-avklart" data-hind="${esc(h.id)}">${h.status === 'avklart' ? '↺ Gjenåpne' : '✔ Avklart'}</button>` : '<span class="sub">🔒 Kun visning</span>'}
+      </div>
+    </div>`;
+  };
+  const grupper = HIND_GRUPPER.map(([k, tittel, forklaring]) => {
+    const i = liste.filter(x => hindGruppe(x.h, x.v) === k);
+    return i.length ? `<div class="hi-gruppe"><h3>${tittel} <span class="sub">${i.length} · ${forklaring}</span></h3>${i.map(kort).join('')}</div>` : '';
+  }).join('');
+  document.getElementById('hi-liste').innerHTML = aktBoks + (grupper || `<div class="panel"><p class="muted">${HIND.length ? 'Ingen hindringer passer søket eller filteret.' : 'Ingen hindringer registrert ennå.'}</p></div>`);
+}
+
+// ----- dialog for ny / endre -----
+let hiDlg = null;
+function hindApne(h, aktId) {
+  if (h ? !kanEndreHind(h) : !kanNyHind()) return;
+  hiDlg = {h, akt: h ? [...h.aktiviteter] : aktId ? [aktId] : []};
+  const $ = id => document.getElementById(id), o = h || {tittel: '', type: 'Avklaring', prioritet: 'middels', frist: '', ansvarlig: '', beslutter: '', beskrivelse: '', gjenstar: []};
+  $('hi-dlg-title').textContent = h ? 'Endre hindring' : 'Ny hindring';
+  $('hif-tittel').value = o.tittel;
+  $('hif-type').innerHTML = HIND_TYPER.map(t => `<option ${t === o.type ? 'selected' : ''}>${t}</option>`).join('');
+  $('hif-prio').innerHTML = Object.entries(HIND_PRIO).map(([k, l]) => `<option value="${k}" ${k === o.prioritet ? 'selected' : ''}>${l}</option>`).join('');
+  $('hif-frist').value = o.frist || '';
+  $('hif-ansvarlig').value = o.ansvarlig || ''; $('hif-beslutter').value = o.beslutter || '';
+  $('hif-besk').value = o.beskrivelse || '';
+  $('hif-gjen').value = o.gjenstar.map(g => g.tekst).join('\n');
+  $('hif-personer').innerHTML = [...new Set([...USERS.filter(u => !u.pending).map(u => u.name), ...HIND.flatMap(x => [x.ansvarlig, x.beslutter]), 'Byggherre'].filter(Boolean))].sort().map(n => `<option value="${esc(n)}">`).join('');
+  $('hif-sok').value = ''; $('hif-treff').innerHTML = '';
+  $('hif-del').hidden = !(h && kanSletteHind(h));
+  hindDlgAkt();
+  $('hi-dlg').showModal();
+  setTimeout(() => $('hif-tittel').focus(), 30);
+}
+function hindDlgAkt() {
+  document.getElementById('hif-akt').innerHTML = hiDlg.akt.length ? hiDlg.akt.map(id => { const a = actById(id); return `<span class="hi-chip" style="border-left-color:${firmColor(a ? a.firma : '')}"><b>${esc(id)}</b> ${esc(a ? a.navn : 'ukjent')} <button type="button" class="mb-x" data-action="hif-fjern" data-akt="${esc(id)}" title="Fjern">×</button></span>`; }).join('')
+    : '<span class="sub">Ingen aktivitet koblet ennå. Søk under.</span>';
+}
+function hindDlgSok(q) {
+  q = q.trim().toLowerCase();
+  const treff = q.length < 2 ? [] : DATA.filter(a => !hiDlg.akt.includes(a.id) && [a.id, a.navn, a.omrade, a.firma].some(s => s.toLowerCase().includes(q)))
+    .sort((x, y) => erArkiv(x) - erArkiv(y) || x.startdato.localeCompare(y.startdato)).slice(0, 10);
+  document.getElementById('hif-treff').innerHTML = treff.map(a => `<button type="button" class="hi-treff" data-action="hif-legg" data-akt="${esc(a.id)}" style="border-left-color:${firmColor(a.firma)}"><b>${esc(a.id)}</b> ${esc(a.navn)} <span class="sub">${esc(a.omrade)} · ${fmtShort(a.startdato)}–${fmtShort(endDate(a))} · ${esc(a.firma)}</span></button>`).join('')
+    || (q.length >= 2 ? '<div class="sub">Ingen aktiviteter passer.</div>' : '');
+}
+function hindLagre() {
+  const $ = id => document.getElementById(id), gammel = hiDlg.h;
+  const tittel = $('hif-tittel').value.trim(); if (!tittel) { $('hif-tittel').focus(); return false; }
+  const tidligere = new Map((gammel ? gammel.gjenstar : []).map(g => [g.tekst, g.ferdig]));
+  const data = {tittel, type: $('hif-type').value, prioritet: $('hif-prio').value, frist: $('hif-frist').value, ansvarlig: $('hif-ansvarlig').value.trim(), beslutter: $('hif-beslutter').value.trim(),
+    beskrivelse: $('hif-besk').value.trim(), gjenstar: $('hif-gjen').value.split('\n').map(t => t.trim()).filter(Boolean).map(tekst => ({tekst, ferdig: !!tidligere.get(tekst)})), aktiviteter: [...hiDlg.akt]};
+  if (gammel) {
+    if (gammel.frist !== data.frist) data.fristForslag = false;
+    Object.assign(gammel, data); gammel.aktFirmaer = hindAktFirmaer(gammel);
+    logg('Hindring endret', data.aktiviteter.join(', '), `${tittel}${data.frist ? ' · frist ' + fmtNo(data.frist) : ''}${data.ansvarlig ? ' · ansvarlig ' + data.ansvarlig : ''}`);
+  } else {
+    const h = {id: 'H' + uid(), ...data, fristForslag: false, status: 'apen', kilde: '', opprettet: new Date().toISOString(), av: me().name || '', firma: isSys() ? 'Skanska' : me().firma};
+    h.aktFirmaer = hindAktFirmaer(h); HIND.push(h);
+    logg('Ny hindring', data.aktiviteter.join(', '), `${tittel}${data.frist ? ' · frist ' + fmtNo(data.frist) : ''}`);
+  }
+  save(); renderCurrent(); return true;
+}
+document.addEventListener('submit', e => { if (e.target.id === 'hi-form') { e.preventDefault(); if (hindLagre()) document.getElementById('hi-dlg').close(); } });
+document.addEventListener('input', e => {
+  if (e.target.id === 'hif-sok') hindDlgSok(e.target.value);
+  if (e.target.id === 'hi-sok') { ui.hindringer.search = e.target.value; renderHindringer(); }
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'hi-vis') { ui.hindringer.vis = e.target.value; renderHindringer(); return; }
+  const id = e.target.dataset && e.target.dataset.hiPunkt; if (!id) return;
+  const h = HIND.find(x => x.id === id); if (!h || !kanEndreHind(h)) { renderHindringer(); return; }
+  const g = h.gjenstar[Number(e.target.dataset.i)]; if (!g) return;
+  g.ferdig = e.target.checked;
+  logg(g.ferdig ? 'Hindring: punkt utført' : 'Hindring: punkt gjenåpnet', h.aktiviteter.join(', '), `${h.tittel}: ${g.tekst}`);
+  save(); renderHindringer();
+});
+function hindAction(action, btn) {
+  const h = btn.dataset.hind && HIND.find(x => x.id === btn.dataset.hind);
+  if (action === 'hi-ny') { hindApne(null, btn.dataset.akt); return; }
+  if (action === 'hi-mine') { ui.hindringer.mine = !ui.hindringer.mine; renderHindringer(); return; }
+  if (action === 'hi-endre' && h) { hindApne(h); return; }
+  if (action === 'hi-vis-akt' && h) { const s = ui.hindringer.apen, k = h.id + ':akt'; s.has(k) ? s.delete(k) : s.add(k); renderHindringer(); return; }
+  if (action === 'hi-vis-ferdige' && h) { const s = ui.hindringer.apen; s.has(h.id) ? s.delete(h.id) : s.add(h.id); renderHindringer(); return; }
+  if (action === 'hi-avklart' && h && kanEndreHind(h)) {
+    if (h.status === 'avklart') { h.status = 'apen'; delete h.avklart; logg('Hindring gjenåpnet', h.aktiviteter.join(', '), h.tittel); }
+    else {
+      const igjen = h.gjenstar.filter(g => !g.ferdig).length;
+      if (igjen && !confirm(`${igjen} punkt${igjen === 1 ? '' : 'er'} er ikke krysset av. Markere «${h.tittel}» som avklart likevel?`)) return;
+      h.status = 'avklart'; h.avklart = {tid: new Date().toISOString(), av: me().name || ''};
+      logg('Hindring avklart', h.aktiviteter.join(', '), h.tittel);
+    }
+    save(); renderCurrent(); return;
+  }
+  if (action === 'hi-goto') {
+    const id = btn.dataset.akt;
+    ui.klargjoring.expanded.add(id); ui.klargjoring.collapsedWeeks.clear(); ui.klargjoring.showArchive = ui.klargjoring.showArchive || erArkiv(actById(id) || {startdato: TODAY, varighet: 1, at: []});
+    showTab('klargjoring');
+    const row = document.querySelector(`#table-klargjoring tr.main-row[data-id="${CSS.escape(id)}"]`);
+    if (row) { row.scrollIntoView({block: 'center'}); row.classList.add('flash-main'); setTimeout(() => row.classList.remove('flash-main'), 1700); }
+    return;
+  }
+  if (action === 'hi-til') { ui.hindringer.search = btn.dataset.akt; const s = document.getElementById('hi-sok'); if (s) s.value = btn.dataset.akt; showTab('hindringer'); return; }
+  if (action === 'hif-legg') { hiDlg.akt.push(btn.dataset.akt); hindDlgAkt(); hindDlgSok(document.getElementById('hif-sok').value); return; }
+  if (action === 'hif-fjern') { hiDlg.akt = hiDlg.akt.filter(x => x !== btn.dataset.akt); hindDlgAkt(); hindDlgSok(document.getElementById('hif-sok').value); return; }
+  if (action === 'hif-avbryt') { document.getElementById('hi-dlg').close(); return; }
+  if (action === 'hif-del' && hiDlg && hiDlg.h && kanSletteHind(hiDlg.h)) {
+    if (!confirm(`Slette «${hiDlg.h.tittel}»? Bruk heller «Avklart» hvis saken er løst, så blir historikken liggende.`)) return;
+    HIND = HIND.filter(x => x !== hiDlg.h); logg('Hindring slettet', hiDlg.h.aktiviteter.join(', '), hiDlg.h.tittel);
+    document.getElementById('hi-dlg').close(); save(); renderCurrent();
+  }
+}
+
 // ---------- dokumenter til metodebeskrivelsene (PDF/Word) ----------
 // Lastes opp under Metodebeskrivelser og følger metodebeskrivelsen inn i Klargjøring og Totaloversikt som en lenke.
 // I skyen lagres filen i biter i Firestore (mbdok/{id}/deler), i demo-modus i nettleserens IndexedDB.
@@ -3965,7 +4321,9 @@ function renderAdmin() {
     <label class="module-row"><input type="checkbox" id="mod-atkoord" ${SETTINGS.atkoord !== false ? 'checked' : ''} ${sys ? '' : 'disabled'}>
       <span><b>AT-koordinering</b><br><span class="sub">Sonekart der AT-ene plasseres og tegnes inn uke for uke. På som standard.</span></span></label>
     <label class="module-row"><input type="checkbox" id="mod-skrastrek" ${SETTINGS.skrastrek ? 'checked' : ''} ${sys ? '' : 'disabled'}>
-      <span><b>Skråstreksdiagram</b><br><span class="sub">Soner mot uker, med hver aktivitet eller AT som en skråstrek.</span></span></label>`;
+      <span><b>Skråstreksdiagram</b><br><span class="sub">Soner mot uker, med hver aktivitet eller AT som en skråstrek.</span></span></label>
+    <label class="module-row"><input type="checkbox" id="mod-firmafane" ${SETTINGS.firmafane === true ? 'checked' : ''} ${sys ? '' : 'disabled'}>
+      <span><b>Utførelse av firma</b><br><span class="sub">Hvilke firmaer som utfører aktivitetene (entreprenør › UE › UE av UE). Av foreløpig, mens fanen ferdigstilles.</span></span></label>`;
   document.getElementById('data-panel').innerHTML = `<h3>Data</h3>
     <p class="intro" style="margin-bottom:10px">${CLOUD ? 'Data lagres i databasen og deles med alle innloggede brukere. Sonebilde du laster opp, lagres foreløpig bare i din nettleser.' : 'Data lagres i denne nettleseren.'} Planen viser ${DATA.length} aktiviteter. Aktiviteter som var ferdige før uke 40 er tatt ut.
     ${sys ? 'Tilbakestilling henter aktivitetene fra Excel-utdraget på nytt og sletter alle endringer og AT-plasseringer.' : ''}</p>
@@ -3976,7 +4334,8 @@ function renderAdmin() {
 function renderCurrent() {
   document.querySelector('nav.tabs button[data-tab="skrastrek"]').hidden = !SETTINGS.skrastrek;
   document.querySelector('nav.tabs button[data-tab="koordinering"]').hidden = SETTINGS.atkoord === false;
-  if (currentTab === 'koordinering' && SETTINGS.atkoord === false) { showTab('statustavle'); return; }
+  document.querySelector('nav.tabs button[data-tab="firma"]').hidden = SETTINGS.firmafane !== true;
+  if ((currentTab === 'koordinering' && SETTINGS.atkoord === false) || (currentTab === 'firma' && SETTINGS.firmafane !== true)) { showTab('statustavle'); return; }
   renderUserBar();
   document.querySelectorAll('.ny-knapper [data-action=new-mb]').forEach(x => { x.hidden = !isSys(); });
   document.querySelectorAll('.ny-knapper [data-action=new-at]').forEach(x => { x.hidden = !kanNyAt(); });
@@ -3986,11 +4345,12 @@ function renderCurrent() {
   else if (currentTab === 'statustavle') renderStatustavle();
   else if (currentTab === 'metoder') renderMetoder();
   else if (currentTab === 'firma') renderFirma();
+  else if (currentTab === 'hindringer') renderHindringer();
   else if (currentTab === 'koordinering') renderKoord();
   else if (currentTab === 'admin') renderAdmin();
 }
 function showTab(tab) {
-  if (!document.getElementById('page-' + tab) || (tab === 'skrastrek' && !SETTINGS.skrastrek) || (tab === 'koordinering' && SETTINGS.atkoord === false)) tab = 'statustavle';
+  if (!document.getElementById('page-' + tab) || (tab === 'skrastrek' && !SETTINGS.skrastrek) || (tab === 'koordinering' && SETTINGS.atkoord === false) || (tab === 'firma' && SETTINGS.firmafane !== true)) tab = 'statustavle';
   currentTab = tab;
   if (typeof fuInfoSkjul === "function") fuInfoSkjul(true);
   ui.koord.drawing = null; ui.koord.tegn = null;
@@ -4076,7 +4436,7 @@ document.addEventListener('mouseout', e => {
 })();
 
 // ---------- hendelser ----------
-function rerenderPage(page) { if (page === 'firma') { renderFirma(); return; } if (page === 'skrastrek') renderSkrastrek(); else if (page === 'statustavle') renderStatustavle(); else if (page === 'metoder') renderMetoder(); else renderTable(page); }
+function rerenderPage(page) { if (page === 'firma') { renderFirma(); return; } if (page === 'hindringer') { renderHindringer(); return; } if (page === 'skrastrek') renderSkrastrek(); else if (page === 'statustavle') renderStatustavle(); else if (page === 'metoder') renderMetoder(); else renderTable(page); }
 function pageOf(el) { const p = el.closest('.page'); return p ? p.id.replace('page-', '') : null; }
 function targetOf(el) {
   const tr = el.closest('tr[data-id]');
@@ -4135,6 +4495,7 @@ document.addEventListener('click', e => {
   if (['sv-del', 'sv-open', 'sv-cancel'].includes(action)) { svDialogAction(action); return; }
   if (action.startsWith('svp-')) { svPopAction(action); return; }
   if (action === 'fuinfo') { fuInfoPinn(btn.dataset.fu, btn); return; }
+  if (action.startsWith('hi-') || action.startsWith('hif-')) { hindAction(action, btn); return; }
   if (action.startsWith('fu-')) { fuAction(action, btn); return; }
   if (action === 'logg-csv') { loggCsv(); return; }
   if (action === 'ff-mine') { ui[btn.dataset.page].firms = new Set([me().firma]); rerenderPage(btn.dataset.page); return; }
@@ -4442,6 +4803,7 @@ document.addEventListener('change', e => {
   if (el.id === 'fu-uten') { ui.firma.uten = el.checked; renderFirma(); return; }
   if (el.id === 'mb-unlinked') { ui.metoder.bareUkoblede = el.checked; renderMetoder(); return; }
   if (el.id === 'mod-atkoord') { if (isSys()) { SETTINGS.atkoord = el.checked; save(); } renderCurrent(); return; }
+  if (el.id === 'mod-firmafane') { if (isSys()) { SETTINGS.firmafane = el.checked; save(); } renderCurrent(); return; }
   if (el.id === 'mod-skrastrek') { if (isSys()) { SETTINGS.skrastrek = el.checked; save(); } renderCurrent(); return; }
   if (el.dataset.firmColor !== undefined) { if (isSys()) { FIRMS[Number(el.dataset.firmColor)].farge = el.value; save(); } renderAdmin(); return; }
   if (el.dataset.userField) {

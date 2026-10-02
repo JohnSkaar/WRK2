@@ -77,6 +77,17 @@ service cloud.firestore {
       allow create: if member() && me().rolle in ['systemadmin', 'firmaadmin'] && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
+    // Hindringer prioritet: alle medlemmer kan lese. Systemadministrator, og firma-admin for hindringer som er laget av
+    // eget firma eller gjelder eget firmas aktiviteter, kan lage og endre. Firmaet som eier hindringen kan ikke byttes.
+    match /hindringer/{id} {
+      allow read: if member();
+      allow create: if sys() || (member() && me().rolle == 'firmaadmin' && request.resource.data.firma == me().firma);
+      allow update: if sys() || (member() && me().rolle == 'firmaadmin'
+        && (resource.data.firma == me().firma || me().firma in resource.data.get('aktFirmaer', []))
+        && request.resource.data.firma == resource.data.firma);
+      allow delete: if sys() || (member() && me().rolle == 'firmaadmin' && resource.data.firma == me().firma);
+    }
+
     // Dokumenter til metodebeskrivelsene (PDF/Word), lagret i biter under «deler».
     // Systemadministrator, eller firma-admin for firmaet som eier metodebeskrivelsen, kan laste opp og slette.
     function dokEier(d) { return sys() || (member() && me().rolle == 'firmaadmin' && d.get('firma', '') == me().firma); }

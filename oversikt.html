@@ -490,6 +490,8 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .mb-drop{display:block;border:2px dashed #c9d1d9;border-radius:8px;padding:7px 10px;font-size:12.5px;color:#57606a;cursor:pointer;text-align:center;background:#fafbfc}
 .mb-drop:hover,.mb-card.fil-over .mb-drop{border-color:var(--accent);background:#eef5ff;color:var(--accent)}
 .mb-drop.laster{border-style:solid;cursor:progress}
+.firm-reg{margin-top:4px;font-size:12.5px}
+.firm-reg select,.reg-farge{font-size:12.5px;padding:2px 4px;max-width:320px}
 .mb-direct{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
 .mb-edit{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .mb-edit input,.mb-edit select{padding:6px 8px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;flex:1;min-width:100px}
@@ -917,7 +919,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-02.1';
+const APP_VERSION = '2026-10-02.2';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -4208,10 +4210,30 @@ function applyRegistersett() {
   return true;
 }
 const normFirm = s => String(s || '').normalize('NFC').toLowerCase().replace(/[\u00a0\s]+/g, ' ').replace(/[.,]/g, '').trim().replace(/\s+(as|asa|ans|da|nuf)$/, '').trim();
-// Et registerfirma regnes som «i bruk» når et aktivt firma har samme navn, eller det ene navnet starter med det andre (f.eks. Skanska / Skanska Norge AS).
+// Hvilket firma under «Firma og fargekoder» (og dermed hvilken farge) et registerfirma hører til:
+// 1) koblingen Admin har satt (samme org.nr), ellers 2) samme navn, eller det ene navnet starter med det andre
+// (f.eks. Skanska / Skanska Norge AS), men bare for firma som ikke er koblet til et annet org.nr.
 function activeFirmFor(r) {
+  if (!r) return null;
+  const fast = r.orgnr && FIRMS.find(f => f.orgnr && f.orgnr === r.orgnr);
+  if (fast) return fast;
   const n = normFirm(r.navn);
-  return FIRMS.find(f => { const m = normFirm(f.navn); return m === n || n.startsWith(m + ' ') || m.startsWith(n + ' '); });
+  return FIRMS.find(f => { if (f.orgnr) return false; const m = normFirm(f.navn); return m === n || n.startsWith(m + ' ') || m.startsWith(n + ' '); }) || null;
+}
+// Unike firma i registeret (ett per org.nr), de som er tatt i bruk først.
+function regUnike() {
+  const sett = new Set();
+  return REGISTER.filter(r => r.orgnr && !sett.has(r.orgnr) && sett.add(r.orgnr))
+    .sort((x, y) => (!!(y.iBruk || activeFirmFor(y)) - !!(x.iBruk || activeFirmFor(x))) || prettyFirm(x.navn).localeCompare(prettyFirm(y.navn), 'nb'));
+}
+// Kobler et firma (farge) til et registerfirma. Org.nr kan bare høre til ett firma; registerfirmaet tas samtidig i bruk.
+function kobleFirmaRegister(f, orgnr) {
+  const før = f.orgnr || '';
+  if (orgnr) FIRMS.forEach(x => { if (x !== f && x.orgnr === orgnr) delete x.orgnr; });
+  if (orgnr) { f.orgnr = orgnr; REGISTER.forEach(r => { if (r.orgnr === orgnr) r.iBruk = true; }); }
+  else delete f.orgnr;
+  const r = REGISTER.find(x => x.orgnr === orgnr);
+  logg('Firma koblet til firmaregisteret', '', orgnr ? `${f.navn} → ${prettyFirm(r ? r.navn : orgnr)} (org.nr ${orgnr})` : `${f.navn}: koblingen til org.nr ${før} er fjernet`);
 }
 function prettyFirm(navn) {
   return navn.split(' ').map(w => /^(AS|ASA|ANS|DA|NUF)$/i.test(w) ? w.toUpperCase()
@@ -4247,7 +4269,8 @@ function renderRegisterList() {
       return `<div class="reg-row" style="padding-left:${8 + r.niva * 18}px">
         <div class="grow"><b>${esc(r.navn)}</b> <span class="sub">org.nr ${esc(r.orgnr)}</span>${r.beskrivelse ? `<div class="sub">${esc(r.beskrivelse)}</div>` : ''}</div>
         <span class="badge ${['st-done', 'st-go', 'st-plan', 'rk-l'][r.niva] || 'st-plan'}">${['Byggherre', 'Hovedentreprenør', 'UE', 'UE av UE'][r.niva] || 'Nivå ' + r.niva}</span>
-        ${hit ? `<span title="Firma med egen farge i planen">${firmBadge(hit.navn)}</span>` : r.iBruk ? `<span class="badge st-done" title="Tatt i bruk – får egen farge først når det står først på en aktivitet">✓ Tatt i bruk</span>${sys ? ` <button class="btn" data-action="reg-unuse" data-rid="${esc(r.id)}">Fjern fra bruk</button>` : ''}` : sys ? `<button class="btn" data-action="reg-use" data-rid="${esc(r.id)}">Ta i bruk</button>` : ''}
+        ${hit ? `<span title="Firma med egen farge i planen${hit.orgnr ? ' (koblet av Admin)' : ' (koblet etter navn)'}">${firmBadge(hit.navn)}</span>` : r.iBruk ? `<span class="badge st-done" title="Tatt i bruk – får egen farge først når det står først på en aktivitet">✓ Tatt i bruk</span>${sys ? ` <button class="btn" data-action="reg-unuse" data-rid="${esc(r.id)}">Fjern fra bruk</button>` : ''}` : sys ? `<button class="btn" data-action="reg-use" data-rid="${esc(r.id)}">Ta i bruk</button>` : ''}
+        ${sys && (hit || r.iBruk) ? `<select class="reg-farge" data-reg-firma="${esc(r.orgnr)}" title="Hvilket firma under «Firma og fargekoder» (farge) dette registerfirmaet hører til"><option value="">${hit ? 'Fjern koblingen' : 'Koble til farge …'}</option>${FIRMS.map(f => `<option value="${esc(f.navn)}" ${hit === f ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')}</select>` : ''}
       </div>`;
     }).join('') || '<p class="muted">Ingen treff.</p>'}`;
 }
@@ -4306,7 +4329,12 @@ function renderAdmin() {
       ${sys ? `<input type="color" value="${firmColor(f.navn)}" data-firm-color="${i}">` : ''}
       <div class="grow">${sys && ui.admin.firmEdit === i
         ? `<span class="firm-rename"><input type="text" id="firm-new-name" value="${esc(f.navn)}" maxlength="60"><button class="btn primary" data-action="firm-rename-save" data-i="${i}">Lagre</button><button class="btn" data-action="firm-rename-cancel">Avbryt</button></span>`
-        : `${firmBadge(f.navn)} <span class="sub">${used} aktiviteter · ${users} brukere</span>`}</div>
+        : `${firmBadge(f.navn)} <span class="sub">${used} aktiviteter · ${users} brukere</span>`}
+        ${(() => { const r = REGISTER.find(x => f.orgnr && x.orgnr === f.orgnr) || REGISTER.find(x => activeFirmFor(x) === f);
+          return sys ? `<div class="firm-reg"><span class="sub">Firmaregisteret:</span> <select data-firm-reg="${i}" title="Koble firmaet (og fargen) til firmaet i firmaregisteret. Da får firmaet samme farge under «Firma tatt i bruk».">
+            <option value="">${r && !f.orgnr ? `Automatisk etter navn: ${esc(prettyFirm(r.navn))}` : 'Ikke koblet'}</option>
+            ${regUnike().map(x => `<option value="${esc(x.orgnr)}" ${f.orgnr === x.orgnr ? 'selected' : ''}>${esc(prettyFirm(x.navn))} · ${esc(x.orgnr)}${x.iBruk || activeFirmFor(x) ? ' ✓' : ''}</option>`).join('')}</select></div>`
+            : r ? `<div class="sub">Firmaregisteret: ${esc(prettyFirm(r.navn))} · ${esc(r.orgnr)}</div>` : ''; })()}</div>
       ${sys && ui.admin.firmEdit !== i ? `<button class="btn" data-action="firm-rename" data-i="${i}" title="Endre navn">✏️ Endre navn</button><button class="btn danger" data-action="del-firm" data-i="${i}">Fjern</button>` : ''}</div>
       ${sys && ui.admin.firmDel === f.navn ? `<div class="firm-move">${used} aktiviteter og ${users} brukere er knyttet til ${esc(f.navn)}. Flytt dem til
         <select id="firm-move-to">${FIRMS.filter(x => x.navn !== f.navn).map(x => `<option value="${esc(x.navn)}">${esc(x.navn)}</option>`).join('')}</select>
@@ -4805,6 +4833,16 @@ document.addEventListener('change', e => {
   if (el.id === 'mod-atkoord') { if (isSys()) { SETTINGS.atkoord = el.checked; save(); } renderCurrent(); return; }
   if (el.id === 'mod-firmafane') { if (isSys()) { SETTINGS.firmafane = el.checked; save(); } renderCurrent(); return; }
   if (el.id === 'mod-skrastrek') { if (isSys()) { SETTINGS.skrastrek = el.checked; save(); } renderCurrent(); return; }
+  if (el.dataset.regFirma !== undefined) {
+    if (isSys()) {
+      const orgnr = el.dataset.regFirma, f = FIRMS.find(x => x.navn === el.value);
+      if (f) kobleFirmaRegister(f, orgnr);
+      else { const g = FIRMS.find(x => x.orgnr === orgnr); if (g) kobleFirmaRegister(g, ''); }
+      save();
+    }
+    renderAdmin(); return;
+  }
+  if (el.dataset.firmReg !== undefined) { if (isSys()) { kobleFirmaRegister(FIRMS[Number(el.dataset.firmReg)], el.value); save(); } renderAdmin(); return; }
   if (el.dataset.firmColor !== undefined) { if (isSys()) { FIRMS[Number(el.dataset.firmColor)].farge = el.value; save(); } renderAdmin(); return; }
   if (el.dataset.userField) {
     const u = USERS.find(x => x.id === el.dataset.uid);

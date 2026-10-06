@@ -628,6 +628,8 @@ td.firma-cell{white-space:normal;min-width:130px}
     <div class="panel">
       <h2>Endringslogg</h2>
       <p class="intro">Hver gang en ny fremdriftsplan fra Sitedrive lastes inn, lages en rapport som sammenligner planen før og etter. Den viser hva som er flyttet, hvilke aktiviteter som ble flyttet etter en forgjenger (via avhengighetene), nye og fjernede aktiviteter, og hvordan endringene slår ut i hver sone i 8-ukersperioden.</p>
+      <div class="rp-sys" hidden style="margin-top:10px"><label class="btn">📄 Sammenlign gjeldende plan med en eldre plan (PDF) …<input type="file" id="rp-fil" accept=".pdf,application/pdf" hidden></label>
+        <span class="sub">For eksempel den opprinnelige planen. Planen endres ikke – det lages bare en rapport.</span></div>
     </div>
     <div id="rp-liste"></div>
   </section>
@@ -972,7 +974,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.3';
+const APP_VERSION = '2026-10-07.4';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1107,12 +1109,17 @@ function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch
 function readRaw(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function writeRaw(k, v) { try { localStorage.setItem(k, v); } catch (e) { console.warn('Kunne ikke lagre', e); } }
 
-const PERSONER = ['TF', 'TL', 'HL', 'JS'];
-function giAnsvar(o, key) {
-  if (o.ansvarUtforelse !== undefined && o.ansvarGodkjenning !== undefined) return;
-  const r = rng(key + '-ansvar'), u = Math.floor(r() * PERSONER.length);
-  o.ansvarUtforelse = PERSONER[u];
-  o.ansvarGodkjenning = PERSONER[(u + 1 + Math.floor(r() * (PERSONER.length - 1))) % PERSONER.length];
+// Testinitialene fra demodataene fjernes én gang (ANSVARRYDD); ansvarlige skrives inn som fritekst.
+const PERSONER = ['TF', 'TL', 'HL', 'JS'], ANSVARRYDD = 1;
+function giAnsvar(o) {
+  if (o.ansvarUtforelse === undefined) o.ansvarUtforelse = '';
+  if (o.ansvarGodkjenning === undefined) o.ansvarGodkjenning = '';
+}
+function applyAnsvarRydd() {
+  if ((SETTINGS.ansvarrydd || 0) >= ANSVARRYDD) return false;
+  [...DATA, ...ATS].forEach(o => ['ansvarUtforelse', 'ansvarGodkjenning'].forEach(f => { if (PERSONER.includes(o[f])) o[f] = ''; }));
+  SETTINGS.ansvarrydd = ANSVARRYDD;
+  return true;
 }
 function migrate(data) {
   data.forEach(a => { giAnsvar(a, a.id); (a.at || []).forEach(t => giAnsvar(t, t.nr)); });
@@ -1241,6 +1248,7 @@ function load() {
   applyMbrydd();
   applyHindsett();
   applyMbRisiko();
+  applyAnsvarRydd();
   save();
 }
 function save() {
@@ -3837,6 +3845,7 @@ function sdForbered(res) {
   pass((a, r) => a.omrade === r.omrade && prefiks(a, r), 'sikker');
   pass((a, r) => likt(a, r), 'sone');
   pass((a, r) => prefiks(a, r), 'sone');
+  pass((a, r) => a.omrade === r.omrade && n(a.navn).replace(/ /g, '') === n(r.navn).replace(/ /g, ''), 'sone');
   sdImp = {meta, rader, valg: rader.map((r, i) => match[i] || 'ny'), hvordan, beholdWrk2: new Set(), fjern: {}, pool: pool.map(a => a.id)};
   // Aktiviteter i planperioden som ikke er med i den nye planen.
   sdUtenfor().forEach(a => { sdImp.fjern[a.id] = sdHarKoblinger(a).length || a.kilde === 'WRK2' ? 'behold' : 'slett'; });
@@ -4142,8 +4151,8 @@ document.addEventListener('change', e => {
 // (via avhengighetene), nye og fjernede aktiviteter, og virkningen per sone i 8-ukersperioden.
 const RAPP_KEY = 'wrk2_planrapporter';
 const sdBilde = () => new Map(DATA.map(a => [a.id, {id: a.id, navn: a.navn, omrade: a.omrade, firma: a.firma, start: a.startdato, slutt: endDate(a)}]));
-function lagPlanrapport(for_, meta, forrigeImport, slettet, merket) {
-  const etter = sdBilde(), tid = new Date().toISOString();
+function lagPlanrapport(for_, meta, forrigeImport, slettet, merket, etter = sdBilde(), ekstra = {}) {
+  const tid = new Date().toISOString();
   const fra = mondayOf(TODAY), til = addDays(fra, 55);
   const flyttet = [];
   // Forrige eksport sluttet på en bestemt dato; aktiviteter som gikk ut over den, har ukjent slutt i den gamle planen.
@@ -4151,7 +4160,8 @@ function lagPlanrapport(for_, meta, forrigeImport, slettet, merket) {
   etter.forEach((e, id) => {
     const f = for_.get(id); if (!f) return;
     const kuttet = horisont && f.slutt >= horisont && e.slutt >= f.slutt;
-    const dStart = daysBetween(f.start, e.start), dSlutt = kuttet ? 0 : daysBetween(f.slutt, e.slutt);
+    // Startet aktiviteten før den gamle eksportens første dag, er den egentlige starten ukjent.
+    const dStart = f.startKuttet && e.start <= f.start ? 0 : daysBetween(f.start, e.start), dSlutt = kuttet ? 0 : daysBetween(f.slutt, e.slutt);
     if (dStart || dSlutt || f.omrade !== e.omrade) flyttet.push({id, navn: e.navn, firma: e.firma, sone: e.omrade, soneFor: f.omrade !== e.omrade ? f.omrade : '', fra: [f.start, f.slutt], til: [e.start, e.slutt], dStart, dSlutt});
   });
   // Følgeflytting: en aktivitet som har en forgjenger (avhengighet) som også er flyttet samme vei, regnes som flyttet etter den.
@@ -4164,12 +4174,14 @@ function lagPlanrapport(for_, meta, forrigeImport, slettet, merket) {
   const nye = [...etter.values()].filter(e => !for_.has(e.id)).map(e => ({id: e.id, navn: e.navn, sone: e.omrade, firma: e.firma, start: e.start, slutt: e.slutt}));
   const fjernet = slettet.map(id => for_.get(id)).filter(Boolean).map(f => ({id: f.id, navn: f.navn, sone: f.omrade, start: f.start, slutt: f.slutt}));
   // Virkning per sone i 8-ukersperioden: aktivitetsdager (antall aktiviteter × dager innenfor perioden), siste slutt og forskyvning.
-  const iVindu = x => Math.max(0, daysBetween(x.start > fra ? x.start : fra, x.slutt < til ? x.slutt : til) + 1);
+  // Perioden kappes ved den gamle eksportens sluttdato hvis den kommer før – det som ligger etter, er ukjent i den gamle planen.
+  const grense = horisont && horisont < til ? horisont : til;
+  const iVindu = x => Math.max(0, daysBetween(x.start > fra ? x.start : fra, x.slutt < grense ? x.slutt : grense) + 1);
   const soner = [...new Set([...for_.values(), ...etter.values()].map(x => x.omrade))].map(sone => {
     const f = [...for_.values()].filter(x => x.omrade === sone);
     const e = [...etter.values()].filter(x => x.omrade === sone);
     const dagerFor = f.reduce((n, x) => n + iVindu(x), 0), dagerEtter = e.reduce((n, x) => n + iVindu(x), 0);
-    const sisteI = l => l.filter(iVindu).map(x => x.slutt < til ? x.slutt : til).sort().pop() || '';
+    const sisteI = l => l.filter(iVindu).map(x => x.slutt < grense ? x.slutt : grense).sort().pop() || '';
     const sisteFor = sisteI(f), sisteEtter = sisteI(e);
     const fl = flyttet.filter(x => x.sone === sone || x.soneFor === sone);
     const senere = fl.filter(x => x.dStart > 0 || (!x.dStart && x.dSlutt > 0)), tidligere = fl.filter(x => x.dStart < 0 || (!x.dStart && x.dSlutt < 0));
@@ -4192,10 +4204,54 @@ function lagPlanrapport(for_, meta, forrigeImport, slettet, merket) {
   const brudd = AVH.filter(avhBrudd).map(d => avhNavn(d));
   return {id: 'R' + tid.replace(/\D/g, '').slice(0, 14), tid, av: me().name || '', plan: meta.plan, visning: meta.visning || '', eksportert: meta.eksportert || '',
     periodePdf: [meta.fra, meta.til], vindu: [fra, til], forrige: forrigeImport ? {plan: forrigeImport.plan, eksportert: forrigeImport.eksportert || '', importert: forrigeImport.importert || ''} : null,
-    flyttet, nye, fjernet, beholdt: merket, soner, brudd};
+    flyttet, nye, fjernet, beholdt: merket, soner, brudd, ...ekstra};
 }
+// Sammenligning med en eldre plan (f.eks. den opprinnelige): PDF-en leses og kobles til dagens aktiviteter, uten at noe i planen endres.
+async function rpSammenlign(fil) {
+  if (!isSys()) return;
+  if (!/\.pdf$/i.test(fil.name)) { alert('Velg PDF-eksporten av tidslinjen fra Sitedrive.'); return; }
+  showToast('Leser den eldre planen …');
+  const lagret = sdImp;
+  try {
+    const res = await sdLesPdf(await fil.arrayBuffer());
+    if (!res.rader.length) throw new Error('fant ingen aktiviteter i PDF-en');
+    sdForbered(res);
+    const gml = res.meta, fra = mondayOf(TODAY), for_ = new Map(), slettet = [];
+    let ferdige = 0;
+    sdImp.rader.forEach((r, i) => {
+      const id = sdImp.valg[i];
+      if (id !== 'ny') { const a = actById(id); for_.set(id, {id, navn: r.navn, omrade: r.omrade, firma: a.firma, start: r.start, slutt: r.slutt, startKuttet: !!r.startKant}); return; }
+      if (r.slutt < fra) { ferdige++; return; } // trolig ferdig og tatt ut av planen – sammenlignes ikke
+      const key = 'gammel-' + i; for_.set(key, {id: '', navn: r.navn, omrade: r.omrade, firma: '', start: r.start, slutt: r.slutt}); slettet.push(key);
+    });
+    // Dagens aktiviteter i den gamle planens periode (det som er lagt til etter den gamle eksportens sluttdato regnes ikke som nytt).
+    // Aktiviteter som kom inn fra den samme eksporten (samme plan og eksporttid), men ikke er med i denne PDF-en (annen visning/filter), er ikke nye.
+    let ikkeIEksport = 0;
+    const etter = new Map([...sdBilde()].filter(([id, e]) => {
+      if (for_.has(id)) return true;
+      if (!(e.slutt >= fra && e.start <= gml.til && e.slutt >= gml.fra)) return false;
+      const a = actById(id); if (a.sd && a.sd.plan === gml.plan && gml.eksportert && a.sd.eksportert === gml.eksportert) { ikkeIEksport++; return false; }
+      return true;
+    }));
+    const naa = SETTINGS.planImport || {plan: 'Gjeldende plan i WRK2'};
+    const rapp = lagPlanrapport(for_, {...naa, fra: naa.fra || gml.fra, til: naa.til || gml.til}, gml, slettet, [], etter,
+      {sammenligning: true, notat: [ferdige ? `${ferdige} aktiviteter i ${gml.plan} sluttet før denne uken og finnes ikke lenger i planen; de er ikke tatt med.` : '',
+        ikkeIEksport ? `${ikkeIEksport} aktiviteter fra ${gml.plan} er ikke med i denne PDF-eksporten (annen visning eller filter) og er holdt utenfor.` : '',
+        'Aktiviteter som ikke finnes i den eldre PDF-en, vises som nye. Bruk helst samme visning i Sitedrive for begge planene.'].filter(Boolean).join(' ')});
+    PLANRAPPORTER.push(rapp); ui.endringer.apen.add(rapp.id);
+    logg('Endringsrapport', '', `${gml.plan} sammenlignet med gjeldende plan: ${rapp.flyttet.length} flyttet, ${rapp.nye.length} nye, ${rapp.fjernet.length} fjernet`);
+    save(); renderCurrent();
+    showToast(`Rapporten er laget: ${rapp.flyttet.length} flyttet, ${rapp.nye.length} nye, ${rapp.fjernet.length} fjernet siden ${gml.plan}.`);
+  } catch (e) { alert('Kunne ikke lese planen: ' + (e.message || e)); }
+  finally { sdImp = lagret; }
+}
+document.addEventListener('change', e => {
+  if (e.target.id !== 'rp-fil') return;
+  const f = e.target.files[0]; e.target.value = ''; if (f) rpSammenlign(f);
+});
 const rappDag = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + Math.abs(n) + ' d';
 function renderEndringer() {
+  document.querySelector('#page-endringer .rp-sys').hidden = !isSys() || location.protocol === 'file:';
   const liste = [...PLANRAPPORTER].sort((x, y) => y.tid.localeCompare(x.tid));
   const st = ui.endringer;
   const nivaLys = n => `<span class="sv-lys ${n}"></span>`;
@@ -4213,11 +4269,12 @@ function renderEndringer() {
     return `<div class="panel rp-kort">
       <div class="rp-hode" data-action="rp-toggle" data-rid="${esc(r.id)}">
         <span>${apen ? '－' : '＋'}</span>
-        <div style="flex:1"><b>${esc(r.plan)}</b>${r.visning ? ' · ' + esc(r.visning) : ''} <span class="sub">eksportert ${r.eksportert ? fmtNo(r.eksportert.slice(0, 10)) : '?'} · lest inn ${fmtNo(r.tid.slice(0, 10))} ${r.tid.slice(11, 16)}${r.av ? ' av ' + esc(r.av) : ''}</span>
+        <div style="flex:1">${r.sammenligning ? `<b>${esc(r.forrige.plan)} → ${esc(r.plan)}</b> <span class="sub">(sammenligning)</span>` : `<b>${esc(r.plan)}</b>${r.visning ? ' · ' + esc(r.visning) : ''}`} <span class="sub">eksportert ${r.eksportert ? fmtNo(r.eksportert.slice(0, 10)) : '?'} · lest inn ${fmtNo(r.tid.slice(0, 10))} ${r.tid.slice(11, 16)}${r.av ? ' av ' + esc(r.av) : ''}</span>
           <div class="sub">${r.forrige ? `Sammenlignet med planen eksportert ${r.forrige.eksportert ? fmtNo(r.forrige.eksportert.slice(0, 10)) : '?'}` : 'Første rapport'} · 8-ukersperiode ${fmtShort(r.vindu[0])}–${fmtShort(r.vindu[1])}</div></div>
         <div class="rp-tall"><span><b>${r.flyttet.length}</b> flyttet</span><span><b>${r.flyttet.filter(x => x.type === 'følge').length}</b> fulgte etter</span><span><b>${r.nye.length}</b> nye</span><span><b>${r.fjernet.length}</b> fjernet</span>${r.brudd.length ? `<span style="color:var(--red)"><b>${r.brudd.length}</b> brutte avh.</span>` : ''}</div>
       </div>
       ${apen ? `<div class="rp-kropp">
+        ${r.notat ? `<p class="sub">${esc(r.notat)}</p>` : ''}
         <h4>Virkning per sone (8 uker)</h4>
         <table class="sd-tab"><tr><th></th><th>Sone</th><th class="c">Flyttet</th><th class="c">Nye / fjernet</th><th class="c">Aktivitetsdager i perioden</th><th>Vurdering</th></tr>
           ${r.soner.map(z => `<tr><td>${nivaLys(z.niva)}</td><td><b>${esc(z.sone)}</b></td><td class="c">${z.flyttet}</td><td class="c">${z.nye} / ${z.fjernet}</td>
@@ -4228,7 +4285,8 @@ function renderEndringer() {
         ${r.fjernet.length ? `<h4>Fjernet</h4><ul class="rp-liste">${r.fjernet.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · var ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : ''}
         ${r.beholdt.length ? `<p class="sub">Ikke med i den nye planen, men beholdt fordi noe er koblet til dem: ${r.beholdt.map(akt).join(', ')}</p>` : ''}
         ${r.brudd.length ? `<h4 style="color:var(--red)">Avhengigheter som er brutt etter oppdateringen</h4><ul class="rp-liste">${r.brudd.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
-        <div style="margin-top:10px"><button class="btn" data-action="rp-skriv" data-rid="${esc(r.id)}">🖨 Skriv ut rapporten</button></div>
+        <div style="margin-top:10px;display:flex;gap:8px"><button class="btn" data-action="rp-skriv" data-rid="${esc(r.id)}">🖨 Skriv ut rapporten</button>
+          ${isSys() ? `<span style="flex:1"></span><button class="btn danger" data-action="rp-slett" data-rid="${esc(r.id)}">Slett rapporten</button>` : ''}</div>
       </div>` : ''}
     </div>`;
   };
@@ -4242,6 +4300,13 @@ function rpAction(action, btn) {
     const apen = st.apen.has(id) || (forst && !st.lukket.has(id));
     if (apen) { st.apen.delete(id); st.lukket.add(id); } else { st.apen.add(id); st.lukket.delete(id); }
     renderEndringer(); return;
+  }
+  if (action === 'rp-slett') {
+    const r = PLANRAPPORTER.find(x => x.id === id);
+    if (!r || !isSys() || !confirm('Slette denne endringsrapporten?')) return;
+    PLANRAPPORTER = PLANRAPPORTER.filter(x => x !== r);
+    logg('Endringsrapport slettet', '', r.sammenligning ? `${r.forrige.plan} → ${r.plan}` : r.plan);
+    save(); renderEndringer(); return;
   }
   if (action === 'rp-skriv') {
     st.apen.add(id); st.lukket.delete(id); renderEndringer();

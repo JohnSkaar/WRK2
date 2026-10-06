@@ -2,10 +2,88 @@
 <html lang="no">
 <head>
 <meta charset="UTF-8">
-<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>WRK2 – Produksjonsplanlegging</title>
-<script>location.replace('oversikt.html' + location.search + location.hash);</script>
-<noscript><meta http-equiv="refresh" content="0; url=oversikt.html"></noscript>
+<meta name="description" content="WRK2 er et planleggings- og koordineringsverktøy for byggeprosjektet Wire Rod Karmøy (WRK2). Brukes av hovedentreprenør og underentreprenører til aktivitetsplanlegging, arbeidstillatelser og områdekoordinering.">
+<script>
+  // Lenker med innhold etter adressen (invitasjoner med ?kode=, lenker til en fane) og brukere som har vært inne før,
+  // sendes rett til appen. Nye besøkende ser denne forsiden.
+  (function () {
+    var tidligere = false;
+    try { tidligere = localStorage.getItem('wrk2_besokt') === '1'; } catch (e) {}
+    if (location.search || location.hash || tidligere) location.replace('oversikt.html' + location.search + location.hash);
+  })();
+</script>
+<style>
+  :root{--bg:#f4f6f8;--card:#fff;--ink:#1b1f24;--muted:#57606a;--line:#d0d7de;--accent:#1f6feb;--head:#1b2a3a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  header{background:var(--head);color:#fff;padding:18px 0}
+  header .inner{padding:0 16px}
+  header .inner,main,footer{max-width:880px;margin:0 auto}
+  header h1{margin:0;font-size:24px}
+  header p{margin:4px 0 0;color:#c9d4df;font-size:14px}
+  main{padding:24px 16px}
+  .hero{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px}
+  .hero h2{margin:0 0 8px;font-size:22px}
+  .hero p{margin:0 0 16px;color:var(--muted)}
+  .btn{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;padding:11px 20px;border-radius:8px}
+  .btn:hover{background:#1858c9}
+  .sub{font-size:13px;color:var(--muted);margin-top:10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h3{margin:0 0 6px;font-size:16px}
+  .card p{margin:0;font-size:14px;color:var(--muted)}
+  section{margin-top:22px}
+  section h2{font-size:18px;margin:0 0 8px}
+  section p,section li{font-size:14.5px;color:#2d333b}
+  section ul{padding-left:20px;margin:6px 0}
+  footer{padding:8px 16px 28px;font-size:12.5px;color:var(--muted)}
+  footer p{margin:4px 0}
+</style>
 </head>
-<body><p><a href="oversikt.html">Gå til WRK2</a></p></body>
+<body>
+<header>
+  <div class="inner">
+    <h1>WRK2 – Produksjonsplanlegging</h1>
+    <p>Planlegging og koordinering for byggeprosjektet Wire Rod Karmøy (WRK2)</p>
+  </div>
+</header>
+<main>
+  <div class="hero">
+    <h2>Arbeidsverktøy for prosjektets entreprenører</h2>
+    <p>WRK2 samler aktivitetsplanen, klargjøringen av aktivitetene og koordineringen på byggeplassen på ett sted. Verktøyet brukes av hovedentreprenøren og underentreprenørene i prosjektet.</p>
+    <a class="btn" href="oversikt.html">Logg inn</a>
+    <div class="sub">Tilgang krever invitasjon fra prosjektets systemadministrator. Har du fått en invitasjonslenke, bruker du den.</div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h3>Statustavle</h3><p>Åtte ukers utkikksplan per sone, med status på hver aktivitet og avhengigheter mellom aktivitetene.</p></div>
+    <div class="card"><h3>Hindringer prioritet</h3><p>Det som må avklares før arbeidet kan starte, med frist, ansvarlig og beslutningstaker.</p></div>
+    <div class="card"><h3>Klargjøring av aktiviteter</h3><p>De sju produksjonsforutsetningene, metodebeskrivelser, arbeidstillatelser og dødsrisikoer per aktivitet.</p></div>
+    <div class="card"><h3>AT-koordinering</h3><p>Hvor arbeidstillatelsene gjelder, vist i plan og snitt uke for uke.</p></div>
+  </div>
+
+  <section>
+    <h2>Om tjenesten</h2>
+    <p>WRK2 er et internt prosjektverktøy, ikke en offentlig tjeneste. Siden har ingen annonser, ingen nedlastbare programmer og ikke noe offentlig brukerinnhold. Alt innhold krever innlogging.</p>
+    <p lang="en"><i>English: WRK2 is a private planning and coordination tool for the Wire Rod Karmøy construction project in Norway, used by the main contractor and its subcontractors. Access requires an invitation and login.</i></p>
+  </section>
+
+  <section>
+    <h2>Personvern og sikkerhet</h2>
+    <ul>
+      <li>For hver bruker lagres navn, e-postadresse, firma og rolle. Dette brukes bare til innlogging og tilgangsstyring i prosjektet.</li>
+      <li>Endringer i planen logges med tidspunkt og navn, slik at prosjektet kan spore hvem som har endret hva.</li>
+      <li>Innlogging og data håndteres av Google Firebase. Siden leveres over kryptert forbindelse (HTTPS).</li>
+      <li>Det brukes ingen sporings- eller reklamekapsler. Nettleseren husker bare innloggingen og enkelte visningsvalg.</li>
+      <li>Ønsker du at opplysningene om deg slettes, kontakter du prosjektets systemadministrator.</li>
+    </ul>
+  </section>
+</main>
+<footer>
+  <p>WRK2 – Produksjonsplanlegging · Wire Rod Karmøy</p>
+  <p>Spørsmål om tilgang rettes til prosjektets systemadministrator.</p>
+</footer>
+</body>
 </html>

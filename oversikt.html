@@ -379,6 +379,18 @@ button.hi-akt:hover{background:#eef5ff}
 .hi-akttreff .hi-akt-rad{display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap}
 .hi-akttreff .hi-akt{width:auto;flex:1;min-width:260px;cursor:default}
 .hi-merke{border:1px solid #cf222e;color:#cf222e;background:#fff;border-radius:10px;font-size:11px;font-weight:700;padding:0 6px;cursor:pointer;margin-left:4px}
+.sd-dlg{width:1000px;max-height:calc(100vh - 40px);display:flex;flex-direction:column;padding:0}
+.sd-dlg[open]{display:flex}
+.sd-hode{padding:16px 20px 10px;border-bottom:1px solid var(--line)}
+.sd-hode h3{margin:0 0 4px}
+.sd-tall{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px;font-size:13.5px}
+.sd-kropp{overflow:auto;padding:4px 20px 10px;flex:1}
+.sd-kropp h4{margin:16px 0 6px;font-size:14px}
+.sd-dlg>.sv-dlg-actions{padding:10px 20px 14px;border-top:1px solid var(--line);margin:0}
+table.sd-tab{width:100%;border-collapse:collapse;font-size:13px}
+table.sd-tab th{text-align:left;background:#f6f8fa;font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line)}
+table.sd-tab td{padding:5px 8px;border-bottom:1px solid #eef0f2;vertical-align:top}
+table.sd-tab select{max-width:330px;font-size:12.5px}
 .sv-dlg-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
 @media(max-width:600px){.sv-dlg-row{flex-direction:column;gap:0}}
 .sv-lab{position:absolute;height:22px;line-height:22px;font-size:11.5px;white-space:nowrap;color:#24292f;cursor:pointer;z-index:1;text-shadow:0 0 3px #fff,0 0 3px #fff}
@@ -680,6 +692,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <button class="btn primary" data-action="sv-new" id="sv-new-btn" hidden>+ Ny aktivitet</button>
         <label id="sv-flytt-lbl" hidden title="AT-er som bare hører til aktiviteten, flyttes like mange dager"><input type="checkbox" id="sv-flytt" checked> Flytt AT-er med</label>
         <button class="btn" data-action="sv-undo" id="sv-undo" hidden>↶ Angre</button>
+        <label class="btn" id="sv-sd-btn" hidden title="Last opp ny PDF-eksport av fremdriftsplanen fra Sitedrive. Du ser endringene før noe oppdateres.">📥 Ny plan fra Sitedrive<input type="file" id="sd-fil2" accept=".pdf,application/pdf" hidden></label>
         <label>Vis: <select class="week-sel" id="sv-lys"><option value="">Alle</option><option value="avvik">Bare røde og gule</option><option value="rod">Bare røde</option><option value="ikke">Ikke ferdig vurdert</option></select></label>
       </div>
       <div class="sv-edit-hint" id="sv-edit-hint" hidden>✏️ <b>Redigering er på.</b> Dra en stolpe sidelengs for å flytte startdatoen, eller opp og ned for å flytte den til en annen sone. Dra i høyre kant for å endre varigheten. Trykk på en stolpe for å endre detaljer, og trykk i et tomt felt for å legge inn en ny aktivitet der. Endringer merkes med ✎, slik at de kan synkroniseres med Sitedrive eller Tactplan senere.</div>
@@ -761,6 +774,7 @@ td.firma-cell{white-space:normal;min-width:130px}
       </div>
       <div class="panel" id="modules-panel"></div>
       <div class="panel reg-panel" id="register-panel"></div>
+      <div class="panel" id="sd-panel"></div>
       <div class="panel" id="data-panel"></div>
       <div class="panel logg-panel" id="logg-panel" hidden></div>
     </div>
@@ -919,7 +933,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-06.1';
+const APP_VERSION = '2026-10-06.2';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -2306,6 +2320,7 @@ function renderStatustavle() {
   document.getElementById('sv-ro-tag').hidden = kanRedigere;
   eb.hidden = !kanRedigere; eb.classList.toggle('on', st.edit); eb.textContent = st.edit ? '✔ Ferdig med redigering' : '✏️ Rediger tidslinje';
   document.getElementById('sv-new-btn').hidden = !st.edit;
+  document.getElementById('sv-sd-btn').hidden = !isSys();
   document.getElementById('sv-flytt-lbl').hidden = !st.edit;
   document.getElementById('sv-flytt').checked = st.flyttAT;
   document.getElementById('sv-edit-hint').hidden = !st.edit;
@@ -3086,7 +3101,9 @@ const SD_PLAN = [
 const SD_TEAM_FIRMA = {
   'Grunn (V&S)': ['Vassbakk & Stol'], 'Betong': ['Skanska'], 'Vitnepunkt': ['Skanska'],
   'Stillas': ['Stillasmontasje AS', 'Stillastjenester AS'], 'Boring': ['Boreteknikk AS', 'Entreprenørservice AS'],
-  'Elektro': ['Byggstrøm Elektro AS'], 'Rør/naturgass': ['Rør & VVS AS', 'Nærenergi AS']
+  'Elektro': ['Byggstrøm Elektro AS'], 'Rør/naturgass': ['Rør & VVS AS', 'Nærenergi AS'],
+  'Fundamentering (E-service)': ['Entreprenørservice AS', 'Entreprenørservice'], 'Rør Industri': ['Rør & VVS AS', 'Nærenergi AS'],
+  'Vitnebefaringer': ['Skanska']
 };
 const PLANSETT = 1;
 const sdNorm = s => String(s || '').toLowerCase().replace(/[^a-z0-9æøå]+/g, ' ').trim();
@@ -3597,6 +3614,340 @@ function hindAction(action, btn) {
     HIND = HIND.filter(x => x !== hiDlg.h); logg('Hindring slettet', hiDlg.h.aktiviteter.join(', '), hiDlg.h.tittel);
     document.getElementById('hi-dlg').close(); save(); renderCurrent();
   }
+}
+
+// ---------- opplasting av fremdriftsplan fra Sitedrive (PDF-eksport av tidslinjen) ----------
+// Leser PDF-en i nettleseren med PDF.js (ligger i vendor/pdfjs): stolpene gir dato og sone ut fra plasseringen,
+// teksten i stolpen gir navnet og fargen/teksten gir teamet. Ingenting endres før forhåndsvisningen er godkjent.
+const SD_MND = {january: 1, february: 2, march: 3, april: 4, may: 5, june: 6, july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+  januar: 1, februar: 2, mars: 3, mai: 5, juni: 6, juli: 7, desember: 12, oktober: 10};
+function isoMandag(uke, aar) {
+  const j4 = new Date(Date.UTC(aar, 0, 4)), dag = (j4.getUTCDay() + 6) % 7;
+  const m = new Date(j4.getTime() - dag * 864e5 + (uke - 1) * 7 * 864e5);
+  return m.toISOString().slice(0, 10);
+}
+async function sdLesPdf(buf) {
+  const pdfjs = await import('./vendor/pdfjs/pdf.min.js');
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL('vendor/pdfjs/pdf.worker.min.js', location.href).href;
+  const doc = await pdfjs.getDocument({data: new Uint8Array(buf)}).promise;
+  if (doc.numPages > 1) throw new Error('PDF-en har flere sider. Eksporter tidslinjen på én side.');
+  const page = await doc.getPage(1), H = page.getViewport({scale: 1}).height;
+  // Fylte rektangler med farge, i koordinater med origo oppe til venstre.
+  const ops = await page.getOperatorList(), O = pdfjs.OPS, rects = [];
+  const mul = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+  let gs = {ctm: [1, 0, 0, 1, 0, 0], fill: [0, 0, 0]}, stack = [], path = null;
+  for (let i = 0; i < ops.fnArray.length; i++) {
+    const f = ops.fnArray[i], a = ops.argsArray[i];
+    if (f === O.save) stack.push({...gs});
+    else if (f === O.restore) gs = stack.pop() || gs;
+    else if (f === O.transform) gs = {...gs, ctm: mul(gs.ctm, a)};
+    else if (f === O.setFillRGBColor) gs = {...gs, fill: [a[0], a[1], a[2]]};
+    else if (f === O.constructPath) {
+      const mm = a[2]; if (!mm) { path = null; continue; }
+      const pts = [[mm[0], mm[1]], [mm[2], mm[3]], [mm[0], mm[3]], [mm[2], mm[1]]].map(([x, y]) => [gs.ctm[0] * x + gs.ctm[2] * y + gs.ctm[4], gs.ctm[1] * x + gs.ctm[3] * y + gs.ctm[5]]);
+      const xs = pts.map(p => p[0]), ys = pts.map(p => H - p[1]);
+      path = {x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys)};
+    } else if ((f === O.fill || f === O.eoFill || f === O.fillStroke || f === O.eoFillStroke) && path) { rects.push({...path, c: gs.fill}); path = null; }
+    else if (f === O.endPath || f === O.stroke) path = null;
+  }
+  const tc = await page.getTextContent();
+  const tekster = tc.items.filter(t => t.str && t.str.trim()).map(t => {
+    const [a, b, , d, e, f] = t.transform, rot = Math.abs(b) > Math.abs(a);
+    const h = rot ? Math.abs(b) : Math.abs(d);
+    const s = t.str.replace(/\u00a0/g, ' ').trim();
+    if (!rot) return {s, x0: e, x1: e + t.width, y0: H - f - h, y1: H - f, h, rot};
+    // Rotert tekst: b < 0 leses ovenfra og ned (bokstavene står til høyre for grunnlinjen), b > 0 nedenfra og opp.
+    return b < 0 ? {s, x0: e, x1: e + h, y0: H - f, y1: H - f + t.width, h, rot} : {s, x0: e - h, x1: e, y0: H - f - t.width, y1: H - f, h, rot};
+  });
+  return sdTolk(rects, tekster);
+}
+// Tolker tidslinjen: kolonner (uke/dag), sonerader (rutene til venstre) og stolper.
+function sdTolk(rects, tekster) {
+  const adv = [];
+  const uker = tekster.filter(t => /^(week|uke)\s*\d{1,2}$/i.test(t.s)).map(t => ({uke: +t.s.match(/\d+/)[0], xm: (t.x0 + t.x1) / 2, y1: t.y1})).sort((p, q) => p.xm - q.xm);
+  if (uker.length < 1) throw new Error('Fant ikke ukene i PDF-en. Bruk tidslinjevisningen i Sitedrive med uker øverst.');
+  const mnd = tekster.map(t => ({t, m: t.s.toLowerCase().match(/^([a-zæøå]+)\s*-?\s*(\d{4})$/)})).filter(x => x.m && SD_MND[x.m[1]]).map(x => ({x: x.t.x0, aar: +x.m[2], mnd: SD_MND[x.m[1]]})).sort((p, q) => p.x - q.x);
+  const ukeB = uker.length > 1 ? (uker[uker.length - 1].xm - uker[0].xm) / (uker.length - 1) : 0;
+  const dagT = tekster.filter(t => /^\d{1,2}(\s+\S+)?$/.test(t.s) && t.y0 > Math.min(...uker.map(u => u.y1)) - 2 && t.y0 < Math.min(...uker.map(u => u.y1)) + 30);
+  // Datoer: hver uke deles i like mange kolonner som det er dagetiketter under den (5 når helgene er skjult).
+  const kol = [];
+  uker.forEach((u, i) => {
+    const bredde = ukeB || 176, x0 = u.xm - bredde / 2;
+    const dager = dagT.filter(t => (t.x0 + t.x1) / 2 >= x0 && (t.x0 + t.x1) / 2 < x0 + bredde).length;
+    const n = dager >= 6 ? 7 : 5;
+    const m = mnd.filter(x => x.x <= u.xm).pop() || mnd[0];
+    let aar = m ? m.aar : new Date().getFullYear();
+    if (m && m.mnd === 12 && u.uke < 10) aar++; if (m && m.mnd === 1 && u.uke > 50) aar--;
+    const mandag = isoMandag(u.uke, aar);
+    for (let k = 0; k < n; k++) kol.push({dato: addDays(mandag, k), x0: x0 + k * bredde / n, x1: x0 + (k + 1) * bredde / n});
+  });
+  const gL = kol[0].x0, gR = kol[kol.length - 1].x1;
+  const gT = Math.max(...dagT.map(t => t.y1), ...uker.map(u => u.y1)) + 1;
+  const lys = c => c[0] > 235 && c[1] > 235 && c[2] > 235;
+  const gra = c => Math.abs(c[0] - c[1]) < 6 && Math.abs(c[1] - c[2]) < 6 && c[0] > 60 && c[0] <= 235;
+  // Sonerader: lyse ruter til venstre for tidslinjen. Bladrutene går helt inn til tidslinjen; ruter lenger til venstre er overordnet.
+  const celler = rects.filter(r => lys(r.c) && r.x1 <= gL + 3 && r.y0 >= gT - 3 && r.y1 - r.y0 > 12 && r.x1 - r.x0 > 15);
+  const inni = (t, r) => (t.x0 + t.x1) / 2 >= r.x0 - 1 && (t.x0 + t.x1) / 2 <= r.x1 + 1 && (t.y0 + t.y1) / 2 >= r.y0 - 1 && (t.y0 + t.y1) / 2 <= r.y1 + 1;
+  // Bladruter: går inn til tidslinjen og inneholder ingen andre slike ruter (den store bakgrunnsruta faller bort).
+  const kant = celler.filter(r => Math.abs(r.x1 - gL) < 4);
+  const inneholder = (p, r) => p !== r && p.x0 <= r.x0 + 1 && p.x1 >= r.x1 - 1 && p.y0 <= r.y0 + 1 && p.y1 >= r.y1 - 1 && (p.y1 - p.y0) > (r.y1 - r.y0) + 2;
+  const blad = kant.filter(r => !kant.some(q => inneholder(r, q))).map(r => ({...r, navn: tekster.filter(t => !t.rot && inni(t, r)).map(t => t.s).join(' ')})).filter(r => r.navn);
+  const soner = blad.map(r => {
+    // Overordnet rute (f.eks. «8302 - Kjeller») rett til venstre, men ikke en rute som dekker alle sonene (prosjektnavnet).
+    const far = celler.filter(p => p !== r && Math.abs(p.x1 - r.x0) < 4 && p.y0 <= r.y0 + 2 && p.y1 >= r.y1 - 2 && !blad.every(b => p.y0 <= b.y0 + 2 && p.y1 >= b.y1 - 2))
+      .sort((p, q) => (p.y1 - p.y0) - (q.y1 - q.y0))[0];
+    const farNavn = far ? tekster.filter(t => inni(t, far)).map(t => t.s).join(' ') : '';
+    return {y0: r.y0, y1: r.y1, raa: farNavn ? `${farNavn} / ${r.navn}` : r.navn};
+  }).sort((p, q) => p.y0 - q.y0);
+  if (!soner.length) throw new Error('Fant ikke sonene til venstre i PDF-en.');
+  const stolper = rects.filter(r => !lys(r.c) && !gra(r.c) && r.x0 >= gL - 3 && r.x1 <= gR + 3 && r.y0 >= gT - 1 && r.y1 - r.y0 >= 12 && r.x1 - r.x0 >= 10);
+  // Farge → team, lært fra stolper som har teamet skrevet i seg.
+  const fkey = c => c.map(v => Math.round(v / 8)).join(',');
+  const rader = stolper.map(r => {
+    const sone = soner.find(z => (r.y0 + r.y1) / 2 >= z.y0 && (r.y0 + r.y1) / 2 <= z.y1);
+    const t = tekster.filter(x => !x.rot && inni(x, {x0: r.x0, x1: r.x1, y0: r.y0, y1: r.y1})).sort((p, q) => p.y0 - q.y0 || p.x0 - q.x0);
+    // Linjer ovenfra. Navnet er de øverste linjene som henger sammen; sone og team står med mindre skrift eller etter et mellomrom.
+    const linjer = [];
+    t.forEach(x => { const l = linjer.find(l => Math.abs(l.y0 - x.y0) < 2.5); l ? l.deler.push(x) : linjer.push({y0: x.y0, y1: x.y1, h: x.h, deler: [x]}); });
+    linjer.forEach(l => { l.h = Math.max(...l.deler.map(x => x.h)); l.y1 = Math.max(...l.deler.map(x => x.y1)); l.s = l.deler.sort((p, q) => p.x0 - q.x0).map(x => x.s).filter(x => /[\p{L}\p{N}]/u.test(x)).join(' '); });
+    const maxH = Math.max(0, ...linjer.map(l => l.h)), navnDel = [], meta = [];
+    linjer.forEach((l, i) => {
+      const forrige = navnDel[navnDel.length - 1];
+      const iNavn = navnDel.length === i && l.h >= maxH * .9 && (!forrige || l.y0 - forrige.y1 < l.h * .8);
+      (iNavn ? navnDel : meta).push(l);
+    });
+    const metaTekst = meta.flatMap(l => l.deler.map(x => x.s)).filter(x => /[\p{L}\p{N}]/u.test(x));
+    let navn = '';
+    navnDel.map(l => ({s: l.s})).forEach(x => { navn = !navn ? x.s : /[-‐]$/.test(navn) && /^[a-zæøå]/.test(x.s) ? navn.replace(/[-‐]$/, '') + x.s : navn + ' ' + x.s; });
+    navn = navn.replace(/\s+/g, ' ').trim();
+    const avkortet = /…$|\.\.\.$/.test(navn);
+    navn = navn.replace(/\s*(…|\.\.\.)$/, '').trim();
+    const sKol = kol.findIndex(k => (k.x0 + k.x1) / 2 > r.x0 - 1), eKol = kol.map(k => (k.x0 + k.x1) / 2 < r.x1 + 1).lastIndexOf(true);
+    const sonenavn = sone ? sone.raa : '';
+    const team = metaTekst.find(m => !soner.some(z => sdNorm(z.raa).endsWith(sdNorm(m))) && !/^\d{4}\s*-/.test(m)) || '';
+    return {sone: sonenavn, team, start: kol[Math.max(0, sKol)].dato, slutt: kol[Math.max(0, eKol)].dato, navn, avkortet,
+      startKant: r.x0 <= gL + 3, sluttKant: r.x1 >= gR - 3, farge: fkey(r.c), y: r.y0};
+  }).filter(r => r.navn);
+  const fargeTeam = {};
+  rader.filter(r => r.team).forEach(r => { (fargeTeam[r.farge] = fargeTeam[r.farge] || {})[r.team] = ((fargeTeam[r.farge] || {})[r.team] || 0) + 1; });
+  rader.forEach(r => { if (!r.team && fargeTeam[r.farge]) r.team = Object.entries(fargeTeam[r.farge]).sort((p, q) => q[1] - p[1])[0][0]; });
+  stolper.filter(r => !rader.some(x => x.y === r.y0)).forEach(() => {});
+  // Overskriften: planens navn, visning og eksporttidspunkt.
+  const datoT = tekster.find(t => t.y1 < gT - 30 && /\d{1,2}[./]\d{1,2}[./]\d{4}/.test(t.s));
+  let eksportert = '';
+  if (datoT) {
+    const m = datoT.s.match(/(\d{1,2})[./](\d{1,2})[./](\d{4}),?\s*(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i);
+    if (m) {
+      let [, p1, p2, aar, hh, mm, ap] = m; hh = +hh;
+      const us = datoT.s.includes('/');
+      const [mo, dd] = us ? [p1, p2] : [p2, p1];
+      if (ap) { if (/pm/i.test(ap) && hh < 12) hh += 12; if (/am/i.test(ap) && hh === 12) hh = 0; }
+      eksportert = `${aar}-${String(mo).padStart(2, '0')}-${String(dd).padStart(2, '0')}T${String(hh).padStart(2, '0')}:${mm}`;
+    }
+  }
+  const hode = datoT ? tekster.filter(t => Math.abs(t.y1 - datoT.y1) < 4 && t !== datoT && !/@/.test(t.s) && t.h < datoT.h * 1.5).sort((p, q) => p.x0 - q.x0).map(t => t.s) : [];
+  const meta = {plan: hode[0] || 'Sitedrive-plan', visning: hode[1] || '', eksportert, fra: kol[0].dato, til: kol[kol.length - 1].dato, kilde: 'PDF-eksport'};
+  if (!rader.length) adv.push('Fant ingen aktiviteter i PDF-en.');
+  return {meta, rader: rader.map(({farge, y, ...r}) => r), soner: soner.map(z => z.raa), advarsler: adv};
+}
+
+// ----- kobling mot aktivitetene og forhåndsvisning -----
+// Aktivitetene beholder ID-en når de finnes i den nye planen, så AT-er, avhengigheter, hindringer, kommentarer,
+// forutsetninger, UE-er og plassering i AT-koordinering blir med.
+let sdImp = null;
+function sdSone(raa) {
+  const alle = OMRADER(), n = sdNorm, uten = s => s.replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+  return alle.find(o => o === raa) || alle.find(o => n(o) === n(raa)) || alle.find(o => n(o) === n(uten(raa))) || alle.find(o => n(uten(o)) === n(uten(raa))) || raa;
+}
+const sdHarKoblinger = a => {
+  const k = [];
+  if (a.at.length) k.push(a.at.map(t => t.nr).join(', '));
+  if (AVH.some(d => d.fra === a.id || d.til === a.id)) k.push('avhengighet');
+  if (HIND.some(h => h.aktiviteter.includes(a.id))) k.push('hindring');
+  if ((a.ue || []).length) k.push('UE');
+  if (a.kommentar || Object.values(a.fuKommentar || {}).some(Boolean)) k.push('kommentar');
+  if (mbNrs(a).length) k.push('MB ' + mbNrs(a).join(', '));
+  if (a.kart || a.kartOmrade) k.push('plassert i AT-koordinering');
+  return k;
+};
+function sdForbered(res) {
+  const {meta} = res, n = sdNorm;
+  const rader = res.rader.map((r, i) => ({...r, i, omrade: sdSone(r.sone)}));
+  const pool = DATA.filter(a => endDate(a) >= addDays(meta.fra, -7));
+  const brukt = new Set(), match = new Array(rader.length).fill(null), hvordan = [];
+  const likt = (a, r) => n(a.navn) === n(r.navn) || (a.sd && a.sd.pdfNavn && n(a.sd.pdfNavn) === n(r.navn));
+  const prefiks = (a, r) => { const x = n(a.navn), y = n(r.navn); return x.length >= 5 && y.length >= 5 && (x.startsWith(y) || y.startsWith(x)); };
+  const pass = (ok, sikker) => rader.forEach((r, i) => {
+    if (match[i]) return;
+    const k = pool.filter(a => !brukt.has(a.id) && ok(a, r)).sort((x, y) => Math.abs(daysBetween(x.startdato, r.start)) - Math.abs(daysBetween(y.startdato, r.start)));
+    if (k[0]) { match[i] = k[0].id; brukt.add(k[0].id); hvordan[i] = sikker; }
+  });
+  pass((a, r) => a.omrade === r.omrade && likt(a, r), 'sikker');
+  pass((a, r) => a.omrade === r.omrade && prefiks(a, r), 'sikker');
+  pass((a, r) => likt(a, r), 'sone');
+  pass((a, r) => prefiks(a, r), 'sone');
+  sdImp = {meta, rader, valg: rader.map((r, i) => match[i] || 'ny'), hvordan, beholdWrk2: new Set(), fjern: {}, pool: pool.map(a => a.id)};
+  // Aktiviteter i planperioden som ikke er med i den nye planen.
+  sdUtenfor().forEach(a => { sdImp.fjern[a.id] = sdHarKoblinger(a).length || a.kilde === 'WRK2' ? 'behold' : 'slett'; });
+}
+function sdUtenfor() {
+  const valgt = new Set(sdImp.valg.filter(v => v !== 'ny'));
+  return DATA.filter(a => !valgt.has(a.id) && endDate(a) >= sdImp.meta.fra && a.startdato <= sdImp.meta.til);
+}
+// Hva blir aktiviteten etter oppdateringen?
+function sdNy(r, a) {
+  const start = r.startKant && a && a.startdato < r.start ? a.startdato : r.start;
+  const slutt = r.sluttKant && a && endDate(a) > r.slutt ? endDate(a) : r.slutt;
+  const navn = a && (r.avkortet || sdNorm(a.navn).startsWith(sdNorm(r.navn))) && a.navn.length > r.navn.length ? a.navn : r.navn + (r.avkortet && !a ? '…' : '');
+  return {start, varighet: daysBetween(start, slutt) + 1, omrade: r.omrade, navn};
+}
+function sdFirmaForTeam(team) {
+  for (const navn of SD_TEAM_FIRMA[team] || []) { const f = FIRMS.find(x => normFirm(x.navn) === normFirm(navn)); if (f) return f.navn; }
+  const tell = {};
+  DATA.filter(a => a.sd && a.sd.team === team).forEach(a => { tell[a.firma] = (tell[a.firma] || 0) + 1; });
+  const best = Object.entries(tell).sort((x, y) => y[1] - x[1])[0];
+  return best ? best[0] : (isSys() ? 'Skanska' : me().firma);
+}
+function sdOppsummer() {
+  const s = sdImp, endret = [], like = [], nye = [];
+  s.rader.forEach((r, i) => {
+    const id = s.valg[i], a = id !== 'ny' && actById(id);
+    if (!a) { nye.push({r, i}); return; }
+    const ny = sdNy(r, a), d = [];
+    if (ny.start !== a.startdato || endDate(a) !== addDays(ny.start, ny.varighet - 1)) d.push(`${fmtShort(a.startdato)}–${fmtShort(endDate(a))} → <b>${fmtShort(ny.start)}–${fmtShort(addDays(ny.start, ny.varighet - 1))}</b>`);
+    if (ny.omrade !== a.omrade) d.push(`sone ${esc(a.omrade)} → <b>${esc(ny.omrade)}</b>${a.kart || a.kartOmrade ? ' <span class="sub">(plasseringen i AT-koordinering nullstilles)</span>' : ''}`);
+    if (ny.navn !== a.navn) d.push(`navn → <b>${esc(ny.navn)}</b>`);
+    (d.length ? endret : like).push({r, i, a, ny, d});
+  });
+  // Avhengigheter som blir brutt med de nye datoene (regnes ut uten å endre noe).
+  const lagret = new Map();
+  endret.forEach(({a, ny}) => { if (s.beholdWrk2.has(a.id)) return; lagret.set(a, [a.startdato, a.varighet]); a.startdato = ny.start; a.varighet = ny.varighet; });
+  const brudd = AVH.filter(avhBrudd).map(d => avhNavn(d));
+  lagret.forEach(([st, v], a) => { a.startdato = st; a.varighet = v; });
+  return {endret, like, nye, utenfor: sdUtenfor(), brudd};
+}
+function sdVisForhandsvisning() {
+  let dlg = document.getElementById('sd-dlg');
+  if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'sd-dlg'; dlg.className = 'sv-dlg sd-dlg'; document.body.appendChild(dlg); }
+  const s = sdImp, o = sdOppsummer(), m = s.meta;
+  const ledige = DATA.filter(a => s.pool.includes(a.id) && !s.valg.includes(a.id)).sort((x, y) => x.omrade.localeCompare(y.omrade) || x.startdato.localeCompare(y.startdato));
+  const velg = (i, r) => `<select data-sd-valg="${i}"><option value="ny" ${s.valg[i] === 'ny' ? 'selected' : ''}>Ny aktivitet</option>
+    ${[...(s.valg[i] !== 'ny' ? [actById(s.valg[i])] : []), ...ledige.filter(a => a.omrade === r.omrade), ...ledige.filter(a => a.omrade !== r.omrade)].filter(Boolean)
+      .map(a => `<option value="${esc(a.id)}" ${a.id === s.valg[i] ? 'selected' : ''}>${esc(a.id)} ${esc(a.navn)} · ${esc(a.omrade)} · ${fmtShort(a.startdato)}</option>`).join('')}</select>`;
+  const rad = r => `<td>${esc(r.navn)}${r.avkortet ? '…' : ''}<div class="sub">${esc(r.omrade)}${r.omrade !== r.sone ? ` (Sitedrive: ${esc(r.sone)})` : ''} · ${fmtShort(r.start)}–${fmtShort(r.slutt)}${r.startKant ? ' · startet før ' + fmtShort(m.fra) : ''}${r.sluttKant ? ' · fortsetter etter ' + fmtShort(m.til) : ''}${r.team ? ' · ' + esc(r.team) : ''}</div></td>`;
+  const usikre = o.endret.concat(o.like).filter(x => s.hvordan[x.i] === 'sone');
+  dlg.innerHTML = `<div class="sd-hode"><h3>Oppdater planen fra Sitedrive</h3>
+      <div class="sub"><b>${esc(m.plan)}</b>${m.visning ? ' · ' + esc(m.visning) : ''}${m.eksportert ? ' · eksportert ' + fmtNo(m.eksportert.slice(0, 10)) + ' ' + m.eksportert.slice(11, 16) : ''} · periode ${fmtNo(m.fra)}–${fmtNo(m.til)} · ${s.rader.length} aktiviteter i PDF-en</div>
+      <div class="sd-tall"><span><b>${o.endret.length}</b> endres</span><span><b>${o.like.length}</b> uendret</span><span><b>${o.nye.length}</b> nye</span><span><b>${o.utenfor.length}</b> ikke i ny plan</span>${o.brudd.length ? `<span style="color:var(--red)"><b>${o.brudd.length}</b> avhengigheter blir brutt</span>` : ''}</div></div>
+    <div class="sd-kropp">
+      ${usikre.length ? `<h4>Kontroller koblingen <span class="sub">– funnet på navn, men i en annen sone eller med litt annet navn</span></h4>
+        <table class="sd-tab"><tr><th>I Sitedrive</th><th>Kobles til</th></tr>${usikre.map(x => `<tr>${rad(x.r)}<td>${velg(x.i, x.r)}</td></tr>`).join('')}</table>` : ''}
+      ${o.endret.length ? `<h4>Endres <span class="sub">– aktiviteten beholder ID, AT-er, avhengigheter, hindringer og kommentarer</span></h4>
+        <table class="sd-tab"><tr><th>Aktivitet</th><th>Endring</th><th></th></tr>${o.endret.map(x => `<tr><td><b>${esc(x.a.id)}</b> ${esc(x.a.navn)}<div class="sub">${esc(x.a.firma)}</div></td><td>${x.d.join('<br>')}</td>
+          <td>${x.a.endretIWRK2 ? `<label class="sub" title="Endret i WRK2 ${fmtNo(x.a.endretIWRK2.tid.slice(0, 10))}${x.a.endretIWRK2.av ? ' av ' + esc(x.a.endretIWRK2.av) : ''}"><input type="checkbox" data-sd-wrk2="${esc(x.a.id)}" ${s.beholdWrk2.has(x.a.id) ? 'checked' : ''}> Behold endringen fra WRK2</label>` : ''}</td></tr>`).join('')}</table>` : ''}
+      ${o.nye.length ? `<h4>Nye i planen <span class="sub">– velg en eksisterende aktivitet hvis det er den samme</span></h4>
+        <table class="sd-tab"><tr><th>I Sitedrive</th><th>Firma</th><th>Kobles til</th></tr>${o.nye.map(x => `<tr>${rad(x.r)}<td>${firmBadge(sdFirmaForTeam(x.r.team))}</td><td>${velg(x.i, x.r)}</td></tr>`).join('')}</table>` : ''}
+      ${o.utenfor.length ? `<h4>Ikke med i den nye planen <span class="sub">– aktiviteter med koblinger beholdes som standard og merkes</span></h4>
+        <table class="sd-tab"><tr><th>Aktivitet</th><th>Koblet til</th><th>Valg</th></tr>${o.utenfor.map(a => { const k = sdHarKoblinger(a); return `<tr><td><b>${esc(a.id)}</b> ${esc(a.navn)}<div class="sub">${esc(a.omrade)} · ${fmtShort(a.startdato)}–${fmtShort(endDate(a))}${a.kilde === 'WRK2' ? ' · lagt inn i WRK2' : ''}</div></td>
+          <td class="sub">${k.length ? esc(k.join(' · ')) : '–'}</td><td><select data-sd-fjern="${esc(a.id)}"><option value="behold" ${s.fjern[a.id] === 'behold' ? 'selected' : ''}>Behold og merk</option><option value="slett" ${s.fjern[a.id] === 'slett' ? 'selected' : ''}>Slett</option></select></td></tr>`; }).join('')}</table>` : ''}
+      ${o.brudd.length ? `<h4 style="color:var(--red)">Avhengigheter som blir brutt</h4><ul class="sub">${o.brudd.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+      ${!o.endret.length && !o.nye.length && !o.utenfor.length ? '<p>Planen er lik det som ligger i WRK2. Ingenting å oppdatere.</p>' : ''}
+    </div>
+    <div class="sv-dlg-actions"><span class="sub">Ingenting endres før du trykker «Oppdater planen».</span><span style="flex:1"></span>
+      <button class="btn" data-action="sd-avbryt">Avbryt</button>
+      <button class="btn primary" data-action="sd-bruk" ${!o.endret.length && !o.nye.length && !Object.values(s.fjern).includes('slett') && !o.utenfor.length ? 'disabled' : ''}>Oppdater planen</button></div>`;
+  if (!dlg.open) dlg.showModal();
+}
+function sdUtfor() {
+  const s = sdImp, m = s.meta, tid = new Date().toISOString();
+  const utenfor = sdUtenfor(); // regnes ut før nye aktiviteter legges til
+  const sdInfo = (r, merknad) => ({team: r.team, plan: m.plan, eksportert: m.eksportert, importert: tid, pdfNavn: r.navn, merknad: merknad.join(' · ')});
+  let ny = 0, oppdatert = 0;
+  s.rader.forEach((r, i) => {
+    const id = s.valg[i];
+    let a = id !== 'ny' && actById(id);
+    const merknad = [];
+    if (r.avkortet) merknad.push('Navnet er avkortet i Sitedrive-eksporten');
+    if (r.sluttKant) merknad.push(`Fortsetter etter ${fmtShort(m.til)} – sluttdatoen er ikke med i eksporten`);
+    if (a) {
+      if (s.beholdWrk2.has(a.id)) { a.sd = {...(a.sd || {}), ...sdInfo(r, merknad), merknad: 'Endring i WRK2 beholdt ved import ' + fmtNo(tid.slice(0, 10))}; return; }
+      const n = sdNy(r, a), endret = n.start !== a.startdato || n.varighet !== a.varighet || n.omrade !== a.omrade || n.navn !== a.navn;
+      if (n.omrade !== a.omrade) { delete a.kart; delete a.snittY; delete a.kartOmrade; }
+      Object.assign(a, {startdato: n.start, varighet: n.varighet, omrade: n.omrade, navn: n.navn});
+      if (r.startKant && n.start < r.start) merknad.push(`Startet ${fmtNo(n.start)} (før eksportens første dag)`);
+      a.kilde = 'Sitedrive'; delete a.endretIWRK2; delete a.ikkeIPlan;
+      if (endret) oppdatert++;
+    } else {
+      const firma = sdFirmaForTeam(r.team), n = sdNy(r, null);
+      a = {id: nextActId(), navn: n.navn, omrade: n.omrade, startdato: n.start, varighet: n.varighet, firma,
+        metode: {nr: '', status: 'ikke', historikk: ''}, forutsetninger: ikkeVurdert(), risikoniva: 'Middels', dodsrisiko: [], kommentar: '', ansvarUtforelse: '', ansvarGodkjenning: '', kilde: 'Sitedrive'};
+      if (r.startKant) merknad.push(`Kan ha startet før eksportens første dag (${fmtShort(m.fra)})`);
+      DATA.push(a); ny++;
+    }
+    a.status = statusFor(a.startdato, a.varighet);
+    a.sd = sdInfo(r, merknad);
+  });
+  const slett = new Set(), merket = [];
+  utenfor.forEach(a => {
+    if (s.fjern[a.id] === 'slett') slett.add(a.id);
+    else { a.ikkeIPlan = m.eksportert || tid; a.sd = {...(a.sd || {}), merknad: `Ikke med i Sitedrive-planen eksportert ${fmtNo((m.eksportert || tid).slice(0, 10))}`}; merket.push(a.id); }
+  });
+  if (slett.size) {
+    DATA = DATA.filter(a => !slett.has(a.id));
+    AVH = AVH.filter(d => !slett.has(d.fra) && !slett.has(d.til));
+    ATS.forEach(t => { t.aktiviteter = t.aktiviteter.filter(x => !slett.has(x)); });
+    HIND.forEach(h => { if (h.aktiviteter.some(x => slett.has(x))) { h.aktiviteter = h.aktiviteter.filter(x => !slett.has(x)); h.aktFirmaer = hindAktFirmaer(h); } });
+  }
+  relink();
+  SETTINGS.planImport = {...m, importert: tid, ny, oppdatert, fjernet: slett.size, merket: merket.length};
+  logg('Import fra Sitedrive', '', `${m.plan}${m.visning ? ' (' + m.visning + ')' : ''}, eksportert ${m.eksportert ? fmtNo(m.eksportert.slice(0, 10)) : '?'}: ${ny} nye, ${oppdatert} endret, ${slett.size} slettet${slett.size ? ' (' + [...slett].join(', ') + ')' : ''}, ${merket.length} beholdt utenfor planen${merket.length ? ' (' + merket.join(', ') + ')' : ''}`);
+  save(); renderCurrent();
+  const brutt = AVH.filter(avhBrudd).length;
+  showToast(`Planen er oppdatert: ${ny} nye, ${oppdatert} endret, ${slett.size} slettet, ${merket.length} beholdt og merket.${brutt ? ` ⚠ ${brutt} avhengigheter er brutt – se Statustavlen.` : ''}`);
+}
+async function sdLastOpp(fil) {
+  if (!isSys()) return;
+  if (location.protocol === 'file:') { alert('Opplasting av plan virker bare på nettsiden (wrk2.no), ikke i demo-modus fra fil.'); return; }
+  if (!/\.pdf$/i.test(fil.name)) { alert('Velg PDF-eksporten av tidslinjen fra Sitedrive.'); return; }
+  showToast('Leser planen …');
+  try {
+    const res = await sdLesPdf(await fil.arrayBuffer());
+    if (!res.rader.length) throw new Error('fant ingen aktiviteter i PDF-en');
+    sdForbered(res);
+    sdVisForhandsvisning();
+    document.getElementById('toast').hidden = true;
+  } catch (e) { alert('Kunne ikke lese planen: ' + (e.message || e)); }
+}
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.id === 'sd-fil' || el.id === 'sd-fil2') { const f = el.files[0]; el.value = ''; if (f) sdLastOpp(f); return; }
+  if (!sdImp) return;
+  if (el.dataset.sdValg !== undefined) {
+    const i = Number(el.dataset.sdValg), v = el.value;
+    if (v !== 'ny') sdImp.valg = sdImp.valg.map((x, j) => (j !== i && x === v) ? 'ny' : x);
+    sdImp.valg[i] = v; sdImp.hvordan[i] = v === 'ny' ? '' : 'manuell';
+    sdUtenfor().forEach(a => { if (!(a.id in sdImp.fjern)) sdImp.fjern[a.id] = sdHarKoblinger(a).length || a.kilde === 'WRK2' ? 'behold' : 'slett'; });
+    sdVisForhandsvisning(); return;
+  }
+  if (el.dataset.sdFjern !== undefined) { sdImp.fjern[el.dataset.sdFjern] = el.value; sdVisForhandsvisning(); return; }
+  if (el.dataset.sdWrk2 !== undefined) { el.checked ? sdImp.beholdWrk2.add(el.dataset.sdWrk2) : sdImp.beholdWrk2.delete(el.dataset.sdWrk2); sdVisForhandsvisning(); }
+});
+function sdAction(action) {
+  const dlg = document.getElementById('sd-dlg');
+  if (action === 'sd-avbryt') { dlg.close(); sdImp = null; return; }
+  if (action === 'sd-bruk' && sdImp) {
+    const o = sdOppsummer(), slett = Object.values(sdImp.fjern).filter(v => v === 'slett').length;
+    if (slett && !confirm(`${slett} aktivitet${slett === 1 ? '' : 'er'} slettes. Fortsette?`)) return;
+    dlg.close(); sdUtfor(); sdImp = null;
+  }
+}
+function sdPanelHtml() {
+  const pi = SETTINGS.planImport;
+  return `<h3>Fremdriftsplan fra Sitedrive</h3>
+    <p class="intro" style="margin-bottom:8px">Last opp PDF-eksporten av tidslinjen i Sitedrive (soner til venstre, uker øverst). Du får se hva som endres før noe oppdateres.
+      Aktivitetene beholder ID-en, så AT-er, avhengigheter, hindringer, kommentarer og plassering i AT-koordinering blir med.</p>
+    ${pi ? `<p class="sub">Sist importert: <b>${esc(pi.plan)}</b>${pi.visning ? ' (' + esc(pi.visning) + ')' : ''}, eksportert ${pi.eksportert ? fmtNo(pi.eksportert.slice(0, 10)) : '?'} · ${pi.importert ? 'lest inn ' + fmtNo(pi.importert.slice(0, 10)) : ''}</p>` : ''}
+    <label class="btn primary">📥 Last opp ny plan (PDF)<input type="file" id="sd-fil" accept=".pdf,application/pdf" hidden></label>`;
 }
 
 // ---------- dokumenter til metodebeskrivelsene (PDF/Word) ----------
@@ -4352,6 +4703,7 @@ function renderAdmin() {
       <span><b>Skråstreksdiagram</b><br><span class="sub">Soner mot uker, med hver aktivitet eller AT som en skråstrek.</span></span></label>
     <label class="module-row"><input type="checkbox" id="mod-firmafane" ${SETTINGS.firmafane === true ? 'checked' : ''} ${sys ? '' : 'disabled'}>
       <span><b>Utførelse av firma</b><br><span class="sub">Hvilke firmaer som utfører aktivitetene (entreprenør › UE › UE av UE). Av foreløpig, mens fanen ferdigstilles.</span></span></label>`;
+  const sdp = document.getElementById('sd-panel'); sdp.hidden = !sys; if (sys) sdp.innerHTML = sdPanelHtml();
   document.getElementById('data-panel').innerHTML = `<h3>Data</h3>
     <p class="intro" style="margin-bottom:10px">${CLOUD ? 'Data lagres i databasen og deles med alle innloggede brukere. Sonebilde du laster opp, lagres foreløpig bare i din nettleser.' : 'Data lagres i denne nettleseren.'} Planen viser ${DATA.length} aktiviteter. Aktiviteter som var ferdige før uke 40 er tatt ut.
     ${sys ? 'Tilbakestilling henter aktivitetene fra Excel-utdraget på nytt og sletter alle endringer og AT-plasseringer.' : ''}</p>
@@ -4523,6 +4875,7 @@ document.addEventListener('click', e => {
   if (['sv-del', 'sv-open', 'sv-cancel'].includes(action)) { svDialogAction(action); return; }
   if (action.startsWith('svp-')) { svPopAction(action); return; }
   if (action === 'fuinfo') { fuInfoPinn(btn.dataset.fu, btn); return; }
+  if (action.startsWith('sd-')) { sdAction(action); return; }
   if (action.startsWith('hi-') || action.startsWith('hif-')) { hindAction(action, btn); return; }
   if (action.startsWith('fu-')) { fuAction(action, btn); return; }
   if (action === 'logg-csv') { loggCsv(); return; }

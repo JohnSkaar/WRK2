@@ -189,13 +189,13 @@ function stable(v) {
   if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
-const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, mbrydd: SETTINGS.mbrydd || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0, hindsett: SETTINGS.hindsett || 0, mbrisiko: SETTINGS.mbrisiko || 0, firmafane: SETTINGS.firmafane === true});
+const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, mbrydd: SETTINGS.mbrydd || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0, hindsett: SETTINGS.hindsett || 0, mbrisiko: SETTINGS.mbrisiko || 0, firmafane: SETTINGS.firmafane === true, mbfane: SETTINGS.mbfane !== false, hindfane: SETTINGS.hindfane !== false, endrfane: SETTINGS.endrfane !== false, tilgang: SETTINGS.tilgang || {}});
 const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle, ...(u.pending && u.kode ? {kode: u.kode} : {})});
 const codeDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
 
 // ---------- innlogget bruker ----------
 let unsubs = [], started = false, myUid = null;
-let base = {akt: new Map(), ats: new Map(), avh: new Map(), hind: new Map(), firms: '', metoder: '', register: '', settings: '', users: new Map()};
+let base = {akt: new Map(), ats: new Map(), avh: new Map(), hind: new Map(), rapp: new Map(), firms: '', metoder: '', register: '', settings: '', users: new Map()};
 let readOnly = '';
 
 onAuthStateChanged(auth, user => handleUser(user));
@@ -248,12 +248,12 @@ async function ensureProfile(user) {
 
 function startSync(uid) {
   myUid = uid;
-  const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false, avh: null, hind: null};
+  const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false, avh: null, hind: null, rapp: null};
   let importing = false, importingAt = false, rydding = false, hindLagt = false, risikoLagt = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
   const fail = err => { view('error', 'Mistet kontakten med databasen: ' + errText(err)); };
 
   const apply = async () => {
-    if (!st.users || !st.firms || !st.metoder || !st.register || !st.settings || !st.akt || !st.ats || !st.avh || !st.hind) return;
+    if (!st.users || !st.firms || !st.metoder || !st.register || !st.settings || !st.akt || !st.ats || !st.avh || !st.hind || !st.rapp) return;
     const meDoc = st.users.find(u => u.id === uid);
     if (!meDoc) { unsubs.forEach(f => f()); unsubs = []; view('noaccess', auth.currentUser ? auth.currentUser.email : ''); return; }
     const sys = meDoc.rolle === 'systemadmin';
@@ -279,6 +279,7 @@ function startSync(uid) {
       readOnly = st.atsDenied ? 'sikkerhetsreglene i Firebase må oppdateres (se firestore.rules).' : 'en systemadministrator må logge inn én gang for å oppgradere databasen.';
     }
     DATA = acts; ATS = ats; AVH = st.avh.map(d => ({...d})); HIND = st.hind.map(d => JSON.parse(JSON.stringify(d)));
+    PLANRAPPORTER = st.rapp.map(d => JSON.parse(JSON.stringify(d)));
     FIRMS = st.firms.length ? st.firms : DEFAULT_FIRMS.map(f => ({...f}));
     METHODS = st.metoder.length ? st.metoder : DEFAULT_METHODS.map(m => ({...m}));
     REGISTER = st.register;
@@ -291,6 +292,7 @@ function startSync(uid) {
       ats: new Map(ATS.map(t => [t.id, stable(toATDoc(t))])),
       avh: new Map(AVH.map(d => [d.id, stable(d)])),
       hind: new Map(HIND.map(h => [h.id, stable(h)])),
+      rapp: new Map(PLANRAPPORTER.map(r => [r.id, stable(r)])),
       firms: stable(FIRMS), metoder: stable(METHODS), register: stable(REGISTER), settings: stable(settingsDoc()),
       users: new Map(USERS.map(u => [u.id, stable(userDoc(u))]))
     };
@@ -322,6 +324,8 @@ function startSync(uid) {
     if (sysOrAdmin()) showToast('Avhengigheter kan ikke lagres før sikkerhetsreglene i Firebase er publisert på nytt (firestore.rules fra GitHub).');
   }));
   unsubs.push(onSnapshot(collection(db, 'aktiviteter'), s => { st.akt = s.docs.map(d => d.data()); apply(); }, fail));
+  // Endringsrapporter for nye fremdriftsplaner: blir tom liste hvis sikkerhetsreglene ikke er oppdatert ennå.
+  unsubs.push(onSnapshot(collection(db, 'planrapporter'), s => { st.rapp = s.docs.map(d => d.data()); apply(); }, () => { st.rapp = []; apply(); }));
   // Hindringer: blir tom liste hvis sikkerhetsreglene ikke er oppdatert ennå.
   unsubs.push(onSnapshot(collection(db, 'hindringer'), s => { window.cloudHindDenied = false; st.hind = s.docs.map(d => d.data()); apply(); }, () => {
     window.cloudHindDenied = true; st.hind = []; apply();
@@ -487,6 +491,10 @@ window.cloudSync = () => {
   }
   for (const id of [...base.hind.keys()]) if (!curHind.has(id)) { base.hind.delete(id); deleteDoc(doc(db, 'hindringer', id)).catch(hindFail); }
   if (!isSys()) return;
+  for (const r of PLANRAPPORTER) {
+    const s = stable(r);
+    if (base.rapp.get(r.id) !== s) { base.rapp.set(r.id, s); setDoc(doc(db, 'planrapporter', r.id), JSON.parse(JSON.stringify(r))).catch(err => showToast('Endringsrapporten ble ikke lagret: ' + (err && err.code === 'permission-denied' ? 'sikkerhetsreglene i Firebase må publiseres på nytt (firestore.rules fra GitHub).' : errText(err)))); }
+  }
   if (stable(REGISTER) !== base.register) { base.register = stable(REGISTER); setDoc(doc(db, 'config', 'firmaregister'), {list: REGISTER}).catch(saveFail); }
   if (stable(METHODS) !== base.metoder) { base.metoder = stable(METHODS); setDoc(doc(db, 'config', 'metoder'), {list: METHODS}).catch(saveFail); }
   if (stable(FIRMS) !== base.firms) { base.firms = stable(FIRMS); setDoc(doc(db, 'config', 'firms'), {list: FIRMS}).catch(saveFail); }

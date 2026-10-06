@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
+<script>if (/^(www\.)?wrk2\.no$/i.test(location.hostname)) location.replace('https://wrk2.skanska.no' + location.pathname + location.search + location.hash);</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WRK2 Produksjonsplanlegging</title>
@@ -345,6 +346,29 @@ table.logg td.h{white-space:nowrap;font-weight:600}
 .sv-dlg input[readonly]{background:#f6f8fa;color:var(--muted)}
 .sv-dlg-row{display:flex;gap:10px}
 .hi-dlg{width:680px}
+#modules-panel{grid-column:1/-1}
+.tilgang-tab{border-collapse:collapse;width:100%;font-size:13.5px}
+.tilgang-tab th,.tilgang-tab td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.tilgang-tab .c{text-align:center}
+.tilgang-tab tr.av td:first-child{opacity:.55}
+.tilgang-tab input{width:17px;height:17px}
+.rp-kort{padding:0;overflow:hidden}
+.rp-hode{display:flex;gap:10px;align-items:flex-start;padding:12px 16px;cursor:pointer}
+.rp-hode:hover{background:#f6f8fa}
+.rp-tall{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;white-space:nowrap}
+.rp-kropp{padding:4px 16px 16px;border-top:1px solid var(--line)}
+.rp-kropp h4{margin:14px 0 6px}
+.rp-folge td:first-child{padding-left:26px}
+.rp-pil{color:var(--muted);font-weight:700}
+.rp-sen{color:var(--red);white-space:nowrap}.rp-tid{color:var(--green);white-space:nowrap}
+.rp-liste{margin:4px 0;padding-left:20px;font-size:13.5px}
+@media print{
+  body.rp-printing header,body.rp-printing nav.tabs,body.rp-printing #page-endringer>.panel:first-child,body.rp-printing .rp-kort:not(.rp-skriv),body.rp-printing .rp-kort button,body.rp-printing #rull-bunn{display:none !important}
+  body.rp-printing .page{display:none !important}
+  body.rp-printing #page-endringer{display:block !important}
+  body.rp-printing .rp-kort{border:none;box-shadow:none}
+  body.rp-printing *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 .hi-dlg textarea{display:block;width:100%;box-sizing:border-box;margin-top:3px;padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font:inherit;font-size:13.5px;font-weight:400}
 .hi-chips{display:flex;flex-wrap:wrap;gap:5px;margin:-4px 0 6px}
 .hi-chip{border:1px solid var(--line);border-left:4px solid #888;border-radius:6px;padding:2px 6px;font-size:12.5px;background:#fafbfc}
@@ -558,6 +582,7 @@ td.firma-cell{white-space:normal;min-width:130px}
   <button data-tab="oversikt">Totaloversikt</button>
   <button data-tab="koordinering">AT-koordinering</button>
   <button data-tab="skrastrek">Skråstreksdiagram</button>
+  <button data-tab="endringer">Endringslogg</button>
   <button data-tab="admin">Admin</button>
 </nav>
 <main>
@@ -597,6 +622,14 @@ td.firma-cell{white-space:normal;min-width:130px}
         </div>
       </form>
     </dialog>
+  </section>
+
+  <section class="page" id="page-endringer">
+    <div class="panel">
+      <h2>Endringslogg</h2>
+      <p class="intro">Hver gang en ny fremdriftsplan fra Sitedrive lastes inn, lages en rapport som sammenligner planen før og etter. Den viser hva som er flyttet, hvilke aktiviteter som ble flyttet etter en forgjenger (via avhengighetene), nye og fjernede aktiviteter, og hvordan endringene slår ut i hver sone i 8-ukersperioden.</p>
+    </div>
+    <div id="rp-liste"></div>
   </section>
 
   <section class="page" id="page-klargjoring">
@@ -939,7 +972,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.2';
+const APP_VERSION = '2026-10-07.3';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1068,7 +1101,7 @@ function buildData() {
 // ---------- lagring ----------
 let DATA = [], ATS = [], FIRMS = [], USERS = [], METHODS = [], currentUserId = null, SETTINGS = {};
 // Avhengigheter mellom aktiviteter ({id, fra, til, type: FS|SS|FF|SF|SAM, lag}) og endringslogg for Statustavlen.
-let AVH = [], LOGG = [], MBDOK = [], HIND = [];
+let AVH = [], LOGG = [], MBDOK = [], HIND = [], PLANRAPPORTER = [];
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
 function readRaw(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -1193,6 +1226,7 @@ function load() {
   LOGG = readJSON(LOGG_KEY) || [];
   MBDOK = readJSON(MBDOK_KEY) || [];
   HIND = readJSON(HIND_KEY) || [];
+  PLANRAPPORTER = readJSON(RAPP_KEY) || [];
   if (!SETTINGS.fuIkkeVurdert) {
     // Engangsnullstilling: alle sju forutsetninger starter som «ikke vurdert».
     DATA.forEach(a => { a.forutsetninger = ikkeVurdert(); }); ATS.forEach(t => { t.forutsetninger = ikkeVurdert(); });
@@ -1218,6 +1252,7 @@ function save() {
   writeRaw(REGISTER_KEY, JSON.stringify(REGISTER));
   writeRaw(AVH_KEY, JSON.stringify(AVH));
   writeRaw(HIND_KEY, JSON.stringify(HIND));
+  writeRaw(RAPP_KEY, JSON.stringify(PLANRAPPORTER));
   writeRaw(USERS_KEY, JSON.stringify(USERS));
   writeRaw(CURRENT_KEY, currentUserId);
   writeRaw(SETTINGS_KEY, JSON.stringify(SETTINGS));
@@ -1289,6 +1324,7 @@ const ui = {
   klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set(), showArchive: false},
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
   hindringer: {search: '', vis: 'apne', mine: false, apen: new Set()},
+  endringer: {apen: new Set(), lukket: new Set()},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
   statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: [], lenke: false, avh: false},
   metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set(), atFirma: null},
@@ -3876,6 +3912,7 @@ function sdVisForhandsvisning() {
 function sdUtfor() {
   const s = sdImp, m = s.meta, tid = new Date().toISOString();
   const utenfor = sdUtenfor(); // regnes ut før nye aktiviteter legges til
+  const forBilde = sdBilde(), forrigeImport = SETTINGS.planImport; // til endringsrapporten
   const sdInfo = (r, merknad) => ({team: r.team, plan: m.plan, eksportert: m.eksportert, importert: tid, pdfNavn: r.navn, merknad: merknad.join(' · ')});
   let ny = 0, oppdatert = 0;
   s.rader.forEach((r, i) => {
@@ -3915,10 +3952,12 @@ function sdUtfor() {
   }
   relink();
   SETTINGS.planImport = {...m, importert: tid, ny, oppdatert, fjernet: slett.size, merket: merket.length};
+  const rapp = lagPlanrapport(forBilde, m, forrigeImport, [...slett], merket);
+  PLANRAPPORTER.push(rapp); ui.endringer.apen.add(rapp.id);
   logg('Import fra Sitedrive', '', `${m.plan}${m.visning ? ' (' + m.visning + ')' : ''}, eksportert ${m.eksportert ? fmtNo(m.eksportert.slice(0, 10)) : '?'}: ${ny} nye, ${oppdatert} endret, ${slett.size} slettet${slett.size ? ' (' + [...slett].join(', ') + ')' : ''}, ${merket.length} beholdt utenfor planen${merket.length ? ' (' + merket.join(', ') + ')' : ''}`);
   save(); renderCurrent();
   const brutt = AVH.filter(avhBrudd).length;
-  showToast(`Planen er oppdatert: ${ny} nye, ${oppdatert} endret, ${slett.size} slettet, ${merket.length} beholdt og merket.${brutt ? ` ⚠ ${brutt} avhengigheter er brutt – se Statustavlen.` : ''}`);
+  showToast(`Planen er oppdatert: ${ny} nye, ${oppdatert} endret, ${slett.size} slettet, ${merket.length} beholdt og merket.${brutt ? ` ⚠ ${brutt} avhengigheter er brutt – se Statustavlen.` : ''}${modulPa('endringer') ? ' Endringsrapporten ligger i fanen Endringslogg.' : ''}`);
 }
 async function sdLastOpp(fil) {
   if (!isSys()) return;
@@ -4020,6 +4059,199 @@ function mbRisikoHtml(m) {
   return `<details class="mb-risiko"><summary>Risiko fra metodebeskrivelsen <span class="sub">(${m.risikotabell.length} arbeidsoperasjoner)</span></summary>
     <table>${m.risikotabell.map(r => `<tr><td>${esc(r.op)}</td><td><span class="badge ${RISK_CLS[AT_RISIKO[r.risiko]] || ''}">${esc(r.risiko)}</span></td>
       <td>${r.dod.map(k => dodIcon(k, 20)).join('') || '<span class="sub">–</span>'}</td><td class="sub">${esc(r.grunn)}</td></tr>`).join('')}</table></details>`;
+}
+
+// ---------- faner og tilgang ----------
+// En fane vises når modulen er slått på i prosjektet OG brukerens prosjektrolle har tilgang. Systemadministrator ser alle påslåtte faner.
+// Prosjektrollen følger firmaet: valgt under «Firma og fargekoder», ellers fra firmaregisteret (byggherre/hovedentreprenør/UE).
+const FANER = [['statustavle', 'Statustavle'], ['hindringer', 'Hindringer prioritet'], ['metoder', 'Metodebeskrivelser'], ['firma', 'Utførelse av firma'],
+  ['klargjoring', 'Klargjøring av aktiviteter'], ['oversikt', 'Totaloversikt'], ['koordinering', 'AT-koordinering'], ['skrastrek', 'Skråstreksdiagram'],
+  ['endringer', 'Endringslogg'], ['admin', 'Admin']];
+const PROSJEKTROLLER = [['hovedentreprenor', 'Hovedentreprenør'], ['byggherre', 'Byggherre'], ['ue', 'UE']];
+const TILGANG_STD = {
+  hovedentreprenor: FANER.map(([k]) => k),
+  byggherre: ['statustavle', 'oversikt', 'koordinering'],
+  ue: ['statustavle', 'klargjoring', 'oversikt', 'koordinering']
+};
+// Moduler som kan slås av og på for hele prosjektet, med standardverdi.
+const MODULER = {
+  hindringer: ['hindfane', true, 'Det som må avklares, med frist, ansvarlig og beslutter.'],
+  metoder: ['mbfane', true, 'Metodebeskrivelser, AT-er og koblingen til aktivitetene.'],
+  firma: ['firmafane', false, 'Hvem som utfører aktivitetene (entreprenør › UE › UE av UE). Av mens fanen ferdigstilles.'],
+  koordinering: ['atkoord', true, 'Sonekart og snitt der AT-ene plasseres uke for uke.'],
+  skrastrek: ['skrastrek', false, 'Soner mot uker, med hver aktivitet eller AT som en skråstrek.'],
+  endringer: ['endrfane', true, 'Rapport for hver ny fremdriftsplan: hva som er flyttet, hva som fulgte med, og virkningen per sone.']
+};
+const modulPa = tab => { const m = MODULER[tab]; if (!m) return true; const v = SETTINGS[m[0]]; return v === undefined ? m[1] : v === true; };
+function firmaRolle(navn) {
+  const f = FIRMS.find(x => x.navn === navn);
+  return f && f.prosjektrolle ? f.prosjektrolle : firmaRolleAuto(f, navn);
+}
+function firmaRolleAuto(f, navn) {
+  const r = f && f.orgnr ? REGISTER.find(x => x.orgnr === f.orgnr) : REGISTER.find(x => activeFirmFor(x) === f);
+  if (r && r.niva === 0) return 'byggherre';
+  if (r && r.niva === 1) return 'hovedentreprenor';
+  if (r) return 'ue';
+  return /^skanska/.test(normFirm(navn)) ? 'hovedentreprenor' : 'ue';
+}
+const minRolle = () => firmaRolle(me().firma);
+function rolleHar(tab, rolle) {
+  const t = (SETTINGS.tilgang || {})[tab];
+  return t && rolle in t ? !!t[rolle] : (TILGANG_STD[rolle] || []).includes(tab);
+}
+// Firma-admin ser alltid Admin-fanen (der de inviterer brukere til sitt firma).
+const harTilgang = (tab, rolle = minRolle(), somSys = isSys()) => modulPa(tab) && (somSys || (tab === 'admin' && me().rolle === 'firmaadmin') || rolleHar(tab, rolle));
+const forsteFane = () => (FANER.find(([k]) => harTilgang(k)) || ['statustavle'])[0];
+function tilgangPanelHtml(sys) {
+  const rad = ([k, navn]) => {
+    const m = MODULER[k], pa = modulPa(k);
+    return `<tr class="${pa ? '' : 'av'}"><td><b>${navn}</b>${m ? `<div class="sub">${m[2]}</div>` : ''}</td>
+      <td class="c">${m ? `<input type="checkbox" data-modul="${k}" ${pa ? 'checked' : ''} ${sys ? '' : 'disabled'} title="Slå fanen av eller på for hele prosjektet">` : '<span class="sub">Alltid</span>'}</td>
+      ${PROSJEKTROLLER.map(([r]) => `<td class="c"><input type="checkbox" data-tilgang="${k}|${r}" ${rolleHar(k, r) ? 'checked' : ''} ${sys && pa ? '' : 'disabled'}></td>`).join('')}</tr>`;
+  };
+  const rolleTekst = r => (PROSJEKTROLLER.find(([k]) => k === r) || [, r])[1];
+  return `<h3>Faner og tilgang</h3>
+    <p class="intro" style="margin-bottom:8px">Slå faner av eller på for hele prosjektet, og velg hvilke faner hver rolle ser. Rollen følger firmaet (velges under «Firma og fargekoder»). Systemadministratorer ser alle faner som er slått på, og firma-admin ser alltid Admin. Dataene blir liggende selv om en fane skrus av.</p>
+    <table class="tilgang-tab"><tr><th>Fane</th><th class="c">I bruk</th>${PROSJEKTROLLER.map(([, n]) => `<th class="c">${n}</th>`).join('')}</tr>${FANER.map(rad).join('')}</table>
+    <p class="sub" style="margin-top:8px">Firmaenes roller nå: ${FIRMS.map(f => `${esc(f.navn)} – <b>${rolleTekst(firmaRolle(f.navn))}</b>`).join(' · ')}</p>
+    <p class="sub">Tilgangen styrer hvilke faner som vises. Hva hver bruker kan endre, styres fortsatt av brukerrollen (systemadministrator, firma-admin, leser) og firmaet.</p>`;
+}
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.modul && isSys()) {
+    const m = MODULER[el.dataset.modul]; SETTINGS[m[0]] = el.checked;
+    logg('Fane slått ' + (el.checked ? 'på' : 'av'), '', (FANER.find(([k]) => k === el.dataset.modul) || [, el.dataset.modul])[1]);
+    save(); renderCurrent(); return;
+  }
+  if (el.dataset.tilgang && isSys()) {
+    const [tab, rolle] = el.dataset.tilgang.split('|');
+    SETTINGS.tilgang = {...(SETTINGS.tilgang || {})}; SETTINGS.tilgang[tab] = {...(SETTINGS.tilgang[tab] || {}), [rolle]: el.checked};
+    logg('Tilgang endret', '', `${(FANER.find(([k]) => k === tab) || [, tab])[1]}: ${(PROSJEKTROLLER.find(([k]) => k === rolle) || [, rolle])[1]} ${el.checked ? 'har tilgang' : 'har ikke tilgang'}`);
+    save(); renderCurrent(); return;
+  }
+  if (el.dataset.firmaRolle !== undefined && isSys()) {
+    const f = FIRMS[Number(el.dataset.firmaRolle)]; if (!f) return;
+    if (el.value) f.prosjektrolle = el.value; else delete f.prosjektrolle;
+    logg('Prosjektrolle for firma', '', `${f.navn}: ${el.value ? (PROSJEKTROLLER.find(([k]) => k === el.value) || [, el.value])[1] : 'automatisk'}`);
+    save(); renderCurrent();
+  }
+});
+
+// ---------- endringsrapport for ny fremdriftsplan (fanen Endringslogg) ----------
+// Lages hver gang en ny plan fra Sitedrive tas inn: hva som er flyttet, hva som ble flyttet fordi en forgjenger flyttet seg
+// (via avhengighetene), nye og fjernede aktiviteter, og virkningen per sone i 8-ukersperioden.
+const RAPP_KEY = 'wrk2_planrapporter';
+const sdBilde = () => new Map(DATA.map(a => [a.id, {id: a.id, navn: a.navn, omrade: a.omrade, firma: a.firma, start: a.startdato, slutt: endDate(a)}]));
+function lagPlanrapport(for_, meta, forrigeImport, slettet, merket) {
+  const etter = sdBilde(), tid = new Date().toISOString();
+  const fra = mondayOf(TODAY), til = addDays(fra, 55);
+  const flyttet = [];
+  // Forrige eksport sluttet på en bestemt dato; aktiviteter som gikk ut over den, har ukjent slutt i den gamle planen.
+  const horisont = (forrigeImport && forrigeImport.til) || [...for_.values()].map(x => x.slutt).sort().pop() || '';
+  etter.forEach((e, id) => {
+    const f = for_.get(id); if (!f) return;
+    const kuttet = horisont && f.slutt >= horisont && e.slutt >= f.slutt;
+    const dStart = daysBetween(f.start, e.start), dSlutt = kuttet ? 0 : daysBetween(f.slutt, e.slutt);
+    if (dStart || dSlutt || f.omrade !== e.omrade) flyttet.push({id, navn: e.navn, firma: e.firma, sone: e.omrade, soneFor: f.omrade !== e.omrade ? f.omrade : '', fra: [f.start, f.slutt], til: [e.start, e.slutt], dStart, dSlutt});
+  });
+  // Følgeflytting: en aktivitet som har en forgjenger (avhengighet) som også er flyttet samme vei, regnes som flyttet etter den.
+  const flyttMap = new Map(flyttet.map(x => [x.id, x])), retning = x => Math.sign(x.dStart || x.dSlutt);
+  flyttet.forEach(x => {
+    const forg = AVH.filter(d => d.til === x.id && flyttMap.has(d.fra) && retning(flyttMap.get(d.fra)) === retning(x) && retning(x) !== 0).map(d => d.fra);
+    x.etter = forg; x.type = forg.length ? 'følge' : 'primær';
+  });
+  flyttet.forEach(x => { x.forte = flyttet.filter(y => y.etter.includes(x.id)).map(y => y.id); });
+  const nye = [...etter.values()].filter(e => !for_.has(e.id)).map(e => ({id: e.id, navn: e.navn, sone: e.omrade, firma: e.firma, start: e.start, slutt: e.slutt}));
+  const fjernet = slettet.map(id => for_.get(id)).filter(Boolean).map(f => ({id: f.id, navn: f.navn, sone: f.omrade, start: f.start, slutt: f.slutt}));
+  // Virkning per sone i 8-ukersperioden: aktivitetsdager (antall aktiviteter × dager innenfor perioden), siste slutt og forskyvning.
+  const iVindu = x => Math.max(0, daysBetween(x.start > fra ? x.start : fra, x.slutt < til ? x.slutt : til) + 1);
+  const soner = [...new Set([...for_.values(), ...etter.values()].map(x => x.omrade))].map(sone => {
+    const f = [...for_.values()].filter(x => x.omrade === sone);
+    const e = [...etter.values()].filter(x => x.omrade === sone);
+    const dagerFor = f.reduce((n, x) => n + iVindu(x), 0), dagerEtter = e.reduce((n, x) => n + iVindu(x), 0);
+    const sisteI = l => l.filter(iVindu).map(x => x.slutt < til ? x.slutt : til).sort().pop() || '';
+    const sisteFor = sisteI(f), sisteEtter = sisteI(e);
+    const fl = flyttet.filter(x => x.sone === sone || x.soneFor === sone);
+    const senere = fl.filter(x => x.dStart > 0 || (!x.dStart && x.dSlutt > 0)), tidligere = fl.filter(x => x.dStart < 0 || (!x.dStart && x.dSlutt < 0));
+    const snitt = senere.length ? Math.round(senere.reduce((n, x) => n + Math.max(x.dStart, x.dSlutt), 0) / senere.length) : 0;
+    const nyeHer = nye.filter(x => x.sone === sone).length, fjernetHer = fjernet.filter(x => x.sone === sone).length;
+    const endring = dagerFor ? Math.round((dagerEtter - dagerFor) / dagerFor * 100) : (dagerEtter ? 100 : 0);
+    const vurd = [];
+    if (!fl.length && !nyeHer && !fjernetHer) vurd.push('Ingen endring.');
+    else {
+      if (senere.length) vurd.push(`${senere.length} aktivitet${senere.length === 1 ? '' : 'er'} skjøvet senere (snitt ${snitt} d)`);
+      if (tidligere.length) vurd.push(`${tidligere.length} trukket fram`);
+      if (endring <= -15) vurd.push(`mindre arbeid i 8-ukersperioden (${endring} %) – arbeid er skjøvet ut i tid`);
+      else if (endring >= 15) vurd.push(`mer arbeid i 8-ukersperioden (+${endring} %) – mer samtidighet og større belastning på sonen`);
+      if (sisteFor && sisteEtter && sisteEtter > sisteFor) vurd.push(`siste aktivitet i perioden slutter senere (${fmtShort(sisteFor)} → ${fmtShort(sisteEtter)})`);
+      if (sisteFor && sisteEtter && sisteEtter < sisteFor) vurd.push(`siste aktivitet i perioden slutter tidligere (${fmtShort(sisteFor)} → ${fmtShort(sisteEtter)})`);
+    }
+    const niva = senere.length && (snitt >= 10 || endring <= -25) ? 'rod' : fl.length || nyeHer || fjernetHer ? 'gul' : 'gronn';
+    return {sone, flyttet: fl.length, senere: senere.length, tidligere: tidligere.length, snitt, nye: nyeHer, fjernet: fjernetHer, dagerFor, dagerEtter, endring, sisteFor, sisteEtter, niva, vurdering: vurd.join('; ')};
+  }).filter(z => z.dagerFor || z.dagerEtter || z.flyttet || z.nye || z.fjernet).sort((x, y) => ({rod: 0, gul: 1, gronn: 2})[x.niva] - ({rod: 0, gul: 1, gronn: 2})[y.niva] || x.sone.localeCompare(y.sone));
+  const brudd = AVH.filter(avhBrudd).map(d => avhNavn(d));
+  return {id: 'R' + tid.replace(/\D/g, '').slice(0, 14), tid, av: me().name || '', plan: meta.plan, visning: meta.visning || '', eksportert: meta.eksportert || '',
+    periodePdf: [meta.fra, meta.til], vindu: [fra, til], forrige: forrigeImport ? {plan: forrigeImport.plan, eksportert: forrigeImport.eksportert || '', importert: forrigeImport.importert || ''} : null,
+    flyttet, nye, fjernet, beholdt: merket, soner, brudd};
+}
+const rappDag = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + Math.abs(n) + ' d';
+function renderEndringer() {
+  const liste = [...PLANRAPPORTER].sort((x, y) => y.tid.localeCompare(x.tid));
+  const st = ui.endringer;
+  const nivaLys = n => `<span class="sv-lys ${n}"></span>`;
+  const akt = id => { const a = actById(id); return a ? `<b>${esc(id)}</b> ${esc(a.navn)}` : `<b>${esc(id)}</b>`; };
+  const rapport = (r, i) => {
+    const prim = r.flyttet.filter(x => x.type === 'primær').sort((x, y) => Math.abs(y.dStart || y.dSlutt) - Math.abs(x.dStart || x.dSlutt));
+    const folger = id => r.flyttet.filter(x => x.etter.includes(id));
+    const radF = (x, nivå) => `<tr class="${nivå ? 'rp-folge' : ''}"><td>${nivå ? '<span class="rp-pil">↳</span> ' : ''}<b>${esc(x.id)}</b> ${esc(x.navn)}<div class="sub">${esc(x.sone)}${x.soneFor ? ` (før: ${esc(x.soneFor)})` : ''} · ${esc(x.firma || '')}</div></td>
+      <td>${fmtShort(x.fra[0])}–${fmtShort(x.fra[1])}</td><td><b>${fmtShort(x.til[0])}–${fmtShort(x.til[1])}</b></td>
+      <td class="${x.dStart > 0 ? 'rp-sen' : x.dStart < 0 ? 'rp-tid' : ''}">${x.dStart ? 'start ' + rappDag(x.dStart) : ''}${x.dStart && x.dSlutt !== x.dStart ? '<br>' : ''}${x.dSlutt !== x.dStart ? 'slutt ' + rappDag(x.dSlutt) : ''}${!x.dStart && !x.dSlutt ? 'ny sone' : ''}</td>
+      <td class="sub">${nivå ? `Flyttet etter ${x.etter.map(esc).join(', ')}` : x.forte.length ? `Flyttet – førte til at ${x.forte.length} etterfølgende aktivitet${x.forte.length === 1 ? '' : 'er'} ble flyttet` : 'Flyttet'}</td></tr>`;
+    const tre = (x, nivå, sett) => { if (sett.has(x.id)) return ''; sett.add(x.id); return radF(x, nivå) + folger(x.id).map(y => tre(y, nivå + 1, sett)).join(''); };
+    const sett = new Set(), flyttRader = prim.map(x => tre(x, 0, sett)).join('') + r.flyttet.filter(x => !sett.has(x.id)).map(x => radF(x, 1)).join('');
+    const apen = st.apen.has(r.id) || (i === 0 && !st.lukket.has(r.id));
+    return `<div class="panel rp-kort">
+      <div class="rp-hode" data-action="rp-toggle" data-rid="${esc(r.id)}">
+        <span>${apen ? '－' : '＋'}</span>
+        <div style="flex:1"><b>${esc(r.plan)}</b>${r.visning ? ' · ' + esc(r.visning) : ''} <span class="sub">eksportert ${r.eksportert ? fmtNo(r.eksportert.slice(0, 10)) : '?'} · lest inn ${fmtNo(r.tid.slice(0, 10))} ${r.tid.slice(11, 16)}${r.av ? ' av ' + esc(r.av) : ''}</span>
+          <div class="sub">${r.forrige ? `Sammenlignet med planen eksportert ${r.forrige.eksportert ? fmtNo(r.forrige.eksportert.slice(0, 10)) : '?'}` : 'Første rapport'} · 8-ukersperiode ${fmtShort(r.vindu[0])}–${fmtShort(r.vindu[1])}</div></div>
+        <div class="rp-tall"><span><b>${r.flyttet.length}</b> flyttet</span><span><b>${r.flyttet.filter(x => x.type === 'følge').length}</b> fulgte etter</span><span><b>${r.nye.length}</b> nye</span><span><b>${r.fjernet.length}</b> fjernet</span>${r.brudd.length ? `<span style="color:var(--red)"><b>${r.brudd.length}</b> brutte avh.</span>` : ''}</div>
+      </div>
+      ${apen ? `<div class="rp-kropp">
+        <h4>Virkning per sone (8 uker)</h4>
+        <table class="sd-tab"><tr><th></th><th>Sone</th><th class="c">Flyttet</th><th class="c">Nye / fjernet</th><th class="c">Aktivitetsdager i perioden</th><th>Vurdering</th></tr>
+          ${r.soner.map(z => `<tr><td>${nivaLys(z.niva)}</td><td><b>${esc(z.sone)}</b></td><td class="c">${z.flyttet}</td><td class="c">${z.nye} / ${z.fjernet}</td>
+            <td class="c">${z.dagerFor} → <b>${z.dagerEtter}</b> <span class="sub">(${z.endring > 0 ? '+' : ''}${z.endring} %)</span></td><td class="sub">${esc(z.vurdering)}</td></tr>`).join('')}</table>
+        ${r.flyttet.length ? `<h4>Flyttet <span class="sub">– aktiviteten som flyttet seg står først; aktiviteter som er flyttet etter den på grunn av avhengigheter, står rykket inn under</span></h4>
+          <table class="sd-tab"><tr><th>Aktivitet</th><th>Før</th><th>Nå</th><th>Endring</th><th>Årsak</th></tr>${flyttRader}</table>` : ''}
+        ${r.nye.length ? `<h4>Nye aktiviteter</h4><ul class="rp-liste">${r.nye.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : ''}
+        ${r.fjernet.length ? `<h4>Fjernet</h4><ul class="rp-liste">${r.fjernet.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · var ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : ''}
+        ${r.beholdt.length ? `<p class="sub">Ikke med i den nye planen, men beholdt fordi noe er koblet til dem: ${r.beholdt.map(akt).join(', ')}</p>` : ''}
+        ${r.brudd.length ? `<h4 style="color:var(--red)">Avhengigheter som er brutt etter oppdateringen</h4><ul class="rp-liste">${r.brudd.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+        <div style="margin-top:10px"><button class="btn" data-action="rp-skriv" data-rid="${esc(r.id)}">🖨 Skriv ut rapporten</button></div>
+      </div>` : ''}
+    </div>`;
+  };
+  document.getElementById('rp-liste').innerHTML = liste.length ? liste.map(rapport).join('')
+    : '<div class="panel"><p class="muted">Ingen endringsrapporter ennå. En rapport lages hver gang en ny fremdriftsplan fra Sitedrive lastes opp (Statustavle → «📥 Ny plan fra Sitedrive» eller Admin).</p></div>';
+}
+function rpAction(action, btn) {
+  const id = btn.dataset.rid, st = ui.endringer;
+  if (action === 'rp-toggle') {
+    const liste = [...PLANRAPPORTER].sort((x, y) => y.tid.localeCompare(x.tid)), forst = liste[0] && liste[0].id === id;
+    const apen = st.apen.has(id) || (forst && !st.lukket.has(id));
+    if (apen) { st.apen.delete(id); st.lukket.add(id); } else { st.apen.add(id); st.lukket.delete(id); }
+    renderEndringer(); return;
+  }
+  if (action === 'rp-skriv') {
+    st.apen.add(id); st.lukket.delete(id); renderEndringer();
+    const knapp = document.querySelector(`.rp-kort [data-action="rp-skriv"][data-rid="${CSS.escape(id)}"]`), kort = knapp && knapp.closest('.rp-kort');
+    document.body.classList.add('rp-printing');
+    document.querySelectorAll('.rp-kort').forEach(k => k.classList.toggle('rp-skriv', k === kort));
+    const ferdig = () => { document.body.classList.remove('rp-printing'); window.removeEventListener('afterprint', ferdig); };
+    window.addEventListener('afterprint', ferdig);
+    setTimeout(() => { window.print(); setTimeout(ferdig, 500); }, 50);
+  }
 }
 
 // ---------- dokumenter til metodebeskrivelsene (PDF/Word) ----------
@@ -4758,7 +4990,11 @@ function renderAdmin() {
           return sys ? `<div class="firm-reg"><span class="sub">Firmaregisteret:</span> <select data-firm-reg="${i}" title="Koble firmaet (og fargen) til firmaet i firmaregisteret. Da får firmaet samme farge under «Firma tatt i bruk».">
             <option value="">${r && !f.orgnr ? `Automatisk etter navn: ${esc(prettyFirm(r.navn))}` : 'Ikke koblet'}</option>
             ${regUnike().map(x => `<option value="${esc(x.orgnr)}" ${f.orgnr === x.orgnr ? 'selected' : ''}>${esc(prettyFirm(x.navn))} · ${esc(x.orgnr)}${x.iBruk || activeFirmFor(x) ? ' ✓' : ''}</option>`).join('')}</select></div>`
-            : r ? `<div class="sub">Firmaregisteret: ${esc(prettyFirm(r.navn))} · ${esc(r.orgnr)}</div>` : ''; })()}</div>
+            : r ? `<div class="sub">Firmaregisteret: ${esc(prettyFirm(r.navn))} · ${esc(r.orgnr)}</div>` : ''; })()}
+        ${sys ? `<div class="firm-reg"><span class="sub">Rolle i prosjektet:</span> <select data-firma-rolle="${i}" title="Styrer hvilke faner brukerne i firmaet ser (se «Faner og tilgang»)">
+            <option value="">Automatisk (${esc((PROSJEKTROLLER.find(([k]) => k === firmaRolleAuto(f, f.navn)) || [, ''])[1])})</option>
+            ${PROSJEKTROLLER.map(([k, n]) => `<option value="${k}" ${f.prosjektrolle === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`
+          : `<div class="sub">Rolle i prosjektet: ${esc((PROSJEKTROLLER.find(([k]) => k === firmaRolle(f.navn)) || [, ''])[1])}</div>`}</div>
       ${sys && ui.admin.firmEdit !== i ? `<button class="btn" data-action="firm-rename" data-i="${i}" title="Endre navn">✏️ Endre navn</button><button class="btn danger" data-action="del-firm" data-i="${i}">Fjern</button>` : ''}</div>
       ${sys && ui.admin.firmDel === f.navn ? `<div class="firm-move">${used} aktiviteter og ${users} brukere er knyttet til ${esc(f.navn)}. Flytt dem til
         <select id="firm-move-to">${FIRMS.filter(x => x.navn !== f.navn).map(x => `<option value="${esc(x.navn)}">${esc(x.navn)}</option>`).join('')}</select>
@@ -4768,14 +5004,7 @@ function renderAdmin() {
 
   renderRegister();
   renderLogg();
-  document.getElementById('modules-panel').innerHTML = `<h3>Moduler i prosjektet</h3>
-    <p class="intro" style="margin-bottom:8px">En systemadministrator velger hvilke moduler som skal være tilgjengelige for alle brukerne i prosjektet. Dataene blir liggende selv om en modul skrus av.</p>
-    <label class="module-row"><input type="checkbox" id="mod-atkoord" ${SETTINGS.atkoord !== false ? 'checked' : ''} ${sys ? '' : 'disabled'}>
-      <span><b>AT-koordinering</b><br><span class="sub">Sonekart der AT-ene plasseres og tegnes inn uke for uke. På som standard.</span></span></label>
-    <label class="module-row"><input type="checkbox" id="mod-skrastrek" ${SETTINGS.skrastrek ? 'checked' : ''} ${sys ? '' : 'disabled'}>
-      <span><b>Skråstreksdiagram</b><br><span class="sub">Soner mot uker, med hver aktivitet eller AT som en skråstrek.</span></span></label>
-    <label class="module-row"><input type="checkbox" id="mod-firmafane" ${SETTINGS.firmafane === true ? 'checked' : ''} ${sys ? '' : 'disabled'}>
-      <span><b>Utførelse av firma</b><br><span class="sub">Hvilke firmaer som utfører aktivitetene (entreprenør › UE › UE av UE). Av foreløpig, mens fanen ferdigstilles.</span></span></label>`;
+  document.getElementById('modules-panel').innerHTML = tilgangPanelHtml(sys);
   const sdp = document.getElementById('sd-panel'); sdp.hidden = !sys; if (sys) sdp.innerHTML = sdPanelHtml();
   document.getElementById('data-panel').innerHTML = `<h3>Data</h3>
     <p class="intro" style="margin-bottom:10px">${CLOUD ? 'Data lagres i databasen og deles med alle innloggede brukere. Sonebilde du laster opp, lagres foreløpig bare i din nettleser.' : 'Data lagres i denne nettleseren.'} Planen viser ${DATA.length} aktiviteter. Aktiviteter som var ferdige før uke 40 er tatt ut.
@@ -4785,10 +5014,8 @@ function renderAdmin() {
 
 // ---------- navigasjon ----------
 function renderCurrent() {
-  document.querySelector('nav.tabs button[data-tab="skrastrek"]').hidden = !SETTINGS.skrastrek;
-  document.querySelector('nav.tabs button[data-tab="koordinering"]').hidden = SETTINGS.atkoord === false;
-  document.querySelector('nav.tabs button[data-tab="firma"]').hidden = SETTINGS.firmafane !== true;
-  if ((currentTab === 'koordinering' && SETTINGS.atkoord === false) || (currentTab === 'firma' && SETTINGS.firmafane !== true)) { showTab('statustavle'); return; }
+  FANER.forEach(([k]) => { const b = document.querySelector(`nav.tabs button[data-tab="${k}"]`); if (b) b.hidden = !harTilgang(k); });
+  if (!harTilgang(currentTab)) { showTab(forsteFane()); return; }
   renderUserBar();
   document.querySelectorAll('.ny-knapper [data-action=new-mb]').forEach(x => { x.hidden = !isSys(); });
   document.querySelectorAll('.ny-knapper [data-action=new-at]').forEach(x => { x.hidden = !kanNyAt(); });
@@ -4800,10 +5027,11 @@ function renderCurrent() {
   else if (currentTab === 'firma') renderFirma();
   else if (currentTab === 'hindringer') renderHindringer();
   else if (currentTab === 'koordinering') renderKoord();
+  else if (currentTab === 'endringer') renderEndringer();
   else if (currentTab === 'admin') renderAdmin();
 }
 function showTab(tab) {
-  if (!document.getElementById('page-' + tab) || (tab === 'skrastrek' && !SETTINGS.skrastrek) || (tab === 'koordinering' && SETTINGS.atkoord === false) || (tab === 'firma' && SETTINGS.firmafane !== true)) tab = 'statustavle';
+  if (!document.getElementById('page-' + tab) || !harTilgang(tab)) tab = forsteFane();
   currentTab = tab;
   if (typeof fuInfoSkjul === "function") fuInfoSkjul(true);
   ui.koord.drawing = null; ui.koord.tegn = null;
@@ -4949,6 +5177,7 @@ document.addEventListener('click', e => {
   if (action.startsWith('svp-')) { svPopAction(action); return; }
   if (action === 'fuinfo') { fuInfoPinn(btn.dataset.fu, btn); return; }
   if (action.startsWith('sd-')) { sdAction(action); return; }
+  if (action.startsWith('rp-')) { rpAction(action, btn); return; }
   if (action.startsWith('hi-') || action.startsWith('hif-')) { hindAction(action, btn); return; }
   if (action.startsWith('fu-')) { fuAction(action, btn); return; }
   if (action === 'logg-csv') { loggCsv(); return; }
@@ -5256,9 +5485,6 @@ document.addEventListener('change', e => {
   }
   if (el.id === 'fu-uten') { ui.firma.uten = el.checked; renderFirma(); return; }
   if (el.id === 'mb-unlinked') { ui.metoder.bareUkoblede = el.checked; renderMetoder(); return; }
-  if (el.id === 'mod-atkoord') { if (isSys()) { SETTINGS.atkoord = el.checked; save(); } renderCurrent(); return; }
-  if (el.id === 'mod-firmafane') { if (isSys()) { SETTINGS.firmafane = el.checked; save(); } renderCurrent(); return; }
-  if (el.id === 'mod-skrastrek') { if (isSys()) { SETTINGS.skrastrek = el.checked; save(); } renderCurrent(); return; }
   if (el.dataset.regFirma !== undefined) {
     if (isSys()) {
       const orgnr = el.dataset.regFirma, f = FIRMS.find(x => x.navn === el.value);

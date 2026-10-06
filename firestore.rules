@@ -77,6 +77,11 @@ service cloud.firestore {
       allow create: if member() && me().rolle in ['systemadmin', 'firmaadmin'] && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
+    // Endringsrapporter (fanen Endringslogg): lages når systemadministrator laster inn en ny fremdriftsplan.
+    match /planrapporter/{id} {
+      allow read: if member();
+      allow write: if sys();
+    }
     // Hindringer prioritet: alle medlemmer kan lese. Systemadministrator, og firma-admin for hindringer som er laget av
     // eget firma eller gjelder eget firmas aktiviteter, kan lage og endre. Firmaet som eier hindringen kan ikke byttes.
     match /hindringer/{id} {

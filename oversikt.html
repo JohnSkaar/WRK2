@@ -496,6 +496,11 @@ body.locked>header,body.locked>nav,body.locked>main{display:none}
 .at-box-tools{margin-left:auto;display:flex;gap:2px}
 .at-handle{font-size:16px;touch-action:none}
 .mb-dok{margin:2px 0 8px}
+.mb-risiko{margin:0 0 8px;font-size:12.5px}
+.mb-risiko summary{cursor:pointer;color:#57606a}
+.mb-risiko table{border-collapse:collapse;margin-top:4px;width:100%}
+.mb-risiko td{padding:3px 6px;border-bottom:1px solid #eef0f2;vertical-align:middle}
+.mb-risiko td:nth-child(3){white-space:nowrap}
 .mb-dok-rad{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;margin-bottom:3px}
 .mb-dok-lenke{border:none;background:none;padding:0;color:var(--accent);cursor:pointer;font:inherit;text-align:left}
 .mb-dok-lenke:hover{text-decoration:underline}
@@ -934,7 +939,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.1';
+const APP_VERSION = '2026-10-07.2';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1201,6 +1206,7 @@ function load() {
   applyAtsett();
   applyMbrydd();
   applyHindsett();
+  applyMbRisiko();
   save();
 }
 function save() {
@@ -3959,6 +3965,63 @@ function sdPanelHtml() {
     <label class="btn primary">📥 Last opp ny plan (PDF)<input type="file" id="sd-fil" accept=".pdf,application/pdf" hidden></label>`;
 }
 
+// ---------- risiko fra metodebeskrivelsene ----------
+// Kapittel 4 i hver metodebeskrivelse gir risikonivå per arbeidsoperasjon (AT). Dødsrisikoene er utledet fra
+// arbeidsbeskrivelsen (løft, arbeid i høyden, maskiner, sprengning, strøm osv.). [operasjon, risiko, dødsrisikoer, AT-er i WRK2, grunnlag]
+const MB_RISIKO = {
+  '1.1': [['Montering av brakkerigg', 'Moderat', ['fall', 'gjenstand'], [], 'Personløfter og arbeid på brakketak; moduler løftes med kranbil'],
+    ['Riggarbeid', 'Lav', ['gjenstand', 'maskin', 'elektrisk'], ['AT44'], 'Anhuking/lossing, kranbil og hjullaster, kobling i strømskap']],
+  '1.2': [['Etablering av fastmerker', 'Moderat', ['fall'], [], 'Arbeid i høyden på fjellskjæring med fallsikring'],
+    ['Stikningsarbeid', 'Lav', [], ['AT28'], 'Ingen særskilt dødsrisiko nevnt']],
+  '1.3': [['Elektrotilkobling av byggestrøm', 'Lav', ['elektrisk'], ['AT30'], 'Tilkobling lavspent og høyspent, megging og spenningssetting']],
+  '1.4': [['Opprigg/nedrigg mobilkran', 'Lav', ['gjenstand'], [], 'Løfteoperasjoner, avsperring av løfteområdet'],
+    ['Montering/demontering tårnkran', 'Moderat', ['fall', 'gjenstand', 'konstruksjon'], [], 'Arbeid i høyden, tunge løft, vind og kranfundament'],
+    ['Montering/demontering selvreisende kran', 'Moderat', ['fall', 'gjenstand', 'konstruksjon'], [], 'Arbeid i høyden, tunge løft, vind og kranfundament'],
+    ['Kranførers AT', 'Lav', ['gjenstand'], [], 'Last over personer, løfteredskap og signalgiving']],
+  '2.1': [['Fjellarbeid - Sprengning', 'Moderat', ['eksplosjon', 'maskin', 'gjenstand'], ['AT7'], 'Lading og avfyring av salve, borerigg, steinsprut'],
+    ['Fjellsikring/arbeidssikring', 'Moderat', ['gjenstand', 'fall'], [], 'Ras og steinsprang, spettrensk fra lift'],
+    ['Grøftearbeid', 'Moderat', ['maskin', 'konstruksjon', 'elektrisk', 'gjenstand'], ['AT6'], 'Gravemaskin og dumper, sikring av grøfter/groper, kabler i bakken, trefelling'],
+    ['Utenomhus og ferdigstillelse', 'Lav', ['maskin'], [], 'Komprimering og massetransport med maskin'],
+    ['Reparasjon på anleggsmaskin', 'Lav', ['maskin'], ['AT21'], 'Arbeid på og ved anleggsmaskin']],
+  '2.2': [['Opprigg/nedrigg av borrigg', 'Moderat', ['gjenstand', 'fall'], [], 'Borerigg (9,5 t) løftes med mobilkran ned i boregrop'],
+    ['Boring til avløpsvann (hammer + sjakt)', 'Lav', ['maskin', 'elektrisk'], ['AT49', 'AT51'], 'Borerigg, kompressor og aggregat 350–450 A'],
+    ['Sjaktboring til overvann', 'Lav', ['maskin', 'elektrisk'], [], 'Utenfor byggegjerdet. Borerigg og aggregat'],
+    ['Trekking av rør', 'Lav', ['gjenstand', 'maskin'], [], 'Rør løftes med gravemaskin og styres av hjelpemann']],
+  '2.3': [['Boring av RD-pel', 'Moderat', ['maskin', 'gjenstand'], [], 'Beltegående borerigg, gravemaskin frakter peler'],
+    ['Montering av pelehode', 'Lav', ['eksplosjon'], [], 'Skjærebrenner og gassflasker']],
+  '3.1': [['Fundamentering i betong', 'Lav', ['gjenstand', 'fall', 'konstruksjon'], ['AT35'], 'Armering heises med kran, riving i høyden og rullestillas, forskaling og oppspenning av gewi-stag (675 kN)']],
+  '3.2': [['Etablering av vegg, søyler og pilaster', 'Lav', ['fall', 'gjenstand', 'konstruksjon'], ['AT52'], 'Høyde opp til 6 m, forskaling og armering løftes med kran, støp i forskaling']]
+};
+const MBRISIKO = 1;
+const RISK_RANG = {Lavt: 0, Middels: 1, 'Høyt': 2};
+const hoyestRisiko = l => l.filter(x => x in RISK_RANG).sort((x, y) => RISK_RANG[y] - RISK_RANG[x])[0];
+function applyMbRisiko(force = false) {
+  if (!force && (SETTINGS.mbrisiko || 0) >= MBRISIKO) return false;
+  Object.entries(MB_RISIKO).forEach(([nr, rader]) => {
+    const m = methodByNr(nr);
+    if (m) m.risikotabell = rader.map(([op, risiko, dod, , grunn]) => ({op, risiko, dod, grunn}));
+    rader.forEach(([, risiko, dod, ats]) => ats.forEach(id => {
+      const t = atById(id); if (!t) return;
+      t.dodsrisiko = [...new Set([...(t.dodsrisiko || []), ...dod])];
+      t.mbRisiko = AT_RISIKO[risiko] || risiko;
+    }));
+  });
+  // Aktivitetens risikonivå: det høyeste av AT-ene den er koblet til (AT-systemets nivå og metodebeskrivelsens).
+  relink();
+  DATA.forEach(a => {
+    const r = hoyestRisiko(a.at.flatMap(t => [t.risikoniva, t.mbRisiko]));
+    if (r) a.risikoniva = r;
+  });
+  SETTINGS.mbrisiko = MBRISIKO;
+  return true;
+}
+function mbRisikoHtml(m) {
+  if (!m.risikotabell || !m.risikotabell.length) return '';
+  return `<details class="mb-risiko"><summary>Risiko fra metodebeskrivelsen <span class="sub">(${m.risikotabell.length} arbeidsoperasjoner)</span></summary>
+    <table>${m.risikotabell.map(r => `<tr><td>${esc(r.op)}</td><td><span class="badge ${RISK_CLS[AT_RISIKO[r.risiko]] || ''}">${esc(r.risiko)}</span></td>
+      <td>${r.dod.map(k => dodIcon(k, 20)).join('') || '<span class="sub">–</span>'}</td><td class="sub">${esc(r.grunn)}</td></tr>`).join('')}</table></details>`;
+}
+
 // ---------- dokumenter til metodebeskrivelsene (PDF/Word) ----------
 // Lastes opp under Metodebeskrivelser og følger metodebeskrivelsen inn i Klargjøring og Totaloversikt som en lenke.
 // I skyen lagres filen i biter i Firestore (mbdok/{id}/deler), i demo-modus i nettleserens IndexedDB.
@@ -4116,6 +4179,7 @@ function renderMetoder() {
     return `<div class="mb-card${m.ukjent ? ' ukjent' : ''}" data-nr="${esc(m.nr)}">
       ${head}
       ${m.ukjent ? '' : mbDokBoks(m)}
+      ${m.ukjent ? '' : mbRisikoHtml(m)}
       ${ats.map(atBox).join('') || '<p class="muted sub" style="margin:4px 0">Ingen AT-er ennå.</p>'}
       ${direct.length ? `<div class="mb-direct"><span class="sub">Knyttet direkte uten AT:</span><div class="mb-chips">${direct.map(a => actChip(a, {can: canEditAct(a), action: 'mb-unlink', data: `data-from="${esc(m.nr)}"`})).join('')}</div></div>` : ''}
       ${!m.ukjent && (sys || canEditFirm(m.firma)) ? `<button class="btn small-dark" data-action="at-new">+ Ny AT</button>` : ''}

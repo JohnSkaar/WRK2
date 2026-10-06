@@ -189,7 +189,7 @@ function stable(v) {
   if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
-const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, mbrydd: SETTINGS.mbrydd || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0, hindsett: SETTINGS.hindsett || 0, firmafane: SETTINGS.firmafane === true});
+const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, mbrydd: SETTINGS.mbrydd || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0, hindsett: SETTINGS.hindsett || 0, mbrisiko: SETTINGS.mbrisiko || 0, firmafane: SETTINGS.firmafane === true});
 const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle, ...(u.pending && u.kode ? {kode: u.kode} : {})});
 const codeDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
 
@@ -249,7 +249,7 @@ async function ensureProfile(user) {
 function startSync(uid) {
   myUid = uid;
   const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false, avh: null, hind: null};
-  let importing = false, importingAt = false, rydding = false, hindLagt = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
+  let importing = false, importingAt = false, rydding = false, hindLagt = false, risikoLagt = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
   const fail = err => { view('error', 'Mistet kontakten med databasen: ' + errText(err)); };
 
   const apply = async () => {
@@ -305,6 +305,8 @@ function startSync(uid) {
     else if (sys && !readOnly && !rydding && (st.settings.atsett || 0) >= ATSETT && (st.settings.mbrydd || 0) < MBRYDD) { rydding = true; await ryddMb(); }
     // Sakene fra leveransemøtet 30.09 legges inn i Hindringer prioritet én gang, når sikkerhetsreglene tillater det.
     else if (sys && !readOnly && !hindLagt && !window.cloudHindDenied && (st.settings.mbrydd || 0) >= MBRYDD && (st.settings.hindsett || 0) < HINDSETT) { hindLagt = true; await importHind(); }
+    // Risiko og dødsrisiko fra metodebeskrivelsene legges på AT-ene og aktivitetene én gang.
+    else if (sys && !readOnly && !risikoLagt && (st.settings.mbrydd || 0) >= MBRYDD && (st.settings.mbrisiko || 0) < MBRISIKO) { risikoLagt = true; await importMbRisiko(); }
   };
 
   unsubs.push(onSnapshot(collection(db, 'users'), s => { st.users = s.docs.map(d => ({id: d.id, ...d.data()})); apply(); }, fail));
@@ -392,6 +394,18 @@ async function importHind() {
   batch.set(doc(db, 'config', 'settings'), settingsDoc());
   try { await batch.commit(); if (nye.length) showToast(`${nye.length} saker fra leveransemøtet 30.09 er lagt inn under Hindringer prioritet.`); }
   catch (err) { showToast('Innleggingen av hindringer feilet: ' + errText(err)); }
+}
+
+async function importMbRisiko() {
+  const atFør = new Map(ATS.map(t => [t.id, stable(toATDoc(t))])), aktFør = new Map(DATA.map(a => [a.id, stable(toDoc(a))]));
+  if (!applyMbRisiko()) return;
+  const batch = writeBatch(db);
+  ATS.forEach(t => { const d = toATDoc(t); if (atFør.get(t.id) !== stable(d)) batch.set(doc(db, 'at', t.id), d); });
+  DATA.forEach(a => { const d = toDoc(a); if (aktFør.get(a.id) !== stable(d)) batch.set(doc(db, 'aktiviteter', a.id), d); });
+  batch.set(doc(db, 'config', 'metoder'), {list: METHODS});
+  batch.set(doc(db, 'config', 'settings'), settingsDoc());
+  try { await batch.commit(); showToast('Risiko og dødsrisikoer fra metodebeskrivelsene er lagt inn på AT-ene og aktivitetene.'); }
+  catch (err) { showToast('Innleggingen av risiko fra metodebeskrivelsene feilet: ' + errText(err)); }
 }
 
 async function importAts() {

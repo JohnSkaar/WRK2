@@ -1,0 +1,25 @@
+# Publiserer appen også på Firebase Hosting (https://wrk2-utkikk.web.app), som en reserveadresse ved siden av wrk2.no.
+# Krever repository-secret FIREBASE_SERVICE_ACCOUNT (JSON-nøkkel fra Firebase → Prosjektinnstillinger → Tjenestekontoer).
+name: Firebase Hosting
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HAR_NOKKEL: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mangler nøkkel
+        if: env.HAR_NOKKEL != 'true'
+        run: echo "::notice::Legg inn repository-secret FIREBASE_SERVICE_ACCOUNT for å publisere til wrk2-utkikk.web.app."
+      - name: Publiser til Firebase Hosting
+        if: env.HAR_NOKKEL == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: wrk2-utkikk

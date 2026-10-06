@@ -1,0 +1,7 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": ["firebase.json", ".firebaserc", "**/.*", "**/node_modules/**", "*.xlsx", "*.md", "netlify.toml", "firestore.rules", "CNAME", "firebase.config.js", ".github/**", ".claude/**"],
+    "headers": [{"source": "**/*.@(html|js)", "headers": [{"key": "Cache-Control", "value": "no-cache"}]}]
+  }
+}

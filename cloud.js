@@ -189,7 +189,7 @@ function stable(v) {
   if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
-const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, mbrydd: SETTINGS.mbrydd || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0, hindsett: SETTINGS.hindsett || 0, mbrisiko: SETTINGS.mbrisiko || 0, firmafane: SETTINGS.firmafane === true, mbfane: SETTINGS.mbfane !== false, hindfane: SETTINGS.hindfane !== false, endrfane: SETTINGS.endrfane !== false, tilgang: SETTINGS.tilgang || {}, ansvarrydd: SETTINGS.ansvarrydd || 0});
+const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, mbrydd: SETTINGS.mbrydd || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0, hindsett: SETTINGS.hindsett || 0, mbrisiko: SETTINGS.mbrisiko || 0, firmafane: SETTINGS.firmafane === true, mbfane: SETTINGS.mbfane !== false, hindfane: SETTINGS.hindfane !== false, endrfane: SETTINGS.endrfane !== false, tilgang: SETTINGS.tilgang || {}, ansvarrydd: SETTINGS.ansvarrydd || 0, hindfix: SETTINGS.hindfix || 0});
 const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle, ...(u.pending && u.kode ? {kode: u.kode} : {})});
 const codeDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
 
@@ -249,7 +249,7 @@ async function ensureProfile(user) {
 function startSync(uid) {
   myUid = uid;
   const st = {users: null, invites: [], firms: null, metoder: null, register: null, settings: null, akt: null, ats: null, atsDenied: false, avh: null, hind: null, rapp: null};
-  let importing = false, importingAt = false, rydding = false, hindLagt = false, risikoLagt = false, ansvarRyddet = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
+  let importing = false, importingAt = false, rydding = false, hindLagt = false, risikoLagt = false, ansvarRyddet = false, hindRettet = false, loggOn = false, invitesOn = false, seeding = false, migrating = false;
   const fail = err => { view('error', 'Mistet kontakten med databasen: ' + errText(err)); };
 
   const apply = async () => {
@@ -311,6 +311,8 @@ function startSync(uid) {
     else if (sys && !readOnly && !risikoLagt && (st.settings.mbrydd || 0) >= MBRYDD && (st.settings.mbrisiko || 0) < MBRISIKO) { risikoLagt = true; await importMbRisiko(); }
     // Testinitialene i ansvarsfeltene fjernes én gang.
     else if (sys && !readOnly && !ansvarRyddet && (st.settings.mbrisiko || 0) >= MBRISIKO && (st.settings.ansvarrydd || 0) < ANSVARRYDD) { ansvarRyddet = true; await importAnsvarRydd(); }
+    // Danieli-saken: feil kobling til gewistagene fjernes én gang.
+    else if (sys && !readOnly && !hindRettet && !window.cloudHindDenied && (st.settings.hindsett || 0) >= HINDSETT && (st.settings.hindfix || 0) < HINDFIX) { hindRettet = true; if (applyHindFix()) { window.cloudSync(); renderCurrent(); } }
   };
 
   unsubs.push(onSnapshot(collection(db, 'users'), s => { st.users = s.docs.map(d => ({id: d.id, ...d.data()})); apply(); }, fail));

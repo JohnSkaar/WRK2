@@ -974,7 +974,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.4';
+const APP_VERSION = '2026-10-07.5';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1249,6 +1249,7 @@ function load() {
   applyHindsett();
   applyMbRisiko();
   applyAnsvarRydd();
+  applyHindFix();
   save();
 }
 function save() {
@@ -3439,9 +3440,9 @@ const HIND_START = [
     ['Videreutvikle arbeidsdokument for innstøpningsgods, ansvar og innkjøpsstatus', 'Registrere ansvarlige personer og innkjøpsunderlag i felles oversikt', 'Følge opp eventuell vurdering av alternativ standard for boltegrupper', 'Kommunisere at prosjekteringen videreføres etter gjeldende spesifikasjoner inntil annet besluttes'],
     [['A083', 'Punktfundamenter'], ['A039', 'Vegger og dekker drossrom'], ['A098', 'Preheater, Drosspress'], ['A101', 'Vitnepunkt innstøpning drossrom']], '', '', '2026-10-09', true],
   ['Inntransport av Danieli-utstyr', 'Beslutning', 'hoy',
-    'Konsekvensen ved å ikke stoppe veggstøp er vurdert. Påvirkningen begrenser seg til en bjelke og to strekkstag i et fundament, og saken vurderes som relativt ukomplisert. Det ønskes rask beslutning. Koblingen til gewistagene er foreløpig – bekreft hvilket fundament det gjelder.',
+    'Konsekvensen ved å ikke stoppe veggstøp er vurdert. Påvirkningen begrenser seg til en bjelke og to strekkstag i et fundament, og saken vurderes som relativt ukomplisert. Det ønskes rask beslutning.',
     ['Innhente endelig beslutning fra byggherre', 'Implementere valgt løsning i konstruksjonsunderlaget'],
-    [['A041', 'Trekking gewistag'], ['A097', 'Trekking gewistag']], '', 'Byggherre', '2026-10-09', true],
+    [], '', 'Byggherre', '2026-10-09', true],
   ['Gulv og gulvoppbygging – fuger og stålvinkler', 'Avklaring', 'middels',
     'Foreslått gulvoppbygging baseres på 0–32-masse og plastmembran. Endelig utforming er ikke avsluttet. Det er reist spørsmål om stålvinkler i fuger, omfang av fuger og betong med redusert svinn for å begrense antall fuger.',
     ['Oppdatere snitt og dokumentasjon for gulvoppbygging', 'Verifisere at foreslåtte masser kan benyttes', 'Utarbeide beslutningsunderlag for fugeløsninger og stålvinkler', 'Sammenligne kostnader og konsekvenser mellom tradisjonell løsning og alternative gulvkonsepter med færre fuger', 'Kontrollere hvilke forutsetninger som lå til grunn i målprisen og tidligere leveranser'],
@@ -3469,6 +3470,19 @@ function applyHindsett() {
   });
   SETTINGS.hindsett = HINDSETT;
   return nye;
+}
+// Rettelse: Danieli-saken var feilkoblet til «Trekking gewistag» (A041/A097). Koblingen fjernes én gang.
+const HINDFIX = 1;
+function applyHindFix() {
+  if ((SETTINGS.hindfix || 0) >= HINDFIX) return false;
+  const h = HIND.find(x => x.tittel === 'Inntransport av Danieli-utstyr');
+  if (h) {
+    h.aktiviteter = h.aktiviteter.filter(id => { const a = actById(id); return !(a ? /^trekking gewistag/i.test(a.navn) : ['A041', 'A097'].includes(id)); });
+    h.beskrivelse = (h.beskrivelse || '').replace(/\s*Koblingen til gewistagene er foreløpig – bekreft hvilket fundament det gjelder\./, '');
+    h.aktFirmaer = hindAktFirmaer(h);
+  }
+  SETTINGS.hindfix = HINDFIX;
+  return true;
 }
 const hindAktFirmaer = h => [...new Set(h.aktiviteter.map(actById).filter(Boolean).map(a => a.firma))];
 const kanNyHind = () => isSys() || me().rolle === 'firmaadmin';

@@ -978,7 +978,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.6';
+const APP_VERSION = '2026-10-07.7';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -5649,13 +5649,22 @@ else { load(); startApp(); }
 </script>
 <script>
 // Oppdateringssjekk: GitHub Pages lar nettleseren bruke en lagret utgave i opptil 10 minutter. Er det kommet en nyere utgave, lastes siden på nytt én gang.
-if (CLOUD) fetch(location.pathname.replace(/[^/]*$/, '') + 'oversikt.html', {cache: 'no-store'}).then(r => r.text()).then(t => {
-  const m = /const APP_VERSION = '([^']+)'/.exec(t);
-  if (!m || m[1] === APP_VERSION) return;
-  let prøvd = null; try { prøvd = sessionStorage.getItem('wrk2_oppdatert'); } catch (e) {}
-  if (prøvd !== m[1]) { try { sessionStorage.setItem('wrk2_oppdatert', m[1]); } catch (e) {} location.reload(); }
-  else showToast('En nyere utgave av WRK2 er tilgjengelig. Trykk Ctrl+F5 (Cmd+Shift+R på Mac) for å laste den.');
-}).catch(() => {});
+// Sider som står åpne, sjekker også hvert 10. minutt og når fanen blir aktiv igjen; da lastes siden på nytt hvis ingen dialog er åpen
+// og ingenting skrives, ellers vises en melding.
+function sjekkVersjon(vedStart) {
+  if (!CLOUD) return;
+  fetch(location.pathname.replace(/[^/]*$/, '') + 'oversikt.html', {cache: 'no-store'}).then(r => r.text()).then(t => {
+    const m = /const APP_VERSION = '([^']+)'/.exec(t);
+    if (!m || m[1] === APP_VERSION) return;
+    let prøvd = null; try { prøvd = sessionStorage.getItem('wrk2_oppdatert'); } catch (e) {}
+    const a = document.activeElement, opptatt = document.querySelector('dialog[open]') || (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
+    if (prøvd !== m[1] && (vedStart || !opptatt)) { try { sessionStorage.setItem('wrk2_oppdatert', m[1]); } catch (e) {} location.reload(); }
+    else showToast('En nyere utgave av WRK2 er tilgjengelig. Trykk F5 (Ctrl+F5, eller Cmd+Shift+R på Mac) for å laste den.');
+  }).catch(() => {});
+}
+sjekkVersjon(true);
+setInterval(() => { if (document.visibilityState === 'visible') sjekkVersjon(false); }, 10 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sjekkVersjon(false); });
 </script>
 <script type="module">if (CLOUD) import('./cloud.js?v=' + APP_VERSION).catch(e => { document.getElementById('login-body').innerHTML = '<p class="login-msg">Kunne ikke laste innloggingen. Sjekk nettforbindelsen og last siden på nytt.</p>'; console.error(e); });</script>
 </body>

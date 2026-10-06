@@ -628,8 +628,12 @@ td.firma-cell{white-space:normal;min-width:130px}
     <div class="panel">
       <h2>Endringslogg</h2>
       <p class="intro">Hver gang en ny fremdriftsplan fra Sitedrive lastes inn, lages en rapport som sammenligner planen før og etter. Den viser hva som er flyttet, hvilke aktiviteter som ble flyttet etter en forgjenger (via avhengighetene), nye og fjernede aktiviteter, og hvordan endringene slår ut i hver sone i 8-ukersperioden.</p>
-      <div class="rp-sys" hidden style="margin-top:10px"><label class="btn">📄 Sammenlign gjeldende plan med en eldre plan (PDF) …<input type="file" id="rp-fil" accept=".pdf,application/pdf" hidden></label>
-        <span class="sub">For eksempel den opprinnelige planen. Planen endres ikke – det lages bare en rapport.</span></div>
+      <div class="rp-sys" hidden style="margin-top:12px;display:grid;gap:10px">
+        <div><label class="btn primary">📥 Last inn ny revisjon av fremdriftsplanen …<input type="file" id="sd-fil3" accept=".pdf,application/pdf" hidden></label>
+          <span class="sub">Vanlig gang: PDF-eksporten fra Sitedrive. Du ser endringene før noe oppdateres. Når du trykker «Oppdater planen», blir den nye revisjonen gjeldende, og rapporten (forrige gjeldende plan → ny revisjon) legges øverst her.</span></div>
+        <div><label class="btn">📄 Bare lag rapport mot en eldre plan …<input type="file" id="rp-fil" accept=".pdf,application/pdf" hidden></label>
+          <span class="sub">Sjelden brukt: sammenligner en eldre PDF (f.eks. den opprinnelige planen) med gjeldende plan. Planen endres ikke.</span></div>
+      </div>
     </div>
     <div id="rp-liste"></div>
   </section>
@@ -974,7 +978,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.5';
+const APP_VERSION = '2026-10-07.6';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -3997,7 +4001,7 @@ async function sdLastOpp(fil) {
 }
 document.addEventListener('change', e => {
   const el = e.target;
-  if (el.id === 'sd-fil' || el.id === 'sd-fil2') { const f = el.files[0]; el.value = ''; if (f) sdLastOpp(f); return; }
+  if (el.id === 'sd-fil' || el.id === 'sd-fil2' || el.id === 'sd-fil3') { const f = el.files[0]; el.value = ''; if (f) sdLastOpp(f); return; }
   if (!sdImp) return;
   if (el.dataset.sdValg !== undefined) {
     const i = Number(el.dataset.sdValg), v = el.value;
@@ -4265,7 +4269,7 @@ document.addEventListener('change', e => {
 });
 const rappDag = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + Math.abs(n) + ' d';
 function renderEndringer() {
-  document.querySelector('#page-endringer .rp-sys').hidden = !isSys() || location.protocol === 'file:';
+  document.querySelector('#page-endringer .rp-sys').style.display = !isSys() || location.protocol === 'file:' ? 'none' : 'grid';
   const liste = [...PLANRAPPORTER].sort((x, y) => y.tid.localeCompare(x.tid));
   const st = ui.endringer;
   const nivaLys = n => `<span class="sv-lys ${n}"></span>`;
@@ -4305,7 +4309,7 @@ function renderEndringer() {
     </div>`;
   };
   document.getElementById('rp-liste').innerHTML = liste.length ? liste.map(rapport).join('')
-    : '<div class="panel"><p class="muted">Ingen endringsrapporter ennå. En rapport lages hver gang en ny fremdriftsplan fra Sitedrive lastes opp (Statustavle → «📥 Ny plan fra Sitedrive» eller Admin).</p></div>';
+    : '<div class="panel"><p class="muted">Ingen endringsrapporter ennå. En rapport lages hver gang en ny fremdriftsplan fra Sitedrive lastes opp (knappen «📥 Last inn ny revisjon» over, eller «📥 Ny plan fra Sitedrive» på Statustavlen).</p></div>';
 }
 function rpAction(action, btn) {
   const id = btn.dataset.rid, st = ui.endringer;

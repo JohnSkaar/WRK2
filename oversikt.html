@@ -93,7 +93,7 @@ select.lys-sel{color:#fff;font-weight:600;border:none}
 select.lys-sel option{color:#000;background:#fff}
 .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:500;white-space:nowrap}
 .firm-badge{color:#fff}
-.st-plan{background:#e6ecf5;color:#34495e}.st-go{background:#fff0d6;color:#9a5b00}.st-done{background:#dcf5e3;color:#1a7f37}
+.st-plan{background:#e6ecf5;color:#34495e}.st-late{background:#ffe2d6;color:#b42318}.st-go{background:#fff0d6;color:#9a5b00}.st-done{background:#dcf5e3;color:#1a7f37}
 .rk-h{background:#ffe0e0;color:#a40e26}.rk-m{background:#fff4cc;color:#7d5a00}.rk-l{background:#dcf5e3;color:#1a7f37}
 .at-chip{display:inline-block;padding:1px 6px;border-radius:4px;background:#eef2ff;color:#3346a8;font-size:11.5px;font-family:ui-monospace,Menlo,monospace;margin:1px;border:1px solid #c7d0f5;cursor:pointer;white-space:nowrap}
 .at-chip:hover{background:#dbe4ff}
@@ -648,8 +648,8 @@ td.firma-cell{white-space:normal;min-width:130px}
       <h2>Endringslogg</h2>
       <p class="intro">Hver gang en ny fremdriftsplan fra Sitedrive lastes inn, lages en rapport som sammenligner planen før og etter. Den viser hva som er flyttet, hvilke aktiviteter som ble flyttet etter en forgjenger (via avhengighetene), nye og fjernede aktiviteter, og hvordan endringene slår ut i hver sone i 8-ukersperioden.</p>
       <div class="rp-sys" hidden style="margin-top:14px;display:grid;gap:14px">
-        <div class="rp-valg"><label class="btn primary">📥 Last inn ny revisjon av fremdriftsplanen …<input type="file" id="sd-fil3" accept=".pdf,application/pdf" hidden></label>
-          <span class="sub">Vanlig gang: PDF-eksporten fra Sitedrive. Du ser endringene før noe oppdateres. Når du trykker «Oppdater planen», blir den nye revisjonen gjeldende, og rapporten (forrige gjeldende plan → ny revisjon) legges øverst her.</span></div>
+        <div class="rp-valg"><label class="btn primary">📥 Last inn ny revisjon (firmaplan + statusplan) …<input type="file" id="sd-fil3" accept=".pdf,application/pdf" multiple hidden></label>
+          <span class="sub">Vanlig gang: velg PDF-eksporten fra Sitedrive med firmafarger, og gjerne statusplanen (grønn = fullført, blå = pågår, rød = forsinket oppstart, lys blå = til utførelse) samtidig – merk begge filene. Du ser endringene før noe oppdateres. Når du trykker «Oppdater planen», blir den nye revisjonen gjeldende, og rapporten (forrige gjeldende plan → ny revisjon) legges øverst her.</span></div>
         <div class="rp-valg"><label class="btn">📄 Bare lag rapport mot en eldre plan …<input type="file" id="rp-fil" accept=".pdf,application/pdf" hidden></label>
           <span class="sub">Sjelden brukt: sammenligner en eldre PDF (f.eks. den opprinnelige planen) med gjeldende plan. Planen endres ikke.</span></div>
       </div>
@@ -757,7 +757,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <button class="btn primary" data-action="sv-new" id="sv-new-btn" hidden>+ Ny aktivitet</button>
         <label id="sv-flytt-lbl" hidden title="AT-er som bare hører til aktiviteten, flyttes like mange dager"><input type="checkbox" id="sv-flytt" checked> Flytt AT-er med</label>
         <button class="btn" data-action="sv-undo" id="sv-undo" hidden>↶ Angre</button>
-        <label class="btn" id="sv-sd-btn" hidden title="Last opp ny PDF-eksport av fremdriftsplanen fra Sitedrive. Du ser endringene før noe oppdateres.">📥 Ny plan fra Sitedrive<input type="file" id="sd-fil2" accept=".pdf,application/pdf" hidden></label>
+        <label class="btn" id="sv-sd-btn" hidden title="Last opp ny PDF-eksport av fremdriftsplanen fra Sitedrive. Du ser endringene før noe oppdateres.">📥 Ny plan fra Sitedrive<input type="file" id="sd-fil2" accept=".pdf,application/pdf" multiple hidden></label>
         <label>Vis: <select class="week-sel" id="sv-lys"><option value="">Alle</option><option value="avvik">Bare røde og gule</option><option value="rod">Bare røde</option><option value="ikke">Ikke ferdig vurdert</option></select></label>
       </div>
       <div class="sv-edit-hint" id="sv-edit-hint" hidden>✏️ <b>Redigering er på.</b> Dra en stolpe sidelengs for å flytte startdatoen, eller opp og ned for å flytte den til en annen sone. Dra i høyre kant for å endre varigheten. Trykk på en stolpe for å endre detaljer, og trykk i et tomt felt for å legge inn en ny aktivitet der. Endringer merkes med ✎, slik at de kan synkroniseres med Sitedrive eller Tactplan senere.</div>
@@ -924,8 +924,8 @@ const FU_SJEKK = {
   utstyr: ["Riktig utstyr og verktøy er tilgjengelig i nødvendig antall", "Utstyret er kontrollert og i forsvarlig stand", "Påkrevde sertifikater og periodiske kontroller er gyldige", "Måleutstyr har gyldig kalibrering der det kreves", "Verneutstyr passer til arbeidsoppgaven og er tilgjengelig", "Energiforsyning, slanger, kabler og tilkoblinger er kontrollert", "Feil eller mangler er meldt, og utstyr som ikke kan brukes er tatt ut av drift"]
 };
 function ikkeVurdert() { return Object.fromEntries(FORUTSETNINGER.map(([k]) => [k, 'ikke'])); }
-const STATUSER = ['Til utførelse', 'Pågår', 'Utført'];
-const STATUS_CLS = {'Til utførelse': 'st-plan', 'Pågår': 'st-go', 'Utført': 'st-done'};
+const STATUSER = ['Til utførelse', 'Forsinket oppstart', 'Pågår', 'Utført'];
+const STATUS_CLS = {'Til utførelse': 'st-plan', 'Forsinket oppstart': 'st-late', 'Pågår': 'st-go', 'Utført': 'st-done'};
 const RISIKONIVA = ['Høyt', 'Middels', 'Lavt'];
 const RISK_CLS = {'Høyt': 'rk-h', 'Middels': 'rk-m', 'Lavt': 'rk-l'};
 const DOD = {
@@ -998,7 +998,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.16';
+const APP_VERSION = '2026-10-07.17';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1594,7 +1594,7 @@ function renderStats(page, rows) {
   const ikke = rows.filter(a => FORUTSETNINGER.some(([k]) => a.forutsetninger[k] === 'ikke')).length;
   document.getElementById('stats-' + page).innerHTML =
     `<span><b>${rows.length}</b> aktiviteter</span><span><b>${ats.length}</b> AT</span>
-     <span><b>${cnt('Til utførelse')}</b> til utførelse</span><span><b>${cnt('Pågår')}</b> pågår</span><span><b>${cnt('Utført')}</b> utført</span>
+     <span><b>${cnt('Til utførelse')}</b> til utførelse</span>${cnt('Forsinket oppstart') ? `<span><b>${cnt('Forsinket oppstart')}</b> forsinket oppstart</span>` : ''}<span><b>${cnt('Pågår')}</b> pågår</span><span><b>${cnt('Utført')}</b> utført</span>
      <span><b style="color:var(--red)">${red}</b> med rødt lys</span><span><b>${ikke}</b> med forutsetninger som ikke er vurdert</span>`;
 }
 
@@ -3871,7 +3871,7 @@ function sdTolk(rects, tekster) {
     const sonenavn = sone ? sone.raa : '';
     const team = metaTekst.find(m => !soner.some(z => sdNorm(z.raa).endsWith(sdNorm(m))) && !/^\d{4}\s*-/.test(m)) || '';
     return {sone: sonenavn, team, start: kol[Math.max(0, sKol)].dato, slutt: kol[Math.max(0, eKol)].dato, navn, avkortet,
-      startKant: r.x0 <= gL + 3, sluttKant: r.x1 >= gR - 3, farge: fkey(r.c), y: r.y0};
+      startKant: r.x0 <= gL + 3, sluttKant: r.x1 >= gR - 3, farge: fkey(r.c), rgb: r.c, y: r.y0};
   }).filter(r => r.navn);
   const fargeTeam = {};
   rader.filter(r => r.team).forEach(r => { (fargeTeam[r.farge] = fargeTeam[r.farge] || {})[r.team] = ((fargeTeam[r.farge] || {})[r.team] || 0) + 1; });
@@ -3938,6 +3938,18 @@ function sdForbered(res) {
   // Aktiviteter i planperioden som ikke er med i den nye planen.
   sdUtenfor().forEach(a => { sdImp.fjern[a.id] = sdHarKoblinger(a).length || a.kilde === 'WRK2' ? 'behold' : 'slett'; });
 }
+function sdBrukStatus(statusRes) {
+  const s = sdImp;
+  s.status = sdKobleStatus(s.rader, statusRes.rader);
+  s.statusMeta = {...statusRes.meta, koblet: s.status.filter(Boolean).length, rader: statusRes.rader.length};
+  // Grønt i statusplanen = fullført: aktiviteten utgår (som de som står som utført i WRK2), og lages ikke på nytt.
+  s.status.forEach((st, i) => {
+    if (s.valg[i] === 'ny' || !st) return;
+    if (st === 'Utført') { s.fullfort.add(s.valg[i]); if (!s.fullfortAlle.includes(s.valg[i])) s.fullfortAlle.push(s.valg[i]); }
+    else s.fullfort.delete(s.valg[i]); // statusplanen sier at den ikke er ferdig – beholdes (kan krysses av i forhåndsvisningen)
+  });
+}
+const sdHoppOver = (s, i) => s.status && s.status[i] === 'Utført' && s.valg[i] === 'ny'; // fullført og ikke i WRK2 fra før
 function sdUtenfor() {
   const valgt = new Set(sdImp.valg.filter(v => v !== 'ny')), ff = sdImp.fullfort || new Set();
   return DATA.filter(a => !valgt.has(a.id) && !ff.has(a.id) && endDate(a) >= sdImp.meta.fra && a.startdato <= sdImp.meta.til);
@@ -3961,6 +3973,7 @@ function sdOppsummer() {
   s.rader.forEach((r, i) => {
     const id = s.valg[i], a = id !== 'ny' && actById(id);
     if (a && s.fullfort && s.fullfort.has(a.id)) return; // utført – utgår
+    if (sdHoppOver(s, i)) return;
     if (!a) { nye.push({r, i}); return; }
     const ny = sdNy(r, a), d = [];
     if (ny.start !== a.startdato || endDate(a) !== addDays(ny.start, ny.varighet - 1)) d.push(`${fmtShort(a.startdato)}–${fmtShort(endDate(a))} → <b>${fmtShort(ny.start)}–${fmtShort(addDays(ny.start, ny.varighet - 1))}</b>`);
@@ -3987,6 +4000,8 @@ function sdVisForhandsvisning() {
   const usikre = o.endret.concat(o.like).filter(x => s.hvordan[x.i] === 'sone');
   dlg.innerHTML = `<div class="sd-hode"><h3>Oppdater planen fra Sitedrive</h3>
       <div class="sub"><b>${esc(m.plan)}</b>${m.visning ? ' · ' + esc(m.visning) : ''}${m.eksportert ? ' · eksportert ' + fmtNo(m.eksportert.slice(0, 10)) + ' ' + m.eksportert.slice(11, 16) : ''} · periode ${fmtNo(m.fra)}–${fmtNo(m.til)} · ${s.rader.length} aktiviteter i PDF-en</div>
+      ${s.statusMeta ? `<div class="sub">Statusplan: eksportert ${s.statusMeta.eksportert ? fmtNo(s.statusMeta.eksportert.slice(0, 10)) + ' ' + s.statusMeta.eksportert.slice(11, 16) : '?'} · ${s.statusMeta.koblet} av ${s.rader.length} aktiviteter fikk status${s.statusMeta.koblet < s.rader.length ? ' (resten får status etter dato)' : ''} ·
+        ${['Utført', 'Pågår', 'Forsinket oppstart', 'Til utførelse'].map(k => `<span class="badge ${STATUS_CLS[k]}">${s.status.filter(x => x === k).length} ${k.toLowerCase()}</span>`).join(' ')}</div>` : ''}
       <div class="sd-tall"><span><b>${o.endret.length}</b> endres</span><span><b>${o.like.length}</b> uendret</span><span><b>${o.nye.length}</b> nye</span><span><b>${o.utenfor.length}</b> ikke i ny plan</span>${s.fullfort.size ? `<span><b>${s.fullfort.size}</b> utført – utgår</span>` : ''}${o.brudd.length ? `<span style="color:var(--red)"><b>${o.brudd.length}</b> avhengigheter blir brutt</span>` : ''}</div></div>
     <div class="sd-kropp">
       ${usikre.length ? `<h4>Kontroller koblingen <span class="sub">– funnet på navn, men i en annen sone eller med litt annet navn</span></h4>
@@ -4002,7 +4017,8 @@ function sdVisForhandsvisning() {
       ${s.fullfortAlle.length ? `<h4>Utført – utgår fra planen <span class="sub">– står som utført i WRK2 og tas ut ved oppdateringen; de listes som «Fullført siden sist» i endringsrapporten. Fjern krysset for å beholde en aktivitet.</span></h4>
         <table class="sd-tab"><tr><th>Utgår</th><th>Aktivitet</th><th>I den nye planen</th></tr>${s.fullfortAlle.map(actById).filter(Boolean).map(a => { const i = s.valg.indexOf(a.id), r = i >= 0 && s.rader[i];
           return `<tr><td class="c"><input type="checkbox" data-sd-ff="${esc(a.id)}" ${s.fullfort.has(a.id) ? 'checked' : ''}></td><td><b>${esc(a.id)}</b> ${esc(a.navn)}<div class="sub">${esc(a.omrade)} · ${esc(a.firma)} · ${fmtShort(a.startdato)}–${fmtShort(endDate(a))}</div></td>
-            <td class="sub">${r ? `${fmtShort(r.start)}–${fmtShort(r.slutt)}${r.slutt >= TODAY ? ' <b style="color:var(--red)">· fortsetter etter i dag</b>' : ''}` : 'Ikke med'}</td></tr>`; }).join('')}</table>` : ''}
+            <td class="sub">${r ? `${fmtShort(r.start)}–${fmtShort(r.slutt)}${s.status && s.status[i] ? ` · <span class="badge ${STATUS_CLS[s.status[i]]}">${s.status[i] === 'Utført' ? 'grønn i statusplanen' : s.status[i].toLowerCase() + ' i statusplanen'}</span>` : r.slutt >= TODAY ? ' <b style="color:var(--red)">· fortsetter etter i dag</b>' : ''}` : 'Ikke med'}</td></tr>`; }).join('')}</table>` : ''}
+      ${s.status && s.status.includes('Forsinket oppstart') ? `<h4 style="color:var(--red)">Forsinket oppstart <span class="sub">– rødt i statusplanen</span></h4><ul class="sub">${s.rader.map((r, i) => s.status[i] === 'Forsinket oppstart' ? `<li>${s.valg[i] !== 'ny' ? `<b>${esc(s.valg[i])}</b> ` : ''}${esc(r.navn)} · ${esc(r.omrade)} · start ${fmtShort(r.start)}</li>` : '').join('')}</ul>` : ''}
       ${o.brudd.length ? `<h4 style="color:var(--red)">Avhengigheter som blir brutt</h4><ul class="sub">${o.brudd.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
       ${!o.endret.length && !o.nye.length && !o.utenfor.length && !s.fullfort.size ? '<p>Planen er lik det som ligger i WRK2. Ingenting å oppdatere.</p>' : ''}
     </div>
@@ -4022,6 +4038,7 @@ function sdUtfor() {
   s.rader.forEach((r, i) => {
     const id = s.valg[i];
     if (id !== 'ny' && s.fullfort && s.fullfort.has(id)) return; // utført – utgår
+    if (sdHoppOver(s, i)) return;
     let a = id !== 'ny' && actById(id);
     const merknad = [];
     if (r.avkortet) merknad.push('Navnet er avkortet i Sitedrive-eksporten');
@@ -4041,7 +4058,7 @@ function sdUtfor() {
       if (r.startKant) merknad.push(`Kan ha startet før eksportens første dag (${fmtShort(m.fra)})`);
       DATA.push(a); ny++;
     }
-    a.status = statusFor(a.startdato, a.varighet);
+    a.status = s.status && s.status[i] && s.status[i] !== 'Utført' ? s.status[i] : statusFor(a.startdato, a.varighet);
     a.sd = sdInfo(r, merknad);
   });
   const slett = new Set(fullfort.map(x => x.id)), merket = [];
@@ -4059,29 +4076,59 @@ function sdUtfor() {
   const nSlettet = slett.size - fullfort.length;
   SETTINGS.planImport = {...m, importert: tid, ny, oppdatert, fjernet: nSlettet, fullfort: fullfort.length, merket: merket.length};
   const rapp = lagPlanrapport(forBilde, m, forrigeImport, [...slett].filter(id => !fullfort.some(x => x.id === id)), merket, sdBilde(),
-    {fullfort: fullfort.map(x => ({id: x.id, navn: x.navn, sone: x.omrade, firma: x.firma, start: x.start, slutt: x.slutt}))});
+    {fullfort: fullfort.map(x => ({id: x.id, navn: x.navn, sone: x.omrade, firma: x.firma, start: x.start, slutt: x.slutt})),
+     statusplan: s.statusMeta ? {eksportert: s.statusMeta.eksportert || '', koblet: s.statusMeta.koblet} : null,
+     forsinket: s.status ? DATA.filter(a => a.status === 'Forsinket oppstart').map(a => ({id: a.id, navn: a.navn, sone: a.omrade, firma: a.firma, start: a.startdato})) : []});
   PLANRAPPORTER.push(rapp); ui.endringer.apen.add(rapp.id);
   logg('Import fra Sitedrive', '', `${m.plan}${m.visning ? ' (' + m.visning + ')' : ''}, eksportert ${m.eksportert ? fmtNo(m.eksportert.slice(0, 10)) : '?'}: ${ny} nye, ${oppdatert} endret, ${fullfort.length} utført og tatt ut${fullfort.length ? ' (' + fullfort.map(x => x.id).join(', ') + ')' : ''}, ${nSlettet} slettet${nSlettet ? ' (' + [...slett].filter(id => !fullfort.some(x => x.id === id)).join(', ') + ')' : ''}, ${merket.length} beholdt utenfor planen${merket.length ? ' (' + merket.join(', ') + ')' : ''}`);
   save(); renderCurrent();
   const brutt = AVH.filter(avhBrudd).length;
   showToast(`Planen er oppdatert: ${ny} nye, ${oppdatert} endret, ${fullfort.length} utført og tatt ut, ${nSlettet} slettet, ${merket.length} beholdt og merket.${brutt ? ` ⚠ ${brutt} avhengigheter er brutt – se Statustavlen.` : ''}${modulPa('endringer') ? ' Endringsrapporten ligger i fanen Endringslogg.' : ''}`);
 }
-async function sdLastOpp(fil) {
+// Statusplanen fra Sitedrive: stolpene har bare statusfarger. Grønn = fullført, blå = pågår, rød/oransje = forsinket oppstart, lys blå = til utførelse.
+const SD_STATUSFARGER = [[[99, 186, 93], 'Utført'], [[95, 158, 249], 'Pågår'], [[194, 229, 245], 'Til utførelse'], [[247, 139, 67], 'Forsinket oppstart'], [[230, 60, 60], 'Forsinket oppstart']];
+function sdStatusFarge(c) {
+  if (!c) return null;
+  const [d, s] = SD_STATUSFARGER.map(([f, s]) => [Math.hypot(f[0] - c[0], f[1] - c[1], f[2] - c[2]), s]).sort((p, q) => p[0] - q[0])[0];
+  return d <= 30 ? s : null;
+}
+const sdErStatusplan = res => res.rader.length > 0 && res.rader.every(r => sdStatusFarge(r.rgb));
+// Kobler statusplanens rader til firmaplanens: samme sone, start og slutt, og navn som stemmer (navnene kan være brutt ulikt i PDF-ene).
+function sdKobleStatus(rader, statusRader) {
+  const kort = s => sdNorm(s).replace(/ /g, ''), brukt = new Set();
+  return rader.map(r => {
+    const kand = statusRader.map((x, j) => ({x, j})).filter(({x, j}) => !brukt.has(j) && sdNorm(x.sone) === sdNorm(r.sone) && x.start === r.start && x.slutt === r.slutt);
+    const a = kort(r.navn);
+    const best = kand.find(({x}) => kort(x.navn) === a) || kand.find(({x}) => { const b = kort(x.navn); return b.length >= 4 && (a.startsWith(b) || b.startsWith(a)); }) || (kand.length === 1 ? kand[0] : null);
+    if (!best) return null;
+    brukt.add(best.j); return sdStatusFarge(best.x.rgb);
+  });
+}
+async function sdLastOpp(filer) {
   if (!isSys()) return;
   if (location.protocol === 'file:') { alert('Opplasting av plan virker bare på nettsiden (wrk2.no), ikke i demo-modus fra fil.'); return; }
-  if (!/\.pdf$/i.test(fil.name)) { alert('Velg PDF-eksporten av tidslinjen fra Sitedrive.'); return; }
-  showToast('Leser planen …');
+  filer = [...filer];
+  if (!filer.length || filer.some(f => !/\.pdf$/i.test(f.name))) { alert('Velg PDF-eksporten av tidslinjen fra Sitedrive.'); return; }
+  if (filer.length > 2) { alert('Velg høyst to filer: firmaplanen og statusplanen.'); return; }
+  showToast(filer.length > 1 ? 'Leser planene …' : 'Leser planen …');
   try {
-    const res = await sdLesPdf(await fil.arrayBuffer());
-    if (!res.rader.length) throw new Error('fant ingen aktiviteter i PDF-en');
-    sdForbered(res);
+    const alle = [];
+    for (const f of filer) { const res = await sdLesPdf(await f.arrayBuffer()); if (!res.rader.length) throw new Error(`fant ingen aktiviteter i ${f.name}`); alle.push(res); }
+    const statusRes = alle.find(sdErStatusplan), plan = alle.find(x => x !== statusRes);
+    if (!plan) {
+      alert('Dette ser ut som statusplanen (bare statusfarger). Velg firmaplanen sammen med den – merk begge filene samtidig.');
+      document.getElementById('toast').hidden = true; return;
+    }
+    if (alle.length === 2 && !statusRes) { alert('Fant ikke statusplanen blant filene (stolper med grønt, blått, rødt og lyseblått). Velg firmaplanen og statusplanen.'); document.getElementById('toast').hidden = true; return; }
+    sdForbered(plan);
+    if (statusRes) sdBrukStatus(statusRes);
     sdVisForhandsvisning();
     document.getElementById('toast').hidden = true;
   } catch (e) { alert('Kunne ikke lese planen: ' + (e.message || e)); }
 }
 document.addEventListener('change', e => {
   const el = e.target;
-  if (el.id === 'sd-fil' || el.id === 'sd-fil2' || el.id === 'sd-fil3') { const f = el.files[0]; el.value = ''; if (f) sdLastOpp(f); return; }
+  if (el.id === 'sd-fil' || el.id === 'sd-fil2' || el.id === 'sd-fil3') { const f = [...el.files]; el.value = ''; if (f.length) sdLastOpp(f); return; }
   if (!sdImp) return;
   if (el.dataset.sdValg !== undefined) {
     const i = Number(el.dataset.sdValg), v = el.value;
@@ -4114,7 +4161,7 @@ function sdPanelHtml() {
     <p class="intro" style="margin-bottom:8px">Last opp PDF-eksporten av tidslinjen i Sitedrive (soner til venstre, uker øverst). Du får se hva som endres før noe oppdateres.
       Aktivitetene beholder ID-en, så AT-er, avhengigheter, hindringer, kommentarer og plassering i AT-koordinering blir med.</p>
     ${pi ? `<p class="sub">Sist importert: <b>${esc(pi.plan)}</b>${pi.visning ? ' (' + esc(pi.visning) + ')' : ''}, eksportert ${pi.eksportert ? fmtNo(pi.eksportert.slice(0, 10)) : '?'} · ${pi.importert ? 'lest inn ' + fmtNo(pi.importert.slice(0, 10)) : ''}</p>` : ''}
-    <label class="btn primary">📥 Last opp ny plan (PDF)<input type="file" id="sd-fil" accept=".pdf,application/pdf" hidden></label>`;
+    <label class="btn primary">📥 Last opp ny plan (PDF)<input type="file" id="sd-fil" accept=".pdf,application/pdf" multiple hidden></label>`;
 }
 
 // ---------- risiko fra metodebeskrivelsene ----------
@@ -4392,14 +4439,16 @@ function renderEndringer() {
         <span>${apen ? '－' : '＋'}</span>
         <div style="flex:1"><div class="rp-topptekst">Rapport for planoppdatering WRK · ${fmtNo(r.tid.slice(0, 10))}</div>
           <div class="rp-periode">Plantidsrom: ${r.forrige ? `${r.forrige.fra ? `${fmtNo(r.forrige.fra)}–${fmtNo(r.forrige.til)}` : 'forrige plan'}${r.forrige.eksportert ? ` <span class="sub">(eksportert ${fmtNo(r.forrige.eksportert.slice(0, 10))})</span>` : ''}` : 'opprinnelig plan'} → <b>${r.periodePdf && r.periodePdf[0] ? `${fmtNo(r.periodePdf[0])}–${fmtNo(r.periodePdf[1])}` : 'ny plan'}</b>${r.eksportert ? ` <span class="sub">(eksportert ${fmtNo(r.eksportert.slice(0, 10))})</span>` : ''}</div>
+          ${r.statusplan ? `<div class="sub">Status fra statusplanen eksportert ${r.statusplan.eksportert ? fmtNo(r.statusplan.eksportert.slice(0, 10)) : '?'} (${r.statusplan.koblet} aktiviteter)</div>` : ''}
           ${r.sammenligning ? `<b>${esc(r.forrige.plan)} → ${esc(r.plan)}</b> <span class="sub">(sammenligning)</span>` : `<b>${esc(r.plan)}</b>${r.visning ? ' · ' + esc(r.visning) : ''}`} <span class="sub">eksportert ${r.eksportert ? fmtNo(r.eksportert.slice(0, 10)) : '?'} · lest inn ${fmtNo(r.tid.slice(0, 10))} ${r.tid.slice(11, 16)}${r.av ? ' av ' + esc(r.av) : ''}</span>
           <div class="sub">${r.forrige ? `Sammenlignet med planen eksportert ${r.forrige.eksportert ? fmtNo(r.forrige.eksportert.slice(0, 10)) : '?'}` : 'Første rapport'} · 8-ukersperiode ${fmtShort(r.vindu[0])}–${fmtShort(r.vindu[1])}</div></div>
         <div class="rp-tall"><span><b>${r.flyttet.length}</b> flyttet</span><span><b>${r.flyttet.filter(x => x.type === 'følge').length}</b> fulgte etter</span><span><b>${r.nye.length}</b> nye</span>${(r.fullfort || []).length ? `<span><b>${r.fullfort.length}</b> fullført</span>` : ''}<span><b>${r.fjernet.length}</b> fjernet</span>${r.brudd.length ? `<span style="color:var(--red)"><b>${r.brudd.length}</b> brutte avh.</span>` : ''}</div>
       </div>
       ${apen ? `<div class="rp-kropp">
         ${r.notat ? `<p class="sub">${esc(r.notat)}</p>` : ''}
-        ${(r.fullfort || []).length || r.nye.length ? `<div class="rp-inn-ut">
+        ${(r.fullfort || []).length || r.nye.length || (r.forsinket || []).length ? `<div class="rp-inn-ut">
           <div><h4>Fullført og ute <span class="sub">(${(r.fullfort || []).length})</span></h4>${(r.fullfort || []).length ? `<ul class="rp-liste">${r.fullfort.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${esc(x.firma || '')} · ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : '<p class="sub">Ingen.</p>'}</div>
+          ${(r.forsinket || []).length ? `<div style="grid-column:1/-1;order:3"><h4 style="color:var(--red)">Forsinket oppstart <span class="sub">(${r.forsinket.length}) – rødt i statusplanen</span></h4><ul class="rp-liste">${r.forsinket.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${esc(x.firma || '')} · planlagt start ${fmtShort(x.start)}</span></li>`).join('')}</ul></div>` : ''}
           <div><h4>Nye i planen <span class="sub">(${r.nye.length})</span></h4>${r.nye.length ? `<ul class="rp-liste">${r.nye.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${esc(x.firma || '')} · ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : '<p class="sub">Ingen.</p>'}</div>
         </div>` : ''}
         <h4>Virkning per sone (8 uker)</h4>

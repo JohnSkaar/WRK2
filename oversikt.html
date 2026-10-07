@@ -367,6 +367,8 @@ table.logg td.h{white-space:nowrap;font-weight:600}
 .rp-valg .sub{flex:1;line-height:1.45}
 @media (max-width:700px){.rp-valg{flex-direction:column;align-items:stretch}.rp-valg .btn{width:auto}}
 .rp-kort{padding:0;overflow:hidden}
+.rp-inn-ut{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:6px}
+@media (max-width:800px){.rp-inn-ut{grid-template-columns:1fr}}
 .rp-topptekst{font-size:17px;font-weight:700;margin-bottom:2px}
 .rp-periode{font-size:13.5px;margin-bottom:4px}
 .rp-hind td{vertical-align:top}
@@ -996,7 +998,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.15';
+const APP_VERSION = '2026-10-07.16';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -4301,6 +4303,8 @@ function lagPlanrapport(for_, meta, forrigeImport, slettet, merket, etter = sdBi
     else {
       if (senere.length) vurd.push(`${senere.length} aktivitet${senere.length === 1 ? '' : 'er'} skjøvet senere (snitt ${snitt} d)`);
       if (tidligere.length) vurd.push(`${tidligere.length} trukket fram`);
+      if (nyeHer) vurd.push(`${nyeHer} ny${nyeHer === 1 ? '' : 'e'} aktivitet${nyeHer === 1 ? '' : 'er'}`);
+      if (fjernetHer) vurd.push(`${fjernetHer} fjernet`);
       if (endring <= -15) vurd.push(`mindre arbeid i 8-ukersperioden (${endring} %) – arbeid er skjøvet ut i tid`);
       else if (endring >= 15) vurd.push(`mer arbeid i 8-ukersperioden (+${endring} %) – mer samtidighet og større belastning på sonen`);
       if (sisteFor && sisteEtter && sisteEtter > sisteFor) vurd.push(`siste aktivitet i perioden slutter senere (${fmtShort(sisteFor)} → ${fmtShort(sisteEtter)})`);
@@ -4394,14 +4398,16 @@ function renderEndringer() {
       </div>
       ${apen ? `<div class="rp-kropp">
         ${r.notat ? `<p class="sub">${esc(r.notat)}</p>` : ''}
+        ${(r.fullfort || []).length || r.nye.length ? `<div class="rp-inn-ut">
+          <div><h4>Fullført og ute <span class="sub">(${(r.fullfort || []).length})</span></h4>${(r.fullfort || []).length ? `<ul class="rp-liste">${r.fullfort.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${esc(x.firma || '')} · ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : '<p class="sub">Ingen.</p>'}</div>
+          <div><h4>Nye i planen <span class="sub">(${r.nye.length})</span></h4>${r.nye.length ? `<ul class="rp-liste">${r.nye.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${esc(x.firma || '')} · ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : '<p class="sub">Ingen.</p>'}</div>
+        </div>` : ''}
         <h4>Virkning per sone (8 uker)</h4>
         <table class="sd-tab"><tr><th></th><th>Sone</th><th class="c">Flyttet</th><th class="c">Nye / fjernet</th><th class="c">Aktivitetsdager i perioden</th><th>Vurdering</th></tr>
           ${r.soner.map(z => `<tr><td>${nivaLys(z.niva)}</td><td><b>${esc(z.sone)}</b></td><td class="c">${z.flyttet}</td><td class="c">${z.nye} / ${z.fjernet}</td>
             <td class="c">${z.dagerFor} → <b>${z.dagerEtter}</b> <span class="sub">(${z.endring > 0 ? '+' : ''}${z.endring} %)</span></td><td class="sub">${esc(z.vurdering)}</td></tr>`).join('')}</table>
         ${r.flyttet.length ? `<h4>Flyttet <span class="sub">– aktiviteten som flyttet seg står først; aktiviteter som er flyttet etter den på grunn av avhengigheter, står rykket inn under</span></h4>
           <table class="sd-tab"><tr><th>Aktivitet</th><th>Før</th><th>Nå</th><th>Endring</th><th>Årsak</th></tr>${flyttRader}</table>` : ''}
-        ${(r.fullfort || []).length ? `<h4>Fullført siden sist <span class="sub">– sto som utført og er tatt ut av planen</span></h4><ul class="rp-liste">${r.fullfort.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${esc(x.firma || '')} · ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : ''}
-        ${r.nye.length ? `<h4>Nye aktiviteter</h4><ul class="rp-liste">${r.nye.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : ''}
         ${r.fjernet.length ? `<h4>Fjernet</h4><ul class="rp-liste">${r.fjernet.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · var ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : ''}
         ${r.beholdt.length ? `<p class="sub">Ikke med i den nye planen, men beholdt fordi noe er koblet til dem: ${r.beholdt.map(akt).join(', ')}</p>` : ''}
         ${r.brudd.length ? `<h4 style="color:var(--red)">Avhengigheter som er brutt etter oppdateringen</h4><ul class="rp-liste">${r.brudd.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}

@@ -353,6 +353,9 @@ table.logg td.h{white-space:nowrap;font-weight:600}
 .tilgang-tab .skille{border-left:2px solid var(--line)}
 .tilgang-tab tr.av td:first-child{opacity:.55}
 .tilgang-tab input{width:17px;height:17px}
+.col-akt .fu-alle{display:block;width:auto;max-width:100%;margin-top:6px;padding:3px 8px;font-size:12px;line-height:1.3;white-space:normal;text-align:left;background:#dafbe1;color:#116329;border:1px solid #4ac26b;border-radius:6px;cursor:pointer}
+.col-akt .fu-alle:hover:not(:disabled){background:#aceebb}
+.col-akt .fu-alle:disabled{opacity:.55;cursor:default}
 .rp-valg{display:flex;gap:14px;align-items:center}
 .rp-valg .btn{flex:none;width:340px;justify-content:center;text-align:center}
 .rp-valg .sub{flex:1;line-height:1.45}
@@ -983,7 +986,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.8';
+const APP_VERSION = '2026-10-07.9';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1429,7 +1432,7 @@ function mainRow(a, page) {
       <button class="icon-btn expand" data-action="expand" title="${exp ? 'Skjul' : 'Vis'} AT-rader">${exp ? '−' : '+'}</button>
       ${editBtn}
     </td>
-    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : ''}${hindForAkt(a.id).length ? ` <button class="hi-merke" data-action="hi-til" data-akt="${esc(a.id)}" title="${esc(hindForAkt(a.id).map(h => h.tittel).join('\n'))}">⛔ ${hindForAkt(a.id).length} hindring${hindForAkt(a.id).length === 1 ? '' : 'er'}</button>` : ''}</div></td>
+    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : ''}${hindForAkt(a.id).length ? ` <button class="hi-merke" data-action="hi-til" data-akt="${esc(a.id)}" title="${esc(hindForAkt(a.id).map(h => h.tittel).join('\n'))}">⛔ ${hindForAkt(a.id).length} hindring${hindForAkt(a.id).length === 1 ? '' : 'er'}</button>` : ''}</div>${ed ? `<button type="button" class="fu-alle" data-action="alle-ok" title="Sett alle sju produksjonsforutsetningene til grønn (avklart)" ${FORUTSETNINGER.every(([k]) => a.forutsetninger[k] === 'gronn') ? 'disabled' : ''}>🟢 Alle forutsetninger OK</button>` : ''}</td>
     ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
     <td class="c">${cLys('metode.status', a.metode.status, ed, METODE_LYS)}${actMbNrs(a).length ? `<div class="sub">MB ${esc(actMbNrs(a).join(', '))} ${mbDokLenker(actMbNrs(a), true)}</div>` : ''}</td>
     <td>${a.at.length ? a.at.map(t => `<span class="at-chip" data-action="goto-at" data-nr="${esc(t.nr)}" title="Gå til ${esc(t.nr)}">${esc(t.nr)}</span>`).join('<br>') : '<span class="muted">Ingen</span>'}</td>
@@ -5307,6 +5310,14 @@ document.addEventListener('click', e => {
     const row = document.getElementById(`row-${page}-${a.id}-${nr}`);
     if (row) { row.scrollIntoView({block: 'center', behavior: 'smooth'}); row.classList.add('flash'); setTimeout(() => row.classList.remove('flash'), 1700); }
     return;
+  }
+  if (action === 'alle-ok') {
+    const tg = targetOf(btn); if (!tg || !tg.isAct || !canEditAct(tg.a)) return;
+    const a = tg.a, var_ = FORUTSETNINGER.filter(([k]) => a.forutsetninger[k] !== 'gronn').map(([, l]) => l);
+    if (!var_.length) return;
+    FORUTSETNINGER.forEach(([k]) => { a.forutsetninger[k] = 'gronn'; });
+    logg('Alle forutsetninger OK', a.id, `Satt til grønn: ${var_.join(', ')}`);
+    save(); renderTable(page); showToast(`${a.id}: alle sju forutsetninger er satt til grønn.`); return;
   }
   if (action === 'dod') {
     const tg = targetOf(btn); if (!tg || !canEditTarget(tg)) return;

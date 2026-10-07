@@ -988,7 +988,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.11';
+const APP_VERSION = '2026-10-07.12';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1175,6 +1175,9 @@ function normalizeAll() {
   METHODS.forEach(m => { if (m.firma === undefined) m.firma = FIRMA_METODE[m.nr] || ''; if (!Array.isArray(m.ue)) m.ue = []; });
   relink();
 }
+// En AT kan gjelde flere aktiviteter i ulike soner. Sonen kan da settes per aktivitet (omradePer); ellers gjelder AT-ens egen sone.
+const atOmrade = (t, a) => (t.omradePer && a && t.omradePer[a.id]) || t.omrade;
+const atOmrader = t => [...new Set(t.aktiviteter.length ? t.aktiviteter.map(id => atOmrade(t, {id})) : [t.omrade])];
 function relink() {
   const byId = new Map(DATA.map(a => [a.id, a]));
   DATA.forEach(a => { Object.defineProperty(a, 'at', {value: [], writable: true, enumerable: false, configurable: true}); });
@@ -1387,9 +1390,9 @@ function cDod(list, ed, fraAT = []) {
   const all = [...new Set([...list, ...fraAT])];
   return all.length ? `<span class="dod">${all.map(k => dodIcon(k)).join('')}</span>` : '<span class="muted">–</span>';
 }
-function commonCells(o, ed, firmaEd, kjede = '') {
+function commonCells(o, ed, firmaEd, kjede = '', omr = o.omrade) {
   return {
-    omrade: `<td>${ed ? selectHtml('omrade', OMRADER(), o.omrade) : esc(o.omrade)}</td>`,
+    omrade: `<td>${ed ? selectHtml('omrade', OMRADER(), omr) : esc(omr)}</td>`,
     uke: `<td class="c">${isoWeek(o.startdato)}</td>`,
     dato: `<td>${ed ? `<input type="date" class="w-date" data-field="startdato" value="${esc(o.startdato)}">` : fmtNo(o.startdato)}</td>`,
     varighet: `<td class="c">${ed ? `<input type="number" min="1" class="w-num" data-field="varighet" value="${o.varighet}">` : o.varighet}</td>`,
@@ -1476,7 +1479,7 @@ function detailRows(a, page) {
   }
   a.at.forEach((t, i) => {
     const ed = editing && canEditAT(a, t);
-    const c = commonCells(t, ed, editing && canEditAct(a));
+    const c = commonCells(t, ed, editing && canEditAct(a), '', atOmrade(t, a));
     h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(a.id)}-${esc(t.nr)}">
       <td class="col-ctrl">${actEd ? `<button class="icon-btn danger" data-action="del-at" title="Slett ${esc(t.nr)}">🗑</button> ` : ''}<span class="conn">↳</span></td>
       <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(t.navn)}">` : esc(t.navn)}<div class="sub">${esc(t.nr)}${t.metode ? ` · MB ${esc(t.metode)} ${mbDokLenker(t.metode, false)}` : ''}</div></td>
@@ -2248,7 +2251,7 @@ function skCollect() {
         if (seen.has(t) || (st.firms && !st.firms.has(t.firma))) return;
         seen.add(t);
         const zones = [...new Set(t.plasseringer.map(p => p.sone).filter(Boolean))];
-        (zones.length ? zones : [t.omrade]).forEach(z => items.push({a, t, key: t.nr + '|' + z, label: t.nr, navn: t.navn, firma: t.firma, zone: z,
+        (zones.length ? zones : atOmrader(t)).forEach(z => items.push({a, t, key: t.nr + '|' + z, label: t.nr, navn: t.navn, firma: t.firma, zone: z,
           start: t.startdato, end: endDate(t), status: t.status, dod: t.dodsrisiko, placed: zones.length > 0}));
       });
     }
@@ -5654,6 +5657,17 @@ document.addEventListener('change', e => {
   }
   if (f === 'navn' && !v.trim()) { renderTable(page); return; }
   if (f === 'ansvarUtforelse' || f === 'ansvarGodkjenning') v = v.trim();
+  if (!tg.isAct && f === 'omrade') {
+    // Sonen på en AT som gjelder flere aktiviteter, endres bare for denne aktiviteten.
+    const at = tg.obj;
+    if (at.aktiviteter.length > 1) {
+      const per = {...(at.omradePer || {})};
+      if (v === at.omrade) delete per[tg.a.id]; else per[tg.a.id] = v;
+      if (Object.keys(per).length) at.omradePer = per; else delete at.omradePer;
+      save(); renderTable(page); return;
+    }
+    delete at.omradePer;
+  }
   setPath(tg.obj, f, v);
   save();
   if (el.tagName === 'SELECT' || ['date', 'number'].includes(el.type) || f === 'nr' || f === 'metode.nr') renderTable(page);

@@ -348,6 +348,11 @@ table.logg td.h{white-space:nowrap;font-weight:600}
 .sv-dlg-row{display:flex;gap:10px}
 .hi-dlg{width:680px}
 #modules-panel{grid-column:1/-1}
+@media (min-width:800px){.admin-grid .firm-panel{grid-column:span 2}}
+.firm-panel .firm-reg select{max-width:100%}
+.firm-panel .firm-reg{margin-top:3px}
+.hi-valg{flex-basis:100%;margin:4px 0 6px;padding:8px 10px;background:#fff8c5;border:1px solid #d4a72c;border-radius:6px;font-size:13px}
+.hi-valg .knapper{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .tilgang-tab{border-collapse:collapse;width:100%;font-size:13.5px}
 .tilgang-tab th,.tilgang-tab td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
 .tilgang-tab .c{text-align:center}
@@ -822,7 +827,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <div id="user-form"></div>
         <div id="user-list"></div>
       </div>
-      <div class="panel">
+      <div class="panel firm-panel">
         <h3>Firma og fargekoder</h3>
         <div id="firm-form"></div>
         <div id="firm-list"></div>
@@ -988,7 +993,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.13';
+const APP_VERSION = '2026-10-07.14';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -3652,8 +3657,15 @@ function hindApne(h, aktId) {
   setTimeout(() => $('hif-tittel').focus(), 30);
 }
 function hindDlgAkt() {
-  document.getElementById('hif-akt').innerHTML = hiDlg.akt.length ? hiDlg.akt.map(id => { const a = actById(id); return `<span class="hi-chip" style="border-left-color:${firmColor(a ? a.firma : '')}"><b>${esc(id)}</b> ${esc(a ? a.navn : 'ukjent')} <button type="button" class="mb-x" data-action="hif-fjern" data-akt="${esc(id)}" title="Fjern">×</button></span>`; }).join('')
-    : '<span class="sub">Ingen aktivitet koblet ennå. Søk under.</span>';
+  const valg = hiDlg.fjern && hiDlg.h ? (() => {
+    const id = hiDlg.fjern, flere = hiDlg.akt.length > 1;
+    return `<div class="hi-valg"><b>Fjerne ${esc(id)} fra hindringen?</b> Er hindringen løst, kan den markeres som avklart for alle aktivitetene i stedet.
+      <div class="knapper"><button type="button" class="btn" data-action="hif-fjern-en" data-akt="${esc(id)}">Fjern bare fra ${esc(id)}${flere ? '' : ' (koblingen)'}</button>
+      <button type="button" class="btn primary" data-action="hif-lost">✔ Løst – avklart for ${flere ? `alle ${hiDlg.akt.length} aktivitetene` : 'aktiviteten'}</button>
+      <button type="button" class="btn" data-action="hif-fjern-avbryt">Avbryt</button></div></div>`;
+  })() : '';
+  document.getElementById('hif-akt').innerHTML = valg + (hiDlg.akt.length ? hiDlg.akt.map(id => { const a = actById(id); return `<span class="hi-chip" style="border-left-color:${firmColor(a ? a.firma : '')}"><b>${esc(id)}</b> ${esc(a ? a.navn : 'ukjent')} <button type="button" class="mb-x" data-action="hif-fjern" data-akt="${esc(id)}" title="Fjern">×</button></span>`; }).join('')
+    : '<span class="sub">Ingen aktivitet koblet ennå. Søk under.</span>');
 }
 function hindDlgSok(q) {
   q = q.trim().toLowerCase();
@@ -3720,7 +3732,22 @@ function hindAction(action, btn) {
   }
   if (action === 'hi-til') { ui.hindringer.search = btn.dataset.akt; const s = document.getElementById('hi-sok'); if (s) s.value = btn.dataset.akt; showTab('hindringer'); return; }
   if (action === 'hif-legg') { hiDlg.akt.push(btn.dataset.akt); hindDlgAkt(); hindDlgSok(document.getElementById('hif-sok').value); return; }
-  if (action === 'hif-fjern') { hiDlg.akt = hiDlg.akt.filter(x => x !== btn.dataset.akt); hindDlgAkt(); hindDlgSok(document.getElementById('hif-sok').value); return; }
+  // × på en aktivitet: for en eksisterende hindring spørres det om den bare skal fjernes fra aktiviteten, eller om den er løst for alle.
+  if (action === 'hif-fjern') {
+    if (hiDlg.h && hiDlg.h.status !== 'avklart') { hiDlg.fjern = btn.dataset.akt; hindDlgAkt(); return; }
+  }
+  if (action === 'hif-fjern' || action === 'hif-fjern-en') { hiDlg.akt = hiDlg.akt.filter(x => x !== btn.dataset.akt); hiDlg.fjern = null; hindDlgAkt(); hindDlgSok(document.getElementById('hif-sok').value); return; }
+  if (action === 'hif-fjern-avbryt') { hiDlg.fjern = null; hindDlgAkt(); return; }
+  if (action === 'hif-lost' && hiDlg && hiDlg.h && kanEndreHind(hiDlg.h)) {
+    hiDlg.fjern = null;
+    if (!hindLagre()) return;
+    const x = hiDlg.h;
+    x.status = 'avklart'; x.avklart = {tid: new Date().toISOString(), av: me().name || ''};
+    logg('Hindring avklart', x.aktiviteter.join(', '), `${x.tittel} (løst for alle aktivitetene)`);
+    document.getElementById('hi-dlg').close(); save(); renderCurrent();
+    showToast(`«${x.tittel}» er markert som avklart for ${x.aktiviteter.length === 1 ? 'aktiviteten' : `alle ${x.aktiviteter.length} aktivitetene`}.`);
+    return;
+  }
   if (action === 'hif-avbryt') { document.getElementById('hi-dlg').close(); return; }
   if (action === 'hif-del' && hiDlg && hiDlg.h && kanSletteHind(hiDlg.h)) {
     if (!confirm(`Slette «${hiDlg.h.tittel}»? Bruk heller «Avklart» hvis saken er løst, så blir historikken liggende.`)) return;

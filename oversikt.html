@@ -986,7 +986,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.9';
+const APP_VERSION = '2026-10-07.10';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1511,7 +1511,8 @@ function erArkiv(a) {
   return a.startdato < mon && endDate(a) < mon && a.at.every(t => endDate(t) < mon);
 }
 function matches(a, st) {
-  if (st.firms && !st.firms.has(a.firma) && !a.at.some(t => st.firms.has(t.firma)) && !chainsFor(actMbNrs(a)).some(c => c.ch.some(f => st.firms.has(f)))) return false;
+  // Firmafilteret viser aktiviteter der firmaet er entreprenør, eller er satt som UE på aktiviteten (ikke via AT-er eller kontraktskjeden i MB).
+  if (st.firms && !st.firms.has(a.firma) && !(a.ue || []).some(u => [u, ...(u.under || [])].some(x => [...st.firms].some(f => normFirm(f) === normFirm(x.navn))))) return false;
   const q = st.search.trim().toLowerCase();
   if (!q) return true;
   return [a.id, a.navn, a.omrade, a.firma, a.kommentar, a.ansvarUtforelse, a.ansvarGodkjenning, ...(a.ue || []).flatMap(u => [u.navn, ...(u.under || []).map(x => x.navn)]), ...a.at.flatMap(t => [t.nr, t.navn, t.firma, t.ansvarUtforelse, t.ansvarGodkjenning])].some(s => String(s).toLowerCase().includes(q));

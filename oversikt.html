@@ -371,6 +371,10 @@ table.logg td.h{white-space:nowrap;font-weight:600}
 @media (max-width:800px){.rp-inn-ut{grid-template-columns:1fr}}
 .rp-pdf-btn{margin-left:6px}
 .rp-pdf-boks .rp-kort{border:none;box-shadow:none;margin:0}
+.gen-tag{background:#ddf4ff;color:#0969da}
+@media (min-width:800px){.admin-grid #gen-panel{grid-column:span 2}}
+.gen-ny{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.gen-ny input{flex:1;min-width:180px}
 .rp-topptekst{font-size:17px;font-weight:700;margin-bottom:2px}
 .rp-periode{font-size:13.5px;margin-bottom:4px}
 .rp-hind td{vertical-align:top}
@@ -843,6 +847,7 @@ td.firma-cell{white-space:normal;min-width:130px}
       <div class="panel" id="modules-panel"></div>
       <div class="panel reg-panel" id="register-panel"></div>
       <div class="panel" id="sd-panel"></div>
+      <div class="panel" id="gen-panel"></div>
       <div class="panel" id="data-panel"></div>
       <div class="panel logg-panel" id="logg-panel" hidden></div>
     </div>
@@ -1001,7 +1006,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.19';
+const APP_VERSION = '2026-10-07.20';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1289,6 +1294,7 @@ function load() {
   applyMbRisiko();
   applyAnsvarRydd();
   applyHindFix();
+  applyGensett();
   save();
 }
 function save() {
@@ -1555,7 +1561,7 @@ function ansvarDatalist() {
 function renderTable(page) {
   if (page === 'klargjoring') ansvarDatalist();
   const st = ui[page];
-  const hits = DATA.filter(a => matches(a, st));
+  const hits = DATA.filter(a => !a.generell && matches(a, st));
   const nArkiv = hits.filter(erArkiv).length;
   // «Skjul grønne» (Totaloversikt): aktiviteter med grønn totalstatus tas ut, så det som gjenstår blir stående.
   const nGronn = st.skjulGronne !== undefined ? hits.filter(a => (st.showArchive || !erArkiv(a)) && totalStatus(a).lys === 'gronn').length : 0;
@@ -1732,7 +1738,7 @@ const KK_UTOMHUS = [[40, 612, 540, 705], [1255, 45, 1880, 285]];
 const KK_CELL = {w: 118, h: 42}, KK_SMAL = {w: 58, h: 26};   // markørstørrelse i piksler (vanlig / kompakt i trange soner)
 function kkAktive() {
   const [from, to] = periodRange();
-  return DATA.filter(a => a.startdato <= to && endDate(a) >= from && !erArkiv(a))
+  return DATA.filter(a => a.startdato <= to && endDate(a) >= from && !erArkiv(a) && (!a.generell || a.at.some(atAktivIPerioden)))
     .sort((x, y) => x.omrade.localeCompare(y.omrade) || x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
 }
 // AT-en gjelder i perioden når gyldighetstiden overlapper (AT-er gjelder én uke om gangen).
@@ -2265,7 +2271,7 @@ function skRange(items) {
 function skCollect() {
   const st = ui.skrastrek, items = [];
   const seen = new Set();
-  DATA.filter(a => matches(a, st) && (st.showArchive || !erArkiv(a))).forEach(a => {
+  DATA.filter(a => !a.generell && matches(a, st) && (st.showArchive || !erArkiv(a))).forEach(a => {
     if (st.niva === 'akt') {
       items.push({a, key: a.id, label: a.id, navn: a.navn, firma: a.firma, zone: a.omrade, start: a.startdato, end: endDate(a), status: a.status, dod: [...new Set([...a.dodsrisiko, ...a.at.flatMap(t => t.dodsrisiko)])]});
     } else {
@@ -2287,7 +2293,7 @@ function renderSkrastrek() {
   document.getElementById('sk-niva').value = st.niva;
   document.getElementById('sk-uker').value = st.uker;
   const ab = document.querySelector('.archive-btn[data-page="skrastrek"]');
-  const nArkiv = DATA.filter(a => matches(a, st) && erArkiv(a)).length;
+  const nArkiv = DATA.filter(a => !a.generell && matches(a, st) && erArkiv(a)).length;
   ab.textContent = st.showArchive ? `📦 Skjul arkiv (${nArkiv})` : `📦 Vis arkiv (${nArkiv})`;
   ab.classList.toggle('on', st.showArchive);
 
@@ -2446,7 +2452,7 @@ function renderStatustavle() {
   const from = mondayOf(TODAY), to = addDays(from, SV_DAYS - 1);
   const pct = d => (daysBetween(from, d) / SV_DAYS * 100);
 
-  const items = DATA.filter(a => matches(a, st) && a.startdato <= to && endDate(a) >= from).map(a => ({a, s: totalStatus(a)}))
+  const items = DATA.filter(a => !a.generell && matches(a, st) && a.startdato <= to && endDate(a) >= from).map(a => ({a, s: totalStatus(a)}))
     .filter(({s}) => !st.lys || (st.lys === 'avvik' ? s.lys === 'rod' || s.lys === 'gul' : s.lys === st.lys));
   const zones = [...SK_ZONE_ORDER, ...[...new Set(items.map(x => x.a.omrade))].filter(z => !SK_ZONE_ORDER.includes(z)).sort()];
   svItems = [];
@@ -3524,6 +3530,57 @@ function applyHindsett() {
   SETTINGS.hindsett = HINDSETT;
   return nye;
 }
+// ---------- generelle aktiviteter (f.eks. Riggarbeid) ----------
+// Står alltid klar i aktivitetslisten under Metodebeskrivelser og kommer i AT-koordinering når de har en AT som gjelder.
+// De er ikke med på Statustavlen, i Klargjøring, Totaloversikt, Skråstreksdiagram eller ved import av ny plan.
+const GENSETT = 1, GEN_SLUTT = '2028-06-30';
+const erGenerell = a => !!(a && a.generell);
+function nyGenerell(navn, firma, omrade) {
+  const max = DATA.reduce((m, a) => { const n = /^G(\d+)$/.exec(a.id); return n ? Math.max(m, Number(n[1])) : m; }, 0);
+  const start = mondayOf(TODAY);
+  const a = {id: 'G' + String(max + 1).padStart(2, '0'), navn, omrade, firma, startdato: start, varighet: daysBetween(start, GEN_SLUTT) + 1, generell: true,
+    metode: {nr: '', status: 'ikke', historikk: ''}, forutsetninger: ikkeVurdert(), risikoniva: 'Middels', dodsrisiko: [], status: 'Pågår', kommentar: '',
+    ansvarUtforelse: '', ansvarGodkjenning: '', kilde: 'WRK2'};
+  DATA.push(a); relink();
+  return a;
+}
+function applyGensett() {
+  if ((SETTINGS.gensett || 0) >= GENSETT) return false;
+  if (!DATA.some(a => a.generell && sdNorm(a.navn) === 'riggarbeid')) nyGenerell('Riggarbeid', 'Skanska', OMRADER()[0] || '');
+  SETTINGS.gensett = GENSETT;
+  return true;
+}
+function genPanelHtml() {
+  const gen = DATA.filter(erGenerell).sort((x, y) => x.id.localeCompare(y.id));
+  return `<h3>Generelle aktiviteter</h3>
+    <p class="intro" style="margin-bottom:8px">Aktiviteter som trenger AT og koordinering, men ikke skal på Statustavlen eller gjennom ukentlig klargjøring (f.eks. riggarbeid).
+      De ligger alltid klare i aktivitetslisten under Metodebeskrivelser. Når en AT kobles til dem, kommer de med i AT-koordinering de ukene AT-en gjelder.</p>
+    ${gen.length ? `<table class="sd-tab"><tr><th>Aktivitet</th><th>Firma</th><th>Område</th><th>AT-er</th><th></th></tr>${gen.map(a => `<tr><td><b>${esc(a.id)}</b> ${esc(a.navn)}</td><td>${firmBadge(a.firma)}</td><td class="sub">${esc(a.omrade)}</td>
+      <td class="sub">${a.at.length ? a.at.map(t => esc(t.nr)).join(', ') : 'Ingen ennå'}</td><td><button class="btn danger" data-action="gen-slett" data-id="${esc(a.id)}">Fjern</button></td></tr>`).join('')}</table>` : '<p class="sub">Ingen generelle aktiviteter.</p>'}
+    <div class="gen-ny"><input type="text" id="gen-navn" maxlength="80" placeholder="Navn, f.eks. Riggarbeid">
+      <select id="gen-firma">${FIRMS.map(f => `<option ${f.navn === 'Skanska' ? 'selected' : ''}>${esc(f.navn)}</option>`).join('')}</select>
+      <select id="gen-omrade">${OMRADER().map(o => `<option>${esc(o)}</option>`).join('')}</select>
+      <button class="btn primary" data-action="gen-ny">＋ Sett inn generell aktivitet</button></div>`;
+}
+function genAction(action, btn) {
+  if (!isSys()) return;
+  if (action === 'gen-ny') {
+    const navn = document.getElementById('gen-navn').value.trim();
+    if (!navn) { document.getElementById('gen-navn').focus(); return; }
+    const a = nyGenerell(navn, document.getElementById('gen-firma').value, document.getElementById('gen-omrade').value);
+    logg('Generell aktivitet', a.id, `«${navn}» · ${a.firma} · ${a.omrade}`);
+    save(); renderCurrent(); showToast(`${a.id} ${navn} ligger nå klar under Metodebeskrivelser.`); return;
+  }
+  if (action === 'gen-slett') {
+    const a = actById(btn.dataset.id); if (!a || !a.generell) return;
+    if (!confirm(`Fjerne den generelle aktiviteten ${a.id} ${a.navn}?${a.at.length ? ` Koblingen til ${a.at.map(t => t.nr).join(', ')} fjernes (AT-ene blir liggende).` : ''}`)) return;
+    DATA = DATA.filter(x => x !== a);
+    ATS.forEach(t => { t.aktiviteter = t.aktiviteter.filter(x => x !== a.id); });
+    AVH = AVH.filter(d => d.fra !== a.id && d.til !== a.id);
+    relink(); logg('Generell aktivitet fjernet', a.id, a.navn);
+    save(); renderCurrent();
+  }
+}
 // Rettelse: Danieli-saken var feilkoblet til «Trekking gewistag» (A041/A097). Koblingen fjernes én gang.
 const HINDFIX = 1;
 function applyHindFix() {
@@ -3921,7 +3978,7 @@ const sdHarKoblinger = a => {
 function sdForbered(res) {
   const {meta} = res, n = sdNorm;
   const rader = res.rader.map((r, i) => ({...r, i, omrade: sdSone(r.sone)}));
-  const pool = DATA.filter(a => endDate(a) >= addDays(meta.fra, -7));
+  const pool = DATA.filter(a => !a.generell && endDate(a) >= addDays(meta.fra, -7));
   const brukt = new Set(), match = new Array(rader.length).fill(null), hvordan = [];
   const likt = (a, r) => n(a.navn) === n(r.navn) || (a.sd && a.sd.pdfNavn && n(a.sd.pdfNavn) === n(r.navn));
   const prefiks = (a, r) => { const x = n(a.navn), y = n(r.navn); return x.length >= 5 && y.length >= 5 && (x.startsWith(y) || y.startsWith(x)); };
@@ -3936,7 +3993,7 @@ function sdForbered(res) {
   pass((a, r) => prefiks(a, r), 'sone');
   pass((a, r) => a.omrade === r.omrade && n(a.navn).replace(/ /g, '') === n(r.navn).replace(/ /g, ''), 'sone');
   // Aktiviteter som står som utført, utgår fra planen ved oppdateringen (også om de fortsatt står i Sitedrive-eksporten).
-  const fullfort = new Set(DATA.filter(a => a.status === 'Utført').map(a => a.id));
+  const fullfort = new Set(DATA.filter(a => !a.generell && a.status === 'Utført').map(a => a.id));
   sdImp = {meta, rader, valg: rader.map((r, i) => match[i] || 'ny'), hvordan, beholdWrk2: new Set(), fjern: {}, pool: pool.map(a => a.id), fullfort, fullfortAlle: [...fullfort]};
   // Aktiviteter i planperioden som ikke er med i den nye planen.
   sdUtenfor().forEach(a => { sdImp.fjern[a.id] = sdHarKoblinger(a).length || a.kilde === 'WRK2' ? 'behold' : 'slett'; });
@@ -3955,7 +4012,7 @@ function sdBrukStatus(statusRes) {
 const sdHoppOver = (s, i) => s.status && s.status[i] === 'Utført' && s.valg[i] === 'ny'; // fullført og ikke i WRK2 fra før
 function sdUtenfor() {
   const valgt = new Set(sdImp.valg.filter(v => v !== 'ny')), ff = sdImp.fullfort || new Set();
-  return DATA.filter(a => !valgt.has(a.id) && !ff.has(a.id) && endDate(a) >= sdImp.meta.fra && a.startdato <= sdImp.meta.til);
+  return DATA.filter(a => !a.generell && !valgt.has(a.id) && !ff.has(a.id) && endDate(a) >= sdImp.meta.fra && a.startdato <= sdImp.meta.til);
 }
 // Hva blir aktiviteten etter oppdateringen?
 function sdNy(r, a) {
@@ -4310,7 +4367,7 @@ document.addEventListener('change', e => {
 // Lages hver gang en ny plan fra Sitedrive tas inn: hva som er flyttet, hva som ble flyttet fordi en forgjenger flyttet seg
 // (via avhengighetene), nye og fjernede aktiviteter, og virkningen per sone i 8-ukersperioden.
 const RAPP_KEY = 'wrk2_planrapporter';
-const sdBilde = () => new Map(DATA.map(a => [a.id, {id: a.id, navn: a.navn, omrade: a.omrade, firma: a.firma, start: a.startdato, slutt: endDate(a)}]));
+const sdBilde = () => new Map(DATA.filter(a => !a.generell).map(a => [a.id, {id: a.id, navn: a.navn, omrade: a.omrade, firma: a.firma, start: a.startdato, slutt: endDate(a)}]));
 function lagPlanrapport(for_, meta, forrigeImport, slettet, merket, etter = sdBilde(), ekstra = {}) {
   const tid = new Date().toISOString();
   const fra = mondayOf(TODAY), til = addDays(fra, 55);
@@ -4672,7 +4729,7 @@ function renderMetoder() {
   const st = ui.metoder, sys = isSys();
   const q = {firms: null, search: st.search};
   const acts = DATA.filter(a => (st.showArchive || !erArkiv(a)) && matches(a, q))
-    .sort((x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
+    .sort((x, y) => erGenerell(y) - erGenerell(x) || x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
   const ab = document.querySelector('.archive-btn[data-page="metoder"]');
   const nArkiv = DATA.filter(a => matches(a, q) && erArkiv(a)).length;
   ab.textContent = st.showArchive ? `📦 Skjul arkiv (${nArkiv})` : `📦 Vis arkiv (${nArkiv})`;
@@ -4781,7 +4838,7 @@ function renderMetoder() {
       ${can ? '<span class="drag-handle" title="Dra til en AT eller metodebeskrivelse">⠿</span>' : '<span class="lock" title="Du kan ikke koble denne aktiviteten">🔒</span>'}
       <div class="at-card-body">
         <div><b>${esc(a.id)}</b> ${esc(a.navn)}</div>
-        <div class="sub">${esc(a.omrade)} · uke ${isoWeek(a.startdato)} · ${firmBadge(a.firma)}</div>
+        <div class="sub">${a.generell ? '<span class="badge gen-tag">Generell</span> ' : ''}${esc(a.omrade)}${a.generell ? '' : ` · uke ${isoWeek(a.startdato)}`} · ${firmBadge(a.firma)}</div>
         ${ueChainHtml(a, false)}${chainHtml(nrs)}
         <div class="mb-tags">${a.at.map(t => `<span class="mb-tag at">${esc(t.nr)}</span>`).join('')}${nrs.map(n => `<span class="mb-tag">MB ${esc(n)}</span>`).join('')}${a.at.length ? '' : '<span class="mb-tag none">Ingen AT</span>'}</div>
       </div>
@@ -4956,7 +5013,7 @@ function renderFirma() {
     }).join('')).join('')
     : `<p class="muted">Ingen firma er tatt i bruk ennå. Merk firma med «Ta i bruk» under Admin → Firmaregister for prosjektet.</p>`);
 
-  const acts = DATA.filter(a => !erArkiv(a) && matches(a, {firms: null, search: st.search}) && (!st.uten || !(a.ue || []).length))
+  const acts = DATA.filter(a => !a.generell && !erArkiv(a) && matches(a, {firms: null, search: st.search}) && (!st.uten || !(a.ue || []).length))
     .sort((x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
   document.getElementById('fu-acts').innerHTML = `<h3 class="mb-colhead">Aktiviteter <span class="sub">${acts.length} stk. · ${acts.filter(a => (a.ue || []).length).length} med UE</span></h3>`
     + (acts.length ? acts.map(a => {
@@ -5310,6 +5367,7 @@ function renderAdmin() {
   renderLogg();
   document.getElementById('modules-panel').innerHTML = tilgangPanelHtml(sys);
   const sdp = document.getElementById('sd-panel'); sdp.hidden = !sys; if (sys) sdp.innerHTML = sdPanelHtml();
+  const gp = document.getElementById('gen-panel'); gp.hidden = !sys; if (sys) gp.innerHTML = genPanelHtml();
   document.getElementById('data-panel').innerHTML = `<h3>Data</h3>
     <p class="intro" style="margin-bottom:10px">${CLOUD ? 'Data lagres i databasen og deles med alle innloggede brukere. Sonebilde du laster opp, lagres foreløpig bare i din nettleser.' : 'Data lagres i denne nettleseren.'} Planen viser ${DATA.length} aktiviteter. Aktiviteter som var ferdige før uke 40 er tatt ut.
     ${sys ? 'Tilbakestilling henter aktivitetene fra Excel-utdraget på nytt og sletter alle endringer og AT-plasseringer.' : ''}</p>
@@ -5482,6 +5540,7 @@ document.addEventListener('click', e => {
   if (action === 'fuinfo') { fuInfoPinn(btn.dataset.fu, btn); return; }
   if (action.startsWith('sd-')) { sdAction(action); return; }
   if (action.startsWith('rp-')) { rpAction(action, btn); return; }
+  if (action.startsWith('gen-')) { genAction(action, btn); return; }
   if (action.startsWith('hi-') || action.startsWith('hif-')) { hindAction(action, btn); return; }
   if (action.startsWith('fu-')) { fuAction(action, btn); return; }
   if (action === 'logg-csv') { loggCsv(); return; }

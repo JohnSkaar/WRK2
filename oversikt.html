@@ -1001,7 +1001,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.18';
+const APP_VERSION = '2026-10-07.19';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -4269,14 +4269,14 @@ function tilgangPanelHtml(sys) {
   const rad = ([k, navn]) => {
     const m = MODULER[k], pa = modulPa(k);
     return `<tr class="${pa ? '' : 'av'}"><td><b>${navn}</b>${m ? `<div class="sub">${m[2]}</div>` : ''}</td>
-      <td class="c">${m ? `<input type="checkbox" data-modul="${k}" ${pa ? 'checked' : ''} ${sys ? '' : 'disabled'} title="Slå fanen av eller på for hele prosjektet">` : '<span class="sub">Alltid</span>'}</td>
+      <td class="c">${m ? `<input type="checkbox" data-modul="${k}" ${pa ? 'checked' : ''} ${sys ? '' : 'disabled'} title="Slå fanen av eller på for hele prosjektet">` : '<span class="sub" title="Grunnfane som ikke kan slås av for prosjektet. Hvem som ser den, styres i rollekolonnene.">Fast</span>'}</td>
       ${PROSJEKTROLLER.map(([r]) => `<td class="c"><input type="checkbox" data-tilgang="${k}|${r}" ${rolleHar(k, r) ? 'checked' : ''} ${sys && pa ? '' : 'disabled'}></td>`).join('')}
       <td class="c skille">${['admin', 'endringer'].includes(k) ? '<span class="sub">–</span>' : `<input type="checkbox" data-rediger="${k}" ${redigerPa(k) ? 'checked' : ''} ${sys && pa ? '' : 'disabled'} title="Firma-admin kan endre sitt eget firmas data i denne fanen">`}</td></tr>`;
   };
   const rolleTekst = r => (PROSJEKTROLLER.find(([k]) => k === r) || [, r])[1];
   return `<h3>Faner og tilgang</h3>
     <p class="intro" style="margin-bottom:8px">Slå faner av eller på for hele prosjektet, og velg hvilke faner hver rolle ser. Rollen følger firmaet (velges under «Firma og fargekoder»). Systemadministratorer ser alle faner som er slått på, og firma-admin ser alltid Admin. Dataene blir liggende selv om en fane skrus av.</p>
-    <table class="tilgang-tab"><tr><th>Fane</th><th class="c">I bruk</th>${PROSJEKTROLLER.map(([, n]) => `<th class="c">${n}<div class="sub">ser fanen</div></th>`).join('')}<th class="c skille">Firma-admin<div class="sub">kan redigere</div></th></tr>${FANER.map(rad).join('')}</table>
+    <table class="tilgang-tab"><tr><th>Fane</th><th class="c">I bruk<div class="sub">i prosjektet</div></th>${PROSJEKTROLLER.map(([, n]) => `<th class="c">${n}<div class="sub">ser fanen</div></th>`).join('')}<th class="c skille">Firma-admin<div class="sub">kan redigere</div></th></tr>${FANER.map(rad).join('')}</table>
     <p class="sub" style="margin-top:8px">Firmaenes roller nå: ${FIRMS.map(f => `${esc(f.navn)} – <b>${rolleTekst(firmaRolle(f.navn))}</b>`).join(' · ')}</p>
     <p class="sub">«Ser fanen» styrer hvilke faner som vises. «Kan redigere» styrer hvor firma-admin kan endre sitt eget firmas aktiviteter, AT-er og hindringer; i de andre fanene er alt bare til lesing. Lesere kan aldri endre, og systemadministrator kan alltid endre alt.</p>`;
 }

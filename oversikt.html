@@ -988,7 +988,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.12';
+const APP_VERSION = '2026-10-07.13';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1177,6 +1177,15 @@ function normalizeAll() {
 }
 // En AT kan gjelde flere aktiviteter i ulike soner. Sonen kan da settes per aktivitet (omradePer); ellers gjelder AT-ens egen sone.
 const atOmrade = (t, a) => (t.omradePer && a && t.omradePer[a.id]) || t.omrade;
+// Det samme for firma (firmaPer): en felles AT kan utføres av ulike firma på ulike aktiviteter.
+const atFirmaFor = (t, a) => (t.firmaPer && a && t.firmaPer[a.id]) || t.firma;
+function settAtPerAkt(t, a, felt, v) {
+  const nokkel = felt === 'omrade' ? 'omradePer' : 'firmaPer';
+  if (t.aktiviteter.length <= 1) { t[felt] = v; delete t[nokkel]; return; }
+  const per = {...(t[nokkel] || {})};
+  if (v === t[felt]) delete per[a.id]; else per[a.id] = v;
+  if (Object.keys(per).length) t[nokkel] = per; else delete t[nokkel];
+}
 const atOmrader = t => [...new Set(t.aktiviteter.length ? t.aktiviteter.map(id => atOmrade(t, {id})) : [t.omrade])];
 function relink() {
   const byId = new Map(DATA.map(a => [a.id, a]));
@@ -1330,7 +1339,7 @@ const redigerPa = (tab = currentTab) => { const v = (SETTINGS.redigering || {})[
 const firmaAdminHer = (tab = currentTab) => me().rolle === 'firmaadmin' && redigerPa(tab);
 function canEditFirm(f) { const u = me(); return u.rolle === 'systemadmin' || (firmaAdminHer() && u.firma === f); }
 function canEditAct(a) { return canEditFirm(a.firma); }
-function canEditAT(a, t) { return canEditFirm(a.firma) || canEditFirm(t.firma); }
+function canEditAT(a, t) { return canEditFirm(a.firma) || canEditFirm(atFirmaFor(t, a)); }
 function canOpenEdit(a) { return canEditAct(a) || a.at.some(t => canEditAT(a, t)); }
 function canPlaceAT(t) { return canEditFirm(t.firma); }
 function accessText() {
@@ -1390,14 +1399,14 @@ function cDod(list, ed, fraAT = []) {
   const all = [...new Set([...list, ...fraAT])];
   return all.length ? `<span class="dod">${all.map(k => dodIcon(k)).join('')}</span>` : '<span class="muted">–</span>';
 }
-function commonCells(o, ed, firmaEd, kjede = '', omr = o.omrade) {
+function commonCells(o, ed, firmaEd, kjede = '', omr = o.omrade, fir = o.firma) {
   return {
     omrade: `<td>${ed ? selectHtml('omrade', OMRADER(), omr) : esc(omr)}</td>`,
     uke: `<td class="c">${isoWeek(o.startdato)}</td>`,
     dato: `<td>${ed ? `<input type="date" class="w-date" data-field="startdato" value="${esc(o.startdato)}">` : fmtNo(o.startdato)}</td>`,
     varighet: `<td class="c">${ed ? `<input type="number" min="1" class="w-num" data-field="varighet" value="${o.varighet}">` : o.varighet}</td>`,
     // Firmakolonnen viser bare hovedfirmaet (entreprenøren). UE-er vises under «Utførelse av firma» og i Statustavlen.
-    firma: `<td class="firma-cell">${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), o.firma) : firmBadge(o.firma)}${ed && DATA.includes(o) ? `<div class="fu-goto">${(o.ue || []).length ? o.ue.map(u => `<div>› ${esc(u.navn)} <i>UE</i>${(u.under || []).map(x => `<div>&nbsp;&nbsp;› ${esc(x.navn)} <i>UE av UE</i></div>`).join('')}</div>`).join('') : '<span class="muted">Ingen UE</span>'}</div>` : ''}</td>`,
+    firma: `<td class="firma-cell">${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), fir) : firmBadge(fir)}${ed && DATA.includes(o) ? `<div class="fu-goto">${(o.ue || []).length ? o.ue.map(u => `<div>› ${esc(u.navn)} <i>UE</i>${(u.under || []).map(x => `<div>&nbsp;&nbsp;› ${esc(x.navn)} <i>UE av UE</i></div>`).join('')}</div>`).join('') : '<span class="muted">Ingen UE</span>'}</div>` : ''}</td>`,
     lys: FORUTSETNINGER.map(([k]) => { const km = (o.fuKommentar || {})[k]; return `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}${km ? `<div class="fu-km" title="${esc(km)}">💬</div>` : ''}</td>`; }).join(''),
     ansvar: ['ansvarUtforelse', 'ansvarGodkjenning'].map(f => `<td class="c">${ed
       ? `<input type="text" class="w-ansvar" data-field="${f}" maxlength="60" list="ansvar-navn" value="${esc(o[f] || '')}" placeholder="Navn" title="${f === 'ansvarUtforelse' ? 'Ansvarlig for utførelse' : 'Ansvarlig for godkjenning'} – skriv inn navn">`
@@ -1479,7 +1488,7 @@ function detailRows(a, page) {
   }
   a.at.forEach((t, i) => {
     const ed = editing && canEditAT(a, t);
-    const c = commonCells(t, ed, editing && canEditAct(a), '', atOmrade(t, a));
+    const c = commonCells(t, ed, editing && canEditAct(a), '', atOmrade(t, a), atFirmaFor(t, a));
     h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(a.id)}-${esc(t.nr)}">
       <td class="col-ctrl">${actEd ? `<button class="icon-btn danger" data-action="del-at" title="Slett ${esc(t.nr)}">🗑</button> ` : ''}<span class="conn">↳</span></td>
       <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(t.navn)}">` : esc(t.navn)}<div class="sub">${esc(t.nr)}${t.metode ? ` · MB ${esc(t.metode)} ${mbDokLenker(t.metode, false)}` : ''}</div></td>
@@ -1584,7 +1593,7 @@ function renderFirmFilter(page) {
   const sel = ui[page].firms;
   const all = !sel;
   const label = all ? 'Alle firma' : sel.size === 0 ? 'Ingen valgt' : sel.size === 1 ? [...sel][0] : `${sel.size} firma valgt`;
-  const count = n => DATA.filter(a => a.firma === n || a.at.some(t => t.firma === n) || chainsFor(actMbNrs(a)).some(c => c.ch.includes(n))).length;
+  const count = n => DATA.filter(a => a.firma === n || a.at.some(t => atFirmaFor(t, a) === n) || chainsFor(actMbNrs(a)).some(c => c.ch.includes(n))).length;
   el.innerHTML = `<button class="btn" data-action="ff-toggle">Firma: ${esc(label)} ▾</button>
     <div class="firm-filter-panel">
       <label class="all"><input type="checkbox" data-ff="__all" ${all ? 'checked' : ''}> Velg alle</label>
@@ -2248,10 +2257,10 @@ function skCollect() {
       items.push({a, key: a.id, label: a.id, navn: a.navn, firma: a.firma, zone: a.omrade, start: a.startdato, end: endDate(a), status: a.status, dod: [...new Set([...a.dodsrisiko, ...a.at.flatMap(t => t.dodsrisiko)])]});
     } else {
       a.at.forEach(t => {
-        if (seen.has(t) || (st.firms && !st.firms.has(t.firma))) return;
+        if (seen.has(t) || (st.firms && !st.firms.has(atFirmaFor(t, a)))) return;
         seen.add(t);
         const zones = [...new Set(t.plasseringer.map(p => p.sone).filter(Boolean))];
-        (zones.length ? zones : atOmrader(t)).forEach(z => items.push({a, t, key: t.nr + '|' + z, label: t.nr, navn: t.navn, firma: t.firma, zone: z,
+        (zones.length ? zones : atOmrader(t)).forEach(z => items.push({a, t, key: t.nr + '|' + z, label: t.nr, navn: t.navn, firma: atFirmaFor(t, a), zone: z,
           start: t.startdato, end: endDate(t), status: t.status, dod: t.dodsrisiko, placed: zones.length > 0}));
       });
     }
@@ -5095,7 +5104,7 @@ function renderAdmin() {
       <button class="btn primary" data-action="add-firm">Legg til firma</button>
     </div>` : '';
   document.getElementById('firm-list').innerHTML = FIRMS.map((f, i) => {
-    const used = DATA.filter(a => a.firma === f.navn || a.at.some(t => t.firma === f.navn)).length;
+    const used = DATA.filter(a => a.firma === f.navn || a.at.some(t => atFirmaFor(t, a) === f.navn)).length;
     const users = USERS.filter(u => u.firma === f.navn).length;
     return `<div class="list-row">
       ${sys ? `<input type="color" value="${firmColor(f.navn)}" data-firm-color="${i}">` : ''}
@@ -5516,7 +5525,7 @@ document.addEventListener('click', e => {
     if (navn !== old) {
       f.navn = navn;
       DATA.forEach(a => { if (a.firma === old) a.firma = navn; });
-      ATS.forEach(t => { if (t.firma === old) t.firma = navn; });
+      ATS.forEach(t => { if (t.firma === old) t.firma = navn; Object.keys(t.firmaPer || {}).forEach(k => { if (t.firmaPer[k] === old) t.firmaPer[k] = navn; }); });
       METHODS.forEach(m => { if (m.firma === old) m.firma = navn; m.ue = (m.ue || []).map(x => x === old ? navn : x); });
       USERS.forEach(u => { if (u.firma === old) u.firma = navn; });
       ['klargjoring', 'oversikt', 'skrastrek'].forEach(pg => { const set = ui[pg].firms; if (set && set.delete(old)) set.add(navn); });
@@ -5530,7 +5539,7 @@ document.addEventListener('click', e => {
     const f = FIRMS[Number(btn.dataset.i)], to = document.getElementById('firm-move-to').value;
     if (!f || !to || !confirm(`Flytte alt fra ${f.navn} til ${to} og fjerne ${f.navn}?`)) return;
     DATA.forEach(a => { if (a.firma === f.navn) a.firma = to; });
-    ATS.forEach(t => { if (t.firma === f.navn) t.firma = to; });
+    ATS.forEach(t => { if (t.firma === f.navn) t.firma = to; Object.keys(t.firmaPer || {}).forEach(k => { if (t.firmaPer[k] === f.navn) t.firmaPer[k] = to; }); });
     METHODS.forEach(m => { if (m.firma === f.navn) m.firma = to; m.ue = [...new Set((m.ue || []).map(x => x === f.navn ? to : x))].filter(x => x !== m.firma); });
     USERS.forEach(u => { if (u.firma === f.navn) u.firma = to; });
     FIRMS = FIRMS.filter(x => x !== f);
@@ -5657,16 +5666,18 @@ document.addEventListener('change', e => {
   }
   if (f === 'navn' && !v.trim()) { renderTable(page); return; }
   if (f === 'ansvarUtforelse' || f === 'ansvarGodkjenning') v = v.trim();
-  if (!tg.isAct && f === 'omrade') {
-    // Sonen på en AT som gjelder flere aktiviteter, endres bare for denne aktiviteten.
-    const at = tg.obj;
-    if (at.aktiviteter.length > 1) {
-      const per = {...(at.omradePer || {})};
-      if (v === at.omrade) delete per[tg.a.id]; else per[tg.a.id] = v;
-      if (Object.keys(per).length) at.omradePer = per; else delete at.omradePer;
-      save(); renderTable(page); return;
-    }
-    delete at.omradePer;
+  if (!tg.isAct && (f === 'omrade' || f === 'firma')) {
+    // Sone og firma på en AT som gjelder flere aktiviteter, endres bare for denne aktiviteten.
+    const fra = f === 'firma' ? atFirmaFor(tg.obj, tg.a) : atOmrade(tg.obj, tg.a);
+    settAtPerAkt(tg.obj, tg.a, f, v);
+    if (f === 'firma' && fra !== v) logg('AT byttet firma', tg.a.id, `${tg.obj.nr} på ${tg.a.id}: ${fra} → ${v}`);
+    save(); renderTable(page); return;
+  }
+  if (tg.isAct && f === 'firma' && v !== tg.a.firma) {
+    // AT-ene under aktiviteten som hadde aktivitetens firma, følger med – bare for denne aktiviteten.
+    const gammel = tg.a.firma;
+    tg.a.at.forEach(t => { if (atFirmaFor(t, tg.a) === gammel) settAtPerAkt(t, tg.a, 'firma', v); });
+    logg('Aktivitet byttet firma', tg.a.id, `${gammel} → ${v}`);
   }
   setPath(tg.obj, f, v);
   save();

@@ -180,7 +180,8 @@ function fromDoc(d) {
 function toATDoc(t, lookup = actById) {
   const c = JSON.parse(JSON.stringify(t));
   c.plasseringer = pToDoc(t.plasseringer);
-  c.aktFirmaer = [...new Set(t.aktiviteter.map(id => (lookup(id) || {}).firma).filter(Boolean))];
+  // Firma satt per aktivitet på en felles AT (firmaPer) får også endre AT-en.
+  c.aktFirmaer = [...new Set([...t.aktiviteter.map(id => (lookup(id) || {}).firma), ...Object.values(t.firmaPer || {})].filter(Boolean))];
   return c;
 }
 function fromATDoc(d) { const c = {...d}; delete c.aktFirmaer; c.plasseringer = pFromDoc(d.plasseringer); return c; }

@@ -246,6 +246,7 @@ tr.main-row.archived td{background:#f6f6f6}
 tr.main-row.archived .akt-name{color:#57606a}
 .arkiv-tag{background:#e1e4e8;color:#57606a;font-size:10.5px;padding:1px 6px}
 .archive-btn.on{background:#57606a;color:#fff;border-color:#57606a}
+.gronn-btn.on{background:#1a7f37;color:#fff;border-color:#1a7f37}
 tr.week-row.arkiv-row td{background:#eceef1;color:#57606a}
 .carry-tag{background:#fff0d6;color:#9a5b00;font-size:10.5px;padding:1px 6px}
 .sk-panel{position:relative;padding:0;overflow:hidden}
@@ -677,6 +678,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <button class="btn" data-action="expand-all" data-page="oversikt">Vis alle AT-rader</button>
         <button class="btn" data-action="collapse-all" data-page="oversikt">Skjul alle AT-rader</button>
         <button class="btn archive-btn" data-action="toggle-archive" data-page="oversikt">📦 Vis arkiv</button>
+        <button class="btn gronn-btn" data-action="skjul-gronne" data-page="oversikt" title="Skjul aktiviteter der metodebeskrivelse, alle sju forutsetninger og eventuelle hindringer er grønne">🟢 Skjul grønne</button>
       </div>
       <div class="stats" id="stats-oversikt"></div>
       <div class="legend legend-box"></div>
@@ -986,7 +988,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.10';
+const APP_VERSION = '2026-10-07.11';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1352,7 +1354,7 @@ function renderUserBar() {
 // ---------- UI-state ----------
 const ui = {
   klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set(), showArchive: false},
-  oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false},
+  oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false, skjulGronne: false},
   hindringer: {search: '', vis: 'apne', mine: false, apen: new Set()},
   endringer: {apen: new Set(), lukket: new Set()},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
@@ -1530,10 +1532,14 @@ function renderTable(page) {
   const st = ui[page];
   const hits = DATA.filter(a => matches(a, st));
   const nArkiv = hits.filter(erArkiv).length;
-  const rows = hits.filter(a => st.showArchive || !erArkiv(a)).sort((x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
+  // «Skjul grønne» (Totaloversikt): aktiviteter med grønn totalstatus tas ut, så det som gjenstår blir stående.
+  const nGronn = st.skjulGronne !== undefined ? hits.filter(a => (st.showArchive || !erArkiv(a)) && totalStatus(a).lys === 'gronn').length : 0;
+  const rows = hits.filter(a => (st.showArchive || !erArkiv(a)) && !(st.skjulGronne && totalStatus(a).lys === 'gronn')).sort((x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
   const ab = document.querySelector(`.archive-btn[data-page="${page}"]`);
   ab.textContent = st.showArchive ? `📦 Skjul arkiv (${nArkiv})` : `📦 Vis arkiv (${nArkiv})`;
   ab.classList.toggle('on', st.showArchive);
+  const gb = document.querySelector(`.gronn-btn[data-page="${page}"]`);
+  if (gb) { gb.textContent = st.skjulGronne ? `🟢 Vis grønne (${nGronn} skjult)` : `🟢 Skjul grønne (${nGronn})`; gb.classList.toggle('on', !!st.skjulGronne); }
   const groups = new Map();
   const mon = mondayOf(TODAY);
   // Utkikksplan: pågående aktiviteter fra tidligere uker vises i inneværende uke, avsluttede samles i arkivet.
@@ -5289,6 +5295,7 @@ document.addEventListener('click', e => {
   if (action.startsWith('fu-')) { fuAction(action, btn); return; }
   if (action === 'logg-csv') { loggCsv(); return; }
   if (action === 'ff-mine') { ui[btn.dataset.page].firms = new Set([me().firma]); rerenderPage(btn.dataset.page); return; }
+  if (action === 'skjul-gronne') { const p = btn.dataset.page; ui[p].skjulGronne = !ui[p].skjulGronne; rerenderPage(p); return; }
   if (action === 'toggle-archive') { const p = btn.dataset.page; ui[p].showArchive = !ui[p].showArchive; rerenderPage(p); return; }
   if (action === 'expand-all') { const p = btn.dataset.page; DATA.forEach(a => ui[p].expanded.add(a.id)); renderTable(p); return; }
   if (action === 'collapse-all') { const p = btn.dataset.page; ui[p].expanded.clear(); renderTable(p); return; }

@@ -189,7 +189,7 @@ function stable(v) {
   if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}';
   return JSON.stringify(v);
 }
-const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, mbrydd: SETTINGS.mbrydd || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0, hindsett: SETTINGS.hindsett || 0, mbrisiko: SETTINGS.mbrisiko || 0, firmafane: SETTINGS.firmafane === true, mbfane: SETTINGS.mbfane !== false, hindfane: SETTINGS.hindfane !== false, endrfane: SETTINGS.endrfane !== false, tilgang: SETTINGS.tilgang || {}, ansvarrydd: SETTINGS.ansvarrydd || 0, hindfix: SETTINGS.hindfix || 0});
+const settingsDoc = () => ({skrastrek: !!SETTINGS.skrastrek, atkoord: SETTINGS.atkoord !== false, plansett: SETTINGS.plansett || 0, atsett: SETTINGS.atsett || 0, mbrydd: SETTINGS.mbrydd || 0, planImport: SETTINGS.planImport || null, metodesett: SETTINGS.metodesett || 0, registersett: SETTINGS.registersett || 0, hindsett: SETTINGS.hindsett || 0, mbrisiko: SETTINGS.mbrisiko || 0, firmafane: SETTINGS.firmafane === true, mbfane: SETTINGS.mbfane !== false, hindfane: SETTINGS.hindfane !== false, endrfane: SETTINGS.endrfane !== false, tilgang: SETTINGS.tilgang || {}, ansvarrydd: SETTINGS.ansvarrydd || 0, hindfix: SETTINGS.hindfix || 0, redigering: SETTINGS.redigering || {}});
 const userDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle, ...(u.pending && u.kode ? {kode: u.kode} : {})});
 const codeDoc = u => ({name: u.name, email: (u.email || '').toLowerCase(), firma: u.firma, rolle: u.rolle});
 

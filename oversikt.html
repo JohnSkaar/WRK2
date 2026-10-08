@@ -375,6 +375,8 @@ table.logg td.h{white-space:nowrap;font-weight:600}
 @media (min-width:800px){.admin-grid #gen-panel{grid-column:span 2}}
 .gen-ny{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .gen-ny input{flex:1;min-width:180px}
+.tegn-boks .mb-dok-rad{font-size:12px}
+.tegn-drop{font-size:12px;padding:4px 6px;margin-top:4px}
 .rp-topptekst{font-size:17px;font-weight:700;margin-bottom:2px}
 .rp-periode{font-size:13.5px;margin-bottom:4px}
 .rp-hind td{vertical-align:top}
@@ -806,7 +808,7 @@ td.firma-cell{white-space:normal;min-width:130px}
     <div class="panel">
       <h2>AT-koordinering</h2>
       <p class="intro">Aktivitetene fra Statustavlen er lagt ut i sonene for valgt uke. Hver markør viser AT-nummeret og aktiviteten under.
-        <br>• <b>Grønn, fet ramme</b> betyr at aktiviteten har en godkjent AT som gjelder i perioden.
+        <br>• <b>Grønn, fet ramme</b> betyr at aktiviteten har en godkjent AT i Dalux som gjelder i perioden. <b>OBS:</b> WorkPermit Hydro skal samstemme.
         <br>• <b>⚠ Mangler AT</b> betyr at aktiviteten ikke er knyttet til noen AT.
         <br>• Til venstre står AT-ene sortert etter nummer, med aktivitetene de gjelder for. En AT kan gjelde flere aktiviteter.
         <br>• Dra en markør for å flytte den, og trykk på en aktivitet i listen for å finne den på kartet.</p>
@@ -1006,7 +1008,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-07.20';
+const APP_VERSION = '2026-10-08.1';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1426,14 +1428,14 @@ function commonCells(o, ed, firmaEd, kjede = '', omr = o.omrade, fir = o.firma) 
     varighet: `<td class="c">${ed ? `<input type="number" min="1" class="w-num" data-field="varighet" value="${o.varighet}">` : o.varighet}</td>`,
     // Firmakolonnen viser bare hovedfirmaet (entreprenøren). UE-er vises under «Utførelse av firma» og i Statustavlen.
     firma: `<td class="firma-cell">${firmaEd ? selectHtml('firma', FIRMS.map(f => f.navn), fir) : firmBadge(fir)}${ed && DATA.includes(o) ? `<div class="fu-goto">${(o.ue || []).length ? o.ue.map(u => `<div>› ${esc(u.navn)} <i>UE</i>${(u.under || []).map(x => `<div>&nbsp;&nbsp;› ${esc(x.navn)} <i>UE av UE</i></div>`).join('')}</div>`).join('') : '<span class="muted">Ingen UE</span>'}</div>` : ''}</td>`,
-    lys: FORUTSETNINGER.map(([k]) => { const km = (o.fuKommentar || {})[k]; return `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}${km ? `<div class="fu-km" title="${esc(km)}">💬</div>` : ''}</td>`; }).join(''),
+    lys: FORUTSETNINGER.map(([k]) => { const km = (o.fuKommentar || {})[k]; return `<td class="c">${cLys('forutsetninger.' + k, o.forutsetninger[k], ed)}${km ? `<div class="fu-km" title="${esc(km)}">💬</div>` : ''}${k === 'informasjon' && DATA.includes(o) && tegninger(o.id).length ? `<div class="fu-km" title="${tegninger(o.id).length} tegning(er): ${esc(tegninger(o.id).map(d => d.navn).join(', '))}">📐</div>` : ''}</td>`; }).join(''),
     ansvar: ['ansvarUtforelse', 'ansvarGodkjenning'].map(f => `<td class="c">${ed
       ? `<input type="text" class="w-ansvar" data-field="${f}" maxlength="60" list="ansvar-navn" value="${esc(o[f] || '')}" placeholder="Navn" title="${f === 'ansvarUtforelse' ? 'Ansvarlig for utførelse' : 'Ansvarlig for godkjenning'} – skriv inn navn">`
       : o[f] ? `<span class="person" title="${f === 'ansvarUtforelse' ? 'Ansvarlig for utførelse' : 'Ansvarlig for godkjenning'}">${esc(o[f])}</span>` : '<span class="muted">–</span>'}</td>`).join(''),
     kommentar: `<td>${ed ? `<input type="text" class="w-kom" maxlength="120" data-field="kommentar" value="${esc(o.kommentar)}" placeholder="Kort kommentar">` : `<span title="${esc(o.kommentar)}">${esc(o.kommentar)}</span>`}</td>`
   };
 }
-const NCOLS = 22;
+const NCOLS = 23;
 
 function headerRow() {
   return `<tr>
@@ -1441,7 +1443,7 @@ function headerRow() {
     <th class="col-akt">Aktivitet</th><th>Område</th><th class="c">Startuke</th><th>Startdato</th><th class="c">Varighet<br><span class="muted">(dager)</span></th>
     <th>Firma</th><th class="c">Metode-<br>beskrivelse</th><th>AT</th>
     ${FORUTSETNINGER.map(([k, l]) => `<th class="c fu" data-fu="${k}">${l.replace(' ', '<br>')} <button type="button" class="fu-i" data-action="fuinfo" data-fu="${k}" title="Vis sjekkpunktene">i</button></th>`).join('')}
-    <th>Risikonivå</th><th>Dødsrisiko</th><th>Status</th><th class="c">Ansvarlig<br>utførelse</th><th class="c">Ansvarlig<br>godkjenning</th><th>Kommentar</th>
+    <th>Risikonivå</th><th>Dødsrisiko</th><th>Status</th><th class="c">Ansvarlig<br>utførelse</th><th class="c">Ansvarlig<br>godkjenning</th><th>Kommentar</th><th class="c">Forberedende<br>aktivitetsmøte</th>
   </tr>`;
 }
 
@@ -1475,6 +1477,7 @@ function mainRow(a, page) {
     <td>${cStatus(a.status, ed)}</td>
     ${c.ansvar}
     ${c.kommentar}
+    <td class="c">${ed ? `<input type="date" class="w-date" data-field="formote" value="${esc(a.formote || '')}" title="Dato for forberedende aktivitetsmøte">` : a.formote ? `<span title="Forberedende aktivitetsmøte">${fmtNo(a.formote)}</span>` : '<span class="muted">–</span>'}</td>
   </tr>`;
 }
 
@@ -1495,14 +1498,14 @@ function detailRows(a, page) {
     const v = (a.fuKommentar || {})[k] || '';
     return `<td class="fu-kom-cell" rowspan="${span}">${actEd
       ? `<textarea class="fu-kom" data-field="fuKommentar.${k}" data-scope="act" rows="4" maxlength="500" placeholder="Kommentar – ${esc(l.toLowerCase())}">${esc(v)}</textarea>`
-      : v ? `<div class="fu-kom">${esc(v)}</div>` : '<span class="muted">–</span>'}</td>`;
+      : v ? `<div class="fu-kom">${esc(v)}</div>` : (k === 'informasjon' && tegninger(a.id).length ? '' : '<span class="muted">–</span>')}${k === 'informasjon' ? tegnBoks(a, actEd) : ''}</td>`;
   }).join('');
   let h = '';
   if (!n) {
     h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="">
       <td class="col-ctrl"><span class="conn">↳</span></td>
       <td class="col-akt"><span class="muted">Ingen AT registrert på aktiviteten</span></td>
-      <td colspan="5"></td>${metodeCell}<td class="at-nr-cell"><span class="muted">–</span></td>${fuCells}<td colspan="6"></td>
+      <td colspan="5"></td>${metodeCell}<td class="at-nr-cell"><span class="muted">–</span></td>${fuCells}<td colspan="7"></td>
     </tr>`;
   }
   a.at.forEach((t, i) => {
@@ -1520,13 +1523,14 @@ function detailRows(a, page) {
       <td>${cStatus(t.status, ed)}</td>
       ${c.ansvar}
       ${c.kommentar}
+      <td></td>
     </tr>`;
   });
   if (actEd) {
     h += `<tr class="at-row editing" data-id="${esc(a.id)}" data-at="">
       <td class="col-ctrl"></td>
       <td class="col-akt"><button class="btn" data-action="add-at">+ Legg til AT</button></td>
-      <td colspan="5"></td><td></td><td colspan="6"></td>
+      <td colspan="5"></td><td></td><td colspan="7"></td>
     </tr>`;
   }
   return h;
@@ -4624,7 +4628,7 @@ const kanLasteOppMb = m => !!m && !m.ukjent && (isSys() || (firmaAdminHer() && !
 const fmtStr = b => b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' kB';
 const dokIkon = () => '📗';
 // Lenker til dokumentene for en eller flere metodebeskrivelser. kort = bare ikonet.
-const dokLenke = (d, kort) => `<button type="button" class="mb-dok-lenke" data-action="mbdok-open" data-dok="${esc(d.id)}" title="Åpne ${esc(d.navn)} (MB ${esc(d.nr)}, ${fmtStr(d.str)})">${dokIkon(d.navn)}${kort ? '' : ' ' + esc(d.navn)}</button>`;
+const dokLenke = (d, kort) => `<button type="button" class="mb-dok-lenke" data-action="mbdok-open" data-dok="${esc(d.id)}" title="Åpne ${esc(d.navn)} (${d.nr.startsWith('tegn:') ? 'tegning' : 'MB ' + esc(d.nr)}, ${fmtStr(d.str)})">${d.nr.startsWith('tegn:') ? '📐' : dokIkon(d.navn)}${kort ? '' : ' ' + esc(d.navn)}</button>`;
 function mbDokLenker(nrs, kort) { return [].concat(nrs).flatMap(mbDoker).map(d => dokLenke(d, kort)).join(' '); }
 function mbDokBoks(m) {
   const kan = kanLasteOppMb(m), dok = mbDoker(m.nr), laster = ui.metoder.laster === m.nr;
@@ -4656,6 +4660,38 @@ async function idbHent(k) {
   const db = await idb();
   return new Promise((ok, feil) => { const r = db.transaction('mbdok').objectStore('mbdok').get(k); r.onsuccess = () => ok(r.result); r.onerror = () => feil(r.error); });
 }
+// Tegninger på en aktivitet (under forutsetningen Informasjon). Lagres som dokumentene til metodebeskrivelsene, med nr «tegn:<aktivitet>».
+const TEGN_TYPER = /\.(pdf|png|jpe?g|dwg|dxf|tiff?)$/i;
+const tegninger = aid => mbDoker('tegn:' + aid);
+function tegnBoks(a, kan) {
+  const dok = tegninger(a.id), laster = ui.klargjoring.tegnLaster === a.id;
+  if (!kan && !dok.length) return '';
+  return `<div class="tegn-boks"><div class="sub" style="margin-top:4px">📐 Tegninger</div>
+    ${dok.map(d => `<div class="mb-dok-rad">${dokLenke(d, false)}${kan ? ` <button class="mb-x" data-action="mbdok-del" data-dok="${esc(d.id)}" title="Slett tegningen">🗑</button>` : ''}</div>`).join('')}
+    ${kan ? `<label class="mb-drop tegn-drop${laster ? ' laster' : ''}">${laster ? '⏳ Laster opp …' : '📎 Legg til tegning <span class="sub">(PDF, bilde, DWG – maks 15 MB)</span>'}
+      <input type="file" accept=".pdf,.png,.jpg,.jpeg,.dwg,.dxf,.tif,.tiff" multiple hidden data-tegnfil="${esc(a.id)}"></label>` : ''}</div>`;
+}
+async function tegnLastOpp(aid, filer) {
+  const a = actById(aid); if (!a || !canEditAct(a)) return;
+  ui.klargjoring.tegnLaster = aid; renderCurrent();
+  for (const f of filer) {
+    if (!TEGN_TYPER.test(f.name)) { alert(`«${f.name}» er ikke en tegning (PDF, bilde eller DWG/DXF).`); continue; }
+    if (f.size > MBDOK_MAKS) { alert(`«${f.name}» er ${fmtStr(f.size)}. Største tillatte størrelse er 15 MB.`); continue; }
+    const nr = 'tegn:' + aid, gammel = MBDOK.find(d => d.nr === nr && d.navn === f.name);
+    const d = {id: uid() + uid(), nr, navn: f.name, type: f.type || '', str: f.size, tid: new Date().toISOString(), av: me().name || '', firma: a.firma || ''};
+    try {
+      if (CLOUD) await window.cloudMbDokLagre(d, f);
+      else { await idbSett(d.id, f); MBDOK.push(d); writeRaw(MBDOK_KEY, JSON.stringify(MBDOK)); }
+      if (gammel) await mbDokFjern(gammel.id, true);
+      logg('Tegning lastet opp', aid, `${f.name} (${fmtStr(f.size)})${gammel ? ' – erstattet forrige versjon' : ''}`);
+    } catch (e) { alert(`Kunne ikke laste opp «${f.name}»: ${e.message || e}`); }
+  }
+  ui.klargjoring.tegnLaster = null; renderCurrent();
+}
+document.addEventListener('change', e => {
+  const aid = e.target.dataset && e.target.dataset.tegnfil; if (!aid) return;
+  const filer = [...e.target.files]; e.target.value = ''; if (filer.length) tegnLastOpp(aid, filer);
+});
 async function mbDokLastOpp(nr, filer) {
   const m = methodByNr(nr); if (!kanLasteOppMb(m)) return;
   ui.metoder.laster = nr; renderMetoder();
@@ -4675,20 +4711,22 @@ async function mbDokLastOpp(nr, filer) {
 }
 async function mbDokFjern(id, stille) {
   const d = MBDOK.find(x => x.id === id); if (!d) return;
-  if (!stille && !confirm(`Slette «${d.navn}» fra MB ${d.nr}?`)) return;
+  const hvor = d.nr.startsWith('tegn:') ? 'aktivitet ' + d.nr.slice(5) : 'MB ' + d.nr;
+  if (!stille && !(d.nr.startsWith('tegn:') ? canEditAct(actById(d.nr.slice(5)) || {}) : kanLasteOppMb(methodByNr(d.nr)))) return;
+  if (!stille && !confirm(`Slette «${d.navn}» fra ${hvor}?`)) return;
   try {
     if (CLOUD) await window.cloudMbDokSlett(d);
     else { await idbSett(id, undefined); MBDOK = MBDOK.filter(x => x !== d); writeRaw(MBDOK_KEY, JSON.stringify(MBDOK)); }
   } catch (e) { alert('Kunne ikke slette dokumentet: ' + (e.message || e)); return; }
   mbDokCache.delete(id);
-  if (!stille) { logg('Dokument slettet', '', `MB ${d.nr}: ${d.navn}`); renderCurrent(); }
+  if (!stille) { logg(d.nr.startsWith('tegn:') ? 'Tegning slettet' : 'Dokument slettet', d.nr.startsWith('tegn:') ? d.nr.slice(5) : '', `${hvor}: ${d.navn}`); renderCurrent(); }
 }
 const mbDokCache = new Map();
 async function mbDokApne(id) {
   const d = MBDOK.find(x => x.id === id); if (!d) return;
-  const pdf = /\.pdf$/i.test(d.navn);
+  const pdf = /\.pdf$/i.test(d.navn), bilde = /\.(png|jpe?g)$/i.test(d.navn);
   // PDF åpnes i ny fane (vinduet åpnes med en gang, ellers stopper nettleseren det); Word lastes ned.
-  const w = pdf ? window.open('', '_blank') : null;
+  const w = pdf || bilde ? window.open('', '_blank') : null;
   if (w) w.document.write(`<title>${esc(d.navn)}</title><p style="font-family:Arial,sans-serif">Henter ${esc(d.navn)} …</p>`);
   try {
     let blob = mbDokCache.get(id);

@@ -406,6 +406,30 @@ table.logg td.h{white-space:nowrap;font-weight:600}
 .hi-treff{display:block;width:100%;text-align:left;border:1px solid var(--line);border-left:4px solid #888;border-radius:6px;background:#fff;padding:4px 8px;margin-bottom:3px;cursor:pointer;font:inherit;font-size:13px}
 .hi-treff:hover{background:#eef5ff}
 .hi-gruppe h3{font-size:15px;margin:14px 2px 8px}
+.hi-rad{background:#fff;border:1px solid var(--line);border-left:5px solid #d4a72c;border-radius:6px;margin-bottom:4px}
+.hi-rad.forfalt,.hi-rad.kollisjon{border-left-color:var(--red)}.hi-rad.avklart{border-left-color:#1a7f37;opacity:.85}.hi-rad.fu{border-left-color:#bf8700;border-left-style:dashed}
+.hi-rad-hode{display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;font-size:13.5px}
+.hi-rad.fu .hi-rad-hode{cursor:default}
+.hi-rad-hode:hover{background:#f6f8fa}
+.hi-pil{width:12px;color:var(--muted)}
+.hi-rad-tittel{flex:1 1 40%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hi-rad-sist{flex:1 1 30%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hi-rad-of{flex:0 0 auto;white-space:nowrap}
+.hi-rad .hi-frist{flex:0 0 auto;white-space:nowrap}
+.hi-rad-kropp{padding:0 10px 10px}
+.hi-rad-kropp .hi-kort{border:none;border-top:1px solid var(--line);border-radius:0;padding:8px 0 0;margin:0}
+.hi-logg{border-top:1px dashed var(--line);margin-top:8px;padding-top:8px}
+.hi-logg-rad{background:#f6f8fa;border-radius:6px;padding:6px 8px;margin:4px 0;font-size:13px}
+.hi-logg-rad.intern{background:#fff8c5}
+.hi-logg-ny{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.hi-logg-ny textarea{width:100%;font:inherit;font-size:13px}
+.hi-logg-valg{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:13px}
+.hi-oppf{display:flex;flex-wrap:wrap;gap:4px 14px;max-height:120px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-bottom:8px}
+.hi-oppf-valg{font-weight:normal;font-size:13px;display:flex;gap:4px;align-items:center}
+.hr-tallrad{display:flex;gap:10px;margin:12px 0}
+.hr-tall{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column}
+.hr-tall b{font-size:26px}
+@media (max-width:700px){.hi-rad-sist,.hi-rad-of{display:none}.hi-logg-ny{grid-template-columns:1fr}}
 .hi-kort{background:#fff;border:1px solid var(--line);border-left:6px solid #d4a72c;border-radius:8px;padding:10px 12px;margin-bottom:10px}
 .hi-kort.forfalt,.hi-kort.kollisjon{border-left-color:#cf222e}
 .hi-kort.avklart{border-left-color:#1a7f37;opacity:.8}
@@ -625,8 +649,9 @@ td.firma-cell{white-space:normal;min-width:130px}
       <div class="toolbar">
         <input type="search" id="hi-sok" placeholder="Søk aktivitet, ID, ansvarlig, tekst …" style="min-width:280px">
         <select id="hi-vis" title="Vis"><option value="apne">Åpne hindringer</option><option value="alle">Alle</option><option value="avklart">Avklarte</option></select>
-        <button class="btn" data-action="hi-mine" id="hi-mine" title="Der du er ansvarlig eller beslutter, eller som gjelder ditt firma">Bare mine</button>
+        <button class="btn" data-action="hi-mine" id="hi-mine" title="Der du er oppfølger, ansvarlig eller beslutter, eller som gjelder ditt firma">Bare mine</button>
         <button class="btn primary" data-action="hi-ny" id="hi-ny">+ Ny hindring</button>
+        <button class="btn" data-action="hi-rapport" title="Løst siste uke og det som gjenstår, med siste logg">🖨 Hindringsrapport (PDF)</button>
       </div>
       <div class="stats" id="stats-hindringer"></div>
     </div>
@@ -639,6 +664,8 @@ td.firma-cell{white-space:normal;min-width:130px}
         <div class="sv-dlg-row"><label>Ansvarlig for oppfølging<input type="text" id="hif-ansvarlig" list="hif-personer" maxlength="80" placeholder="Navn"></label>
           <label>Beslutning tas av<input type="text" id="hif-beslutter" list="hif-personer" maxlength="80" placeholder="Navn eller rolle, f.eks. Byggherre"></label></div>
         <datalist id="hif-personer"></datalist>
+        <label>Oppfølgere <span class="sub" style="font-weight:normal">– kan skrive i loggen på denne hindringen, også med lesetilgang</span></label>
+        <div id="hif-oppf" class="hi-oppf"></div>
         <label>Gjenstår (ett punkt per linje)<textarea id="hif-gjen" rows="4" placeholder="Det som må gjøres for å få saken avklart"></textarea></label>
         <label>Status / beskrivelse<textarea id="hif-besk" rows="3" placeholder="Hva er situasjonen nå?"></textarea></label>
         <label>Aktiviteter</label>
@@ -1011,7 +1038,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-13.2';
+const APP_VERSION = '2026-10-13.3';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1391,7 +1418,7 @@ function renderUserBar() {
 const ui = {
   klargjoring: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', editing: new Set(), showArchive: false},
   oversikt: {expanded: new Set(), collapsedWeeks: new Set(), firms: null, search: '', showArchive: false, skjulGronne: false},
-  hindringer: {search: '', vis: 'apne', mine: false, apen: new Set()},
+  hindringer: {search: '', vis: 'apne', mine: false, apen: new Set(), utvidet: new Set(), alleLogg: new Set()},
   endringer: {apen: new Set(), lukket: new Set()},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
   statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: [], lenke: false, avh: false},
@@ -1470,7 +1497,7 @@ function mainRow(a, page) {
       <button class="icon-btn expand" data-action="expand" title="${exp ? 'Skjul' : 'Vis'} AT-rader">${exp ? '−' : '+'}</button>
       ${editBtn}
     </td>
-    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : ''}${hindForAkt(a.id).length ? ` <button class="hi-merke" data-action="hi-til" data-akt="${esc(a.id)}" title="${esc(hindForAkt(a.id).map(h => h.tittel).join('\n'))}">⛔ ${hindForAkt(a.id).length} hindring${hindForAkt(a.id).length === 1 ? '' : 'er'}</button>` : ''}</div>${ed ? `<button type="button" class="fu-alle" data-action="alle-ok" title="Sett alle sju produksjonsforutsetningene til grønn (avklart)" ${FORUTSETNINGER.every(([k]) => a.forutsetninger[k] === 'gronn') ? 'disabled' : ''}>🟢 Alle forutsetninger OK</button>` : ''}</td>
+    <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(a.navn)}">` : `<span class="akt-name">${esc(a.navn)}</span>`}<div class="sub">${esc(a.id)}${ark ? ' <span class="badge arkiv-tag">Arkivert</span>' : ''}${hindForAkt(a.id).length ? ` <button class="hi-merke" data-action="hi-til" data-akt="${esc(a.id)}" title="${esc(hindForAkt(a.id).map(h => { const s = sisteLogg(h, true); return h.tittel + (s ? `\n   ${fmtShort(s.tid.slice(0, 10))}: ${kortTxt(s.gjort || s.neste, 90)}` : ''); }).join('\n'))}">⛔ ${hindForAkt(a.id).length} hindring${hindForAkt(a.id).length === 1 ? '' : 'er'}</button>` : ''}</div>${ed ? `<button type="button" class="fu-alle" data-action="alle-ok" title="Sett alle sju produksjonsforutsetningene til grønn (avklart)" ${FORUTSETNINGER.every(([k]) => a.forutsetninger[k] === 'gronn') ? 'disabled' : ''}>🟢 Alle forutsetninger OK</button>` : ''}</td>
     ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
     <td class="c">${cLys('metode.status', a.metode.status, ed, METODE_LYS)}${actMbNrs(a).length ? `<div class="sub">MB ${esc(actMbNrs(a).join(', '))} ${mbDokLenker(actMbNrs(a), true)}</div>` : ''}</td>
     <td>${a.at.length ? a.at.map(t => `<span class="at-chip" data-action="goto-at" data-nr="${esc(t.nr)}" title="Gå til ${esc(t.nr)}">${esc(t.nr)}</span>`).join('<br>') : '<span class="muted">Ingen</span>'}</td>
@@ -3648,7 +3675,7 @@ function renderHindringer() {
   document.getElementById('hi-vis').value = st.vis;
   document.getElementById('hi-mine').classList.toggle('on', st.mine);
   const navn = (me().name || '').toLowerCase();
-  const mine = h => !st.mine || [h.ansvarlig, h.beslutter].some(x => x && navn && x.toLowerCase().includes(navn)) || h.firma === me().firma || (h.aktFirmaer || []).includes(me().firma);
+  const mine = h => !st.mine || erOppfolger(h) || [h.ansvarlig, h.beslutter].some(x => x && navn && x.toLowerCase().includes(navn)) || h.firma === me().firma || (h.aktFirmaer || []).includes(me().firma);
   const alle = HIND.map(h => ({h, v: hindVurder(h)}));
   const liste = alle.filter(({h}) => (st.vis === 'alle' || (st.vis === 'avklart') === (h.status === 'avklart')) && mine(h) && hindTreff(h, q))
     .sort((x, y) => HIND_RANG[x.v.niva] - HIND_RANG[y.v.niva] || (x.v.behov || '').localeCompare(y.v.behov || '') || PRIO_RANG[x.h.prioritet] - PRIO_RANG[y.h.prioritet]);
@@ -3670,11 +3697,7 @@ function renderHindringer() {
     const kan = kanEndreHind(h), igjen = h.gjenstar.filter(g => !g.ferdig), ferdig = h.gjenstar.length - igjen.length;
     const vis = st.apen.has(h.id) ? h.gjenstar : igjen;
     return `<div class="hi-kort ${v.niva}" data-hind="${esc(h.id)}">
-      <div class="hi-topp">
-        <span class="badge hi-prio ${h.prioritet}">${esc(HIND_PRIO[h.prioritet] || h.prioritet)}</span><span class="badge hi-type">${esc(h.type)}</span>
-        <b class="hi-tittel">${esc(h.tittel)}</b>
-        <span class="hi-frist ${v.niva}">${h.frist ? `Frist <b>${fmtShort(h.frist)}</b> <span class="sub">(${omDager(h.frist)})</span>${h.fristForslag ? ' <span class="hi-forslag" title="Foreslått ut fra planen – bekreft eller endre">forslag</span>' : ''}` : '<span class="sub">Ingen frist</span>'}</span>
-      </div>
+      ${h.fristForslag ? '<div class="sub">Fristen er <span class="hi-forslag">foreslått</span> ut fra planen – bekreft eller endre.</div>' : ''}
       ${v.varsler.length ? `<div class="hi-varsel">${v.varsler.map(t => `<span>⚠ ${esc(t)}</span>`).join('')}</div>` : ''}
       <div class="hi-kropp">
         <div class="hi-gjen"><div class="hi-lbl">Gjenstår ${h.gjenstar.length ? `<span class="sub">${ferdig} av ${h.gjenstar.length} utført</span>` : ''}</div>
@@ -3700,11 +3723,147 @@ function renderHindringer() {
       </div>
     </div>`;
   };
+  // Kompakt rad; trykk for å se detaljer, punkter, aktiviteter og loggen.
+  const rad = x => {
+    const {h, v} = x, ut = st.utvidet.has(h.id), s = sisteLogg(h), igjen = h.gjenstar.filter(g => !g.ferdig).length, of = oppfolgerNavn(h);
+    return `<div class="hi-rad ${v.niva}${ut ? ' ut' : ''}" data-hind="${esc(h.id)}">
+      <div class="hi-rad-hode" data-action="hi-utvid" data-hind="${esc(h.id)}" title="${ut ? 'Skjul detaljer' : 'Vis detaljer og logg'}">
+        <span class="hi-pil">${ut ? '▾' : '▸'}</span><span class="sv-lys ${v.lys}"></span>
+        <span class="badge hi-prio ${h.prioritet}">${esc(HIND_PRIO[h.prioritet] || h.prioritet)}</span>
+        <span class="hi-rad-tittel"><b>${esc(h.tittel)}</b> <span class="sub">${esc(h.aktiviteter.slice(0, 3).join(', '))}${h.aktiviteter.length > 3 ? ' …' : ''}${h.kilde === 'Klargjøring' ? ' · fra Klargjøring' : ''}</span></span>
+        <span class="hi-rad-sist sub">${s ? `<b>${fmtShort(s.tid.slice(0, 10))}</b> ${esc(kortTxt(s.gjort || s.neste, 70))}` : igjen ? `${igjen} punkt${igjen === 1 ? '' : 'er'} gjenstår` : ''}</span>
+        <span class="sub hi-rad-of">${of.length ? '👥 ' + esc(of.map(n => n.split(' ')[0]).join(', ')) : esc(h.ansvarlig ? '👤 ' + h.ansvarlig : '')}</span>
+        <span class="hi-frist ${v.niva}">${h.status === 'avklart' ? 'Avklart' : h.frist ? fmtShort(h.frist) : '–'}</span>
+      </div>
+      ${ut ? `<div class="hi-rad-kropp">${kort(x)}${hindLoggHtml(h)}</div>` : ''}
+    </div>`;
+  };
   const grupper = HIND_GRUPPER.map(([k, tittel, forklaring]) => {
     const i = liste.filter(x => hindGruppe(x.h, x.v) === k);
-    return i.length ? `<div class="hi-gruppe"><h3>${tittel} <span class="sub">${i.length} · ${forklaring}</span></h3>${i.map(kort).join('')}</div>` : '';
+    return i.length ? `<div class="hi-gruppe"><h3>${tittel} <span class="sub">${i.length} · ${forklaring}</span></h3>${i.map(rad).join('')}</div>` : '';
   }).join('');
-  document.getElementById('hi-liste').innerHTML = aktBoks + (grupper || `<div class="panel"><p class="muted">${HIND.length ? 'Ingen hindringer passer søket eller filteret.' : 'Ingen hindringer registrert ennå.'}</p></div>`);
+  // Gule og røde forutsetninger fra Klargjøring som ikke følges opp ennå.
+  const fu = st.vis === 'avklart' ? [] : hindFraKlargjoring().filter(x => !q || [x.a.id, x.a.navn, x.l, x.kom].some(s => s.toLowerCase().includes(q)));
+  const fuBoks = fu.length ? `<div class="hi-gruppe"><h3>Fra Klargjøring <span class="sub">${fu.length} · gule og røde forutsetninger som ikke følges opp som hindring ennå</span></h3>
+    ${fu.map(x => `<div class="hi-rad fu"><div class="hi-rad-hode"><span class="hi-pil"></span><span class="sv-lys ${x.v}"></span>
+      <span class="hi-rad-tittel"><b>${esc(x.l)}: ${esc(x.a.navn)}</b> <span class="sub">${esc(x.a.id)} · ${esc(x.a.firma)} · start ${fmtShort(x.a.startdato)}</span></span>
+      <span class="hi-rad-sist sub">${esc(kortTxt(x.kom, 80))}</span>
+      ${kanNyHind() ? `<button class="btn small-dark" data-action="hi-fu-ny" data-akt="${esc(x.a.id)}" data-fu="${esc(x.k)}">＋ Følg opp</button>` : ''}</div></div>`).join('')}</div>` : '';
+  document.getElementById('hi-liste').innerHTML = aktBoks + grupper + fuBoks + (grupper || fuBoks ? '' : `<div class="panel"><p class="muted">${HIND.length ? 'Ingen hindringer passer søket eller filteret.' : 'Ingen hindringer registrert ennå.'}</p></div>`);
+}
+
+// ---------- oppfølging av hindringer: oppfølgere, logg og rapport ----------
+// Oppfølgere (brukere i WRK2) kan skrive i loggen på hindringen selv om de ellers bare har lesetilgang.
+// Hver loggføring har «Gjort» og «Neste», og er enten et internt notat eller vises på aktivitetene.
+const oppfolgerNavn = h => (h.oppfolgere || []).map(id => (USERS.find(u => u.id === id) || {}).name).filter(Boolean);
+const erOppfolger = h => (h.oppfolgere || []).includes(currentUserId);
+const kanLoggeHind = h => kanEndreHind(h) || erOppfolger(h);
+const sisteLogg = (h, offentlig) => (h.logg || []).filter(l => !offentlig || !l.intern).slice(-1)[0];
+const kortTxt = (s, n) => s && s.length > n ? s.slice(0, n - 1) + '…' : (s || '');
+function hindLoggHtml(h) {
+  const kan = kanLoggeHind(h), logg = [...(h.logg || [])].reverse(), vis = ui.hindringer.alleLogg.has(h.id) ? logg : logg.slice(0, 3);
+  return `<div class="hi-logg" data-hind="${esc(h.id)}">
+    <div class="hi-lbl">Logg <span class="sub">${logg.length ? logg.length + ' føringer' : 'ingen føringer ennå'}${oppfolgerNavn(h).length ? ' · oppfølgere: ' + esc(oppfolgerNavn(h).join(', ')) : ''}</span></div>
+    ${vis.map(l => `<div class="hi-logg-rad${l.intern ? ' intern' : ''}">
+      <div class="sub">${fmtNo(l.tid.slice(0, 10))} ${l.tid.slice(11, 16)} · ${esc(l.av || '')} · ${l.intern ? '🔒 internt notat' : '🔗 vises på aktivitetene'}</div>
+      ${l.gjort ? `<div><b>Gjort:</b> ${esc(l.gjort)}</div>` : ''}${l.neste ? `<div><b>Neste:</b> ${esc(l.neste)}</div>` : ''}</div>`).join('')}
+    ${logg.length > 3 ? `<button class="link-btn" data-action="hi-alle-logg" data-hind="${esc(h.id)}">${ui.hindringer.alleLogg.has(h.id) ? 'Vis bare de siste' : `Vis alle ${logg.length}`}</button>` : ''}
+    ${kan ? `<div class="hi-logg-ny">
+      <textarea data-hil="gjort" rows="2" maxlength="600" placeholder="Hva er gjort siden sist?"></textarea>
+      <textarea data-hil="neste" rows="2" maxlength="600" placeholder="Hva skal gjøres videre, og av hvem?"></textarea>
+      <div class="hi-logg-valg"><label><input type="checkbox" data-hil="intern"> 🔒 Internt notat <span class="sub">(vises ikke på aktivitetene)</span></label>
+        <span style="flex:1"></span><button class="btn primary" data-action="hi-logg-lagre" data-hind="${esc(h.id)}">Lagre i loggen</button></div></div>` : ''}
+  </div>`;
+}
+function hindLoggLagre(btn) {
+  const h = HIND.find(x => x.id === btn.dataset.hind); if (!h || !kanLoggeHind(h)) return;
+  const boks = btn.closest('.hi-logg'), v = k => boks.querySelector(`[data-hil="${k}"]`);
+  const gjort = v('gjort').value.trim(), neste = v('neste').value.trim();
+  if (!gjort && !neste) { v('gjort').focus(); return; }
+  h.logg = [...(h.logg || []), {id: uid(), tid: new Date().toISOString(), av: me().name || '', avId: currentUserId, gjort, neste, intern: v('intern').checked}];
+  logg('Hindring: oppfølging', h.aktiviteter.join(', '), `${h.tittel}${gjort ? ' · gjort: ' + kortTxt(gjort, 80) : ''}${neste ? ' · neste: ' + kortTxt(neste, 80) : ''}${v('intern').checked ? ' (internt)' : ''}`);
+  save(); renderHindringer(); showToast('Lagret i loggen.');
+}
+// Gule og røde forutsetninger i Klargjøring som ennå ikke følges opp som hindring.
+function hindFraKlargjoring() {
+  const ut = [];
+  DATA.filter(a => !a.generell && !erArkiv(a) && a.status !== 'Utført').forEach(a => FORUTSETNINGER.forEach(([k, l]) => {
+    const v = a.forutsetninger[k];
+    if (v !== 'gul' && v !== 'rod') return;
+    if (HIND.some(h => h.fu && h.fu.akt === a.id && h.fu.k === k && h.status !== 'avklart')) return;
+    ut.push({a, k, l, v, kom: (a.fuKommentar || {})[k] || ''});
+  }));
+  return ut.sort((x, y) => (x.v === 'rod' ? 0 : 1) - (y.v === 'rod' ? 0 : 1) || x.a.startdato.localeCompare(y.a.startdato));
+}
+function hindFraFu(aid, k) {
+  const a = actById(aid), l = (FORUTSETNINGER.find(([x]) => x === k) || [, k])[1]; if (!a || !kanNyHind()) return;
+  const v = a.forutsetninger[k], tid = new Date().toISOString();
+  const h = {id: 'H' + uid(), tittel: `${l}: ${a.navn}`, type: 'Avklaring', prioritet: v === 'rod' ? 'hoy' : 'middels', beskrivelse: (a.fuKommentar || {})[k] || '',
+    gjenstar: [], aktiviteter: [a.id], ansvarlig: '', beslutter: '', frist: a.startdato >= TODAY ? a.startdato : '', fristForslag: a.startdato >= TODAY,
+    status: 'apen', kilde: 'Klargjøring', fu: {akt: a.id, k}, opprettet: tid, av: me().name || '', firma: isSys() ? 'Skanska' : me().firma, oppfolgere: [], logg: []};
+  h.aktFirmaer = hindAktFirmaer(h); HIND.push(h);
+  logg('Ny hindring', a.id, `${h.tittel} (fra ${LYS[v].kort.toLowerCase()} forutsetning i Klargjøring)`);
+  ui.hindringer.utvidet.add(h.id);
+  save(); renderHindringer();
+}
+// Hindringsrapport (PDF): løst siste uke og det som gjenstår, med siste logg.
+async function hindRapportPdf(btn) {
+  const tekst = btn.textContent; btn.disabled = true; btn.textContent = '⏳ Lager PDF …';
+  let boks = null;
+  try {
+    await lastSkript('vendor/pdfgen/html2canvas.min.js');
+    await lastSkript('vendor/pdfgen/jspdf.umd.min.js');
+    const uke = addDays(TODAY, -7), alle = HIND.map(h => ({h, v: hindVurder(h)}));
+    const lost = alle.filter(x => x.h.status === 'avklart' && x.h.avklart && x.h.avklart.tid.slice(0, 10) >= uke);
+    const apne = alle.filter(x => x.h.status !== 'avklart').sort((x, y) => HIND_RANG[x.v.niva] - HIND_RANG[y.v.niva] || (x.v.behov || '').localeCompare(y.v.behov || ''));
+    const fu = hindFraKlargjoring();
+    const rad = ({h, v}) => { const s = sisteLogg(h), igjen = h.gjenstar.filter(g => !g.ferdig);
+      return `<tr><td><span class="sv-lys ${v.lys}"></span></td><td><b>${esc(h.tittel)}</b><div class="sub">${esc(HIND_PRIO[h.prioritet] || '')} · ${esc(h.type)}${h.aktiviteter.length ? ' · ' + esc(h.aktiviteter.join(', ')) : ''}</div></td>
+        <td class="sub">${h.frist ? fmtNo(h.frist) : '–'}${v.varsler.length ? `<div style="color:var(--red)">${esc(v.varsler[0])}</div>` : ''}</td>
+        <td class="sub">${esc([h.ansvarlig, ...oppfolgerNavn(h)].filter(Boolean).join(', ') || '–')}</td>
+        <td class="sub">${s ? `<i>${fmtShort(s.tid.slice(0, 10))}${s.intern ? ' (internt)' : ''}:</i> ${s.gjort ? '<b>Gjort:</b> ' + esc(s.gjort) : ''}${s.neste ? '<br><b>Neste:</b> ' + esc(s.neste) : ''}` : '–'}
+          ${igjen.length ? `<div>${igjen.slice(0, 4).map(g => '☐ ' + esc(g.tekst)).join('<br>')}${igjen.length > 4 ? `<br>+ ${igjen.length - 4} til` : ''}</div>` : ''}</td></tr>`; };
+    const tab = (l, tom) => l.length ? `<table class="sd-tab rp-hind"><tr><th></th><th>Hindring</th><th>Frist</th><th>Ansvarlig / oppfølger</th><th>Siste status og det som gjenstår</th></tr>${l.map(rad).join('')}</table>` : `<p class="sub">${tom}</p>`;
+    const tall = (n, t, c) => `<div class="hr-tall"><b style="color:${c}">${n}</b><span>${t}</span></div>`;
+    boks = document.createElement('div');
+    boks.className = 'rp-pdf-boks';
+    boks.style.cssText = 'position:absolute;left:-1400px;top:0;width:1000px;background:#fff;padding:20px;font-family:Arial,Helvetica,sans-serif';
+    boks.innerHTML = `<div class="rp-topptekst">Hindringsrapport WRK · ${fmtNo(TODAY)}</div><div class="sub">Status på hindringer prioritet: det som er løst siste uke (${fmtShort(uke)}–${fmtShort(TODAY)}) og det som gjenstår. Laget av ${esc(me().name || '')}.</div>
+      <div class="hr-tallrad">${tall(apne.length, 'åpne', '#1b1f24')}${tall(apne.filter(x => hindGruppe(x.h, x.v) === 'haster').length, 'haster', 'var(--red)')}${tall(apne.filter(x => x.v.niva === 'forfalt').length, 'frist passert', 'var(--red)')}${tall(lost.length, 'løst siste uke', 'var(--green)')}${tall(fu.length, 'gule/røde forutsetninger uten oppfølging', '#9a6700')}</div>
+      <h4 style="color:var(--green)">Løst siste uke</h4>${lost.length ? `<table class="sd-tab rp-hind"><tr><th></th><th>Hindring</th><th>Løst</th><th>Siste logg</th></tr>${lost.map(({h}) => { const s = sisteLogg(h); return `<tr><td><span class="sv-lys gronn"></span></td><td><b>${esc(h.tittel)}</b><div class="sub">${esc(h.aktiviteter.join(', '))}</div></td><td class="sub">${fmtNo(h.avklart.tid.slice(0, 10))}${h.avklart.av ? '<br>' + esc(h.avklart.av) : ''}</td><td class="sub">${s ? (s.gjort ? esc(s.gjort) : esc(s.neste || '')) : '–'}</td></tr>`; }).join('')}</table>` : '<p class="sub">Ingen hindringer er løst siste uke.</p>'}
+      ${HIND_GRUPPER.filter(([k]) => k !== 'avklart').map(([k, t, f]) => { const l = apne.filter(x => hindGruppe(x.h, x.v) === k); return l.length ? `<h4>Gjenstår – ${esc(t)} <span class="sub">${l.length} · ${esc(f)}</span></h4>${tab(l, '')}` : ''; }).join('') || '<p class="sub">Ingen åpne hindringer.</p>'}
+      ${fu.length ? `<h4 style="color:#9a6700">Gule og røde forutsetninger i Klargjøring som ikke følges opp som hindring</h4><ul class="rp-liste">${fu.map(x => `<li><span class="sv-lys ${x.v}"></span> <b>${esc(x.a.id)}</b> ${esc(x.a.navn)} – ${esc(x.l)}${x.kom ? ': <i>' + esc(x.kom) + '</i>' : ''} <span class="sub">(start ${fmtShort(x.a.startdato)})</span></li>`).join('')}</ul>` : ''}`;
+    document.body.appendChild(boks);
+    await lagPdf(boks, `Hindringsrapport WRK ${TODAY}.pdf`, `Hindringsrapport WRK - ${fmtNo(TODAY)}`);
+  } catch (e) { alert('Kunne ikke lage PDF: ' + (e.message || e)); }
+  finally { if (boks) boks.remove(); btn.disabled = false; btn.textContent = tekst; }
+}
+// Lager A4-PDF av et element som ligger utenfor skjermen (bredde 1000 px), med sideskift mellom rader og avsnitt.
+async function lagPdf(boks, filnavn, fot) {
+  const B = boks.offsetWidth, topp = boks.getBoundingClientRect().top;
+  const brudd = [...boks.querySelectorAll('tr, li, h4, p, .hr-tallrad')].map(e => e.getBoundingClientRect().bottom - topp).sort((a, b) => a - b);
+  const lerret = await html2canvas(boks, {scale: 2, backgroundColor: '#ffffff', logging: false});
+  const {jsPDF} = window.jspdf, pdf = new jsPDF({unit: 'mm', format: 'a4', orientation: 'portrait'});
+  const marg = 10, bredde = 210 - 2 * marg, hoyde = 297 - 2 * marg - 8, pxPerMm = B / bredde, sideH = hoyde * pxPerMm;
+  const totalH = boks.scrollHeight, kutt = [0];
+  while (totalH - kutt[kutt.length - 1] > sideH) {
+    const start = kutt[kutt.length - 1], b = brudd.filter(y => y > start + sideH * .5 && y <= start + sideH).pop();
+    kutt.push(b || start + sideH);
+  }
+  kutt.push(totalH);
+  const skala = lerret.width / B;
+  for (let i = 0; i < kutt.length - 1; i++) {
+    const y0 = kutt[i], h = kutt[i + 1] - y0;
+    const del = document.createElement('canvas'); del.width = lerret.width; del.height = Math.max(1, Math.ceil(h * skala));
+    const ctx = del.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, del.width, del.height);
+    ctx.drawImage(lerret, 0, Math.floor(y0 * skala), lerret.width, del.height, 0, 0, lerret.width, del.height);
+    if (i) pdf.addPage();
+    pdf.addImage(del.toDataURL('image/jpeg', 0.92), 'JPEG', marg, marg, bredde, h / pxPerMm);
+    pdf.setFontSize(8); pdf.setTextColor(110);
+    pdf.text(fot, marg, 297 - 6);
+    pdf.text(`Side ${i + 1} av ${kutt.length - 1}`, 210 - marg, 297 - 6, {align: 'right'});
+  }
+  pdf.save(filnavn);
 }
 
 // ----- dialog for ny / endre -----
@@ -3719,6 +3878,9 @@ function hindApne(h, aktId) {
   $('hif-prio').innerHTML = Object.entries(HIND_PRIO).map(([k, l]) => `<option value="${k}" ${k === o.prioritet ? 'selected' : ''}>${l}</option>`).join('');
   $('hif-frist').value = o.frist || '';
   $('hif-ansvarlig').value = o.ansvarlig || ''; $('hif-beslutter').value = o.beslutter || '';
+  const valgte = new Set(o.oppfolgere || []);
+  $('hif-oppf').innerHTML = USERS.filter(u => !u.pending).sort((x, y) => (x.name || '').localeCompare(y.name || '', 'nb'))
+    .map(u => `<label class="hi-oppf-valg"><input type="checkbox" value="${esc(u.id)}" ${valgte.has(u.id) ? 'checked' : ''}> ${esc(u.name || u.email || u.id)} <span class="sub">${esc(u.firma || '')}</span></label>`).join('') || '<span class="sub">Ingen brukere.</span>';
   $('hif-besk').value = o.beskrivelse || '';
   $('hif-gjen').value = o.gjenstar.map(g => g.tekst).join('\n');
   $('hif-personer').innerHTML = [...new Set([...USERS.filter(u => !u.pending).map(u => u.name), ...HIND.flatMap(x => [x.ansvarlig, x.beslutter]), 'Byggherre'].filter(Boolean))].sort().map(n => `<option value="${esc(n)}">`).join('');
@@ -3751,7 +3913,7 @@ function hindLagre() {
   const tittel = $('hif-tittel').value.trim(); if (!tittel) { $('hif-tittel').focus(); return false; }
   const tidligere = new Map((gammel ? gammel.gjenstar : []).map(g => [g.tekst, g.ferdig]));
   const data = {tittel, type: $('hif-type').value, prioritet: $('hif-prio').value, frist: $('hif-frist').value, ansvarlig: $('hif-ansvarlig').value.trim(), beslutter: $('hif-beslutter').value.trim(),
-    beskrivelse: $('hif-besk').value.trim(), gjenstar: $('hif-gjen').value.split('\n').map(t => t.trim()).filter(Boolean).map(tekst => ({tekst, ferdig: !!tidligere.get(tekst)})), aktiviteter: [...hiDlg.akt]};
+    beskrivelse: $('hif-besk').value.trim(), oppfolgere: [...document.querySelectorAll('#hif-oppf input:checked')].map(x => x.value), gjenstar: $('hif-gjen').value.split('\n').map(t => t.trim()).filter(Boolean).map(tekst => ({tekst, ferdig: !!tidligere.get(tekst)})), aktiviteter: [...hiDlg.akt]};
   if (gammel) {
     if (gammel.frist !== data.frist) data.fristForslag = false;
     Object.assign(gammel, data); gammel.aktFirmaer = hindAktFirmaer(gammel);
@@ -3781,6 +3943,11 @@ function hindAction(action, btn) {
   const h = btn.dataset.hind && HIND.find(x => x.id === btn.dataset.hind);
   if (action === 'hi-ny') { hindApne(null, btn.dataset.akt); return; }
   if (action === 'hi-mine') { ui.hindringer.mine = !ui.hindringer.mine; renderHindringer(); return; }
+  if (action === 'hi-utvid') { const s = ui.hindringer.utvidet, id = btn.dataset.hind; s.has(id) ? s.delete(id) : s.add(id); renderHindringer(); return; }
+  if (action === 'hi-alle-logg') { const s = ui.hindringer.alleLogg, id = btn.dataset.hind; s.has(id) ? s.delete(id) : s.add(id); renderHindringer(); return; }
+  if (action === 'hi-logg-lagre') { hindLoggLagre(btn); return; }
+  if (action === 'hi-fu-ny') { hindFraFu(btn.dataset.akt, btn.dataset.fu); return; }
+  if (action === 'hi-rapport') { hindRapportPdf(btn); return; }
   if (action === 'hi-endre' && h) { hindApne(h); return; }
   if (action === 'hi-vis-akt' && h) { const s = ui.hindringer.apen, k = h.id + ':akt'; s.has(k) ? s.delete(k) : s.add(k); renderHindringer(); return; }
   if (action === 'hi-vis-ferdige' && h) { const s = ui.hindringer.apen; s.has(h.id) ? s.delete(h.id) : s.add(h.id); renderHindringer(); return; }
@@ -4485,7 +4652,8 @@ function hindRapport(siden) {
   return HIND.filter(h => h.status !== 'avklart' || !siden || (h.avklart && h.avklart.tid >= siden)).map(h => ({
     id: h.id, tittel: h.tittel, type: h.type, prioritet: h.prioritet, status: h.status, lys: h.status === 'avklart' ? 'gronn' : hindVurder(h).lys,
     avklart: h.avklart ? {tid: h.avklart.tid, av: h.avklart.av || ''} : null, kommentar: h.beskrivelse || '', frist: h.frist || '', ansvarlig: h.ansvarlig || '', beslutter: h.beslutter || '',
-    aktiviteter: [...h.aktiviteter], gjenstar: h.gjenstar.map(g => ({tekst: g.tekst, ferdig: !!g.ferdig}))
+    aktiviteter: [...h.aktiviteter], gjenstar: h.gjenstar.map(g => ({tekst: g.tekst, ferdig: !!g.ferdig})),
+    sist: (s => s ? {tid: s.tid, av: s.av, gjort: s.gjort, neste: s.neste} : null)(sisteLogg(h, true))
   })).sort((x, y) => (x.status === 'avklart') - (y.status === 'avklart') || (x.frist || '9').localeCompare(y.frist || '9'));
 }
 // Sammenligning med en eldre plan (f.eks. den opprinnelige): PDF-en leses og kobles til dagens aktiviteter, uten at noe i planen endres.
@@ -4579,7 +4747,7 @@ function renderEndringer() {
         ${r.hindringer ? `<h4>Hindringer <span class="sub">– åpne hindringer, og de som er løst siden forrige planoppdatering</span></h4>
           ${r.hindringer.length ? `<table class="sd-tab rp-hind"><tr><th></th><th>Hindring</th><th>Kommentar / status</th><th>Gjenstår</th><th>Frist · ansvarlig</th><th>Løst</th></tr>
           ${r.hindringer.map(h => `<tr><td><span class="sv-lys ${h.lys}"></span></td><td><b>${esc(h.tittel)}</b><div class="sub">${esc(h.type || '')}${h.aktiviteter.length ? ' · ' + esc(h.aktiviteter.join(', ')) : ''}</div></td>
-            <td class="sub">${h.kommentar ? esc(h.kommentar) : '–'}</td>
+            <td class="sub">${h.kommentar ? esc(h.kommentar) : '–'}${h.sist ? `<div style="margin-top:4px"><i>${fmtShort(h.sist.tid.slice(0, 10))}${h.sist.av ? ' ' + esc(h.sist.av) : ''}:</i> ${h.sist.gjort ? '<b>Gjort:</b> ' + esc(h.sist.gjort) : ''}${h.sist.neste ? ' <b>Neste:</b> ' + esc(h.sist.neste) : ''}</div>` : ''}</td>
             <td class="sub">${h.gjenstar.length ? h.gjenstar.map(g => `${g.ferdig ? '☑' : '☐'} ${esc(g.tekst)}`).join('<br>') : '–'}</td>
             <td class="sub">${h.frist ? fmtNo(h.frist) : '–'}${h.ansvarlig ? '<br>' + esc(h.ansvarlig) : ''}${h.beslutter ? '<br>Beslutter: ' + esc(h.beslutter) : ''}</td>
             <td>${h.status === 'avklart' ? `<b style="color:var(--green)">Løst ${h.avklart ? fmtNo(h.avklart.tid.slice(0, 10)) : ''}</b>${h.avklart && h.avklart.av ? `<div class="sub">${esc(h.avklart.av)}</div>` : ''}` : '<b style="color:var(--red)">Åpen</b>'}</td></tr>`).join('')}</table>` : '<p class="sub">Ingen åpne hindringer.</p>'}` : ''}

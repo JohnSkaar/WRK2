@@ -89,7 +89,10 @@ service cloud.firestore {
       allow create: if sys() || (member() && me().rolle == 'firmaadmin' && request.resource.data.firma == me().firma);
       allow update: if sys() || (member() && me().rolle == 'firmaadmin'
         && (resource.data.firma == me().firma || me().firma in resource.data.get('aktFirmaer', []))
-        && request.resource.data.firma == resource.data.firma);
+        && request.resource.data.firma == resource.data.firma)
+        // Oppfølgere på hindringen kan skrive i loggen (bare feltet «logg» kan endres).
+        || (member() && request.auth.uid in resource.data.get('oppfolgere', [])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['logg']));
       allow delete: if sys() || (member() && me().rolle == 'firmaadmin' && resource.data.firma == me().firma);
     }
     // Dokumenter til metodebeskrivelsene (PDF/Word), lagret i biter under «deler».

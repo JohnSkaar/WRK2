@@ -1008,7 +1008,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-08.1';
+const APP_VERSION = '2026-10-13.1';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -3873,7 +3873,7 @@ async function sdLesPdf(buf) {
 // Tolker tidslinjen: kolonner (uke/dag), sonerader (rutene til venstre) og stolper.
 function sdTolk(rects, tekster) {
   const adv = [];
-  const uker = tekster.filter(t => /^(week|uke)\s*\d{1,2}$/i.test(t.s)).map(t => ({uke: +t.s.match(/\d+/)[0], xm: (t.x0 + t.x1) / 2, y1: t.y1})).sort((p, q) => p.xm - q.xm);
+  const uker = tekster.filter(t => /^(week|wk|uke|u)\.?\s*\d{1,2}$/i.test(t.s)).map(t => ({uke: +t.s.match(/\d+/)[0], xm: (t.x0 + t.x1) / 2, y1: t.y1})).sort((p, q) => p.xm - q.xm);
   if (uker.length < 1) throw new Error('Fant ikke ukene i PDF-en. Bruk tidslinjevisningen i Sitedrive med uker øverst.');
   const mnd = tekster.map(t => ({t, m: t.s.toLowerCase().match(/^([a-zæøå]+)\s*-?\s*(\d{4})$/)})).filter(x => x.m && SD_MND[x.m[1]]).map(x => ({x: x.t.x0, aar: +x.m[2], mnd: SD_MND[x.m[1]]})).sort((p, q) => p.x - q.x);
   const ukeB = uker.length > 1 ? (uker[uker.length - 1].xm - uker[0].xm) / (uker.length - 1) : 0;
@@ -3890,6 +3890,38 @@ function sdTolk(rects, tekster) {
     const mandag = isoMandag(u.uke, aar);
     for (let k = 0; k < n; k++) kol.push({dato: addDays(mandag, k), x0: x0 + k * bredde / n, x1: x0 + (k + 1) * bredde / n});
   });
+  // Dagnumrene øverst (13, 14, 15 …) gir den sikreste datoaksen: hver etikett står midt over sin dag.
+  // Første dag dateres ut fra uken den står under; deretter telles det fram til neste dagnummer (helger kan være skjult).
+  {
+    const dager = dagT.map(t => ({n: +t.s.match(/^\d+/)[0], xm: (t.x0 + t.x1) / 2})).sort((p, q) => p.xm - q.xm);
+    if (dager.length >= 5) {
+      const f = dager[0], u = [...uker].sort((p, q) => Math.abs(p.xm - f.xm) - Math.abs(q.xm - f.xm))[0];
+      const m = mnd.filter(x => x.x <= u.xm + 40).pop() || mnd[0];
+      let aar = m ? m.aar : new Date().getFullYear();
+      if (m && m.mnd === 12 && u.uke < 10) aar++; if (m && m.mnd === 1 && u.uke > 50) aar--;
+      const man = isoMandag(u.uke, aar);
+      let d = [0, 1, 2, 3, 4, 5, 6].map(k => addDays(man, k)).find(x => parseD(x).getDate() === f.n);
+      const avst = dager.slice(1).map((x, i) => x.xm - dager[i].xm).sort((p, q) => p - q), dw = avst[Math.floor(avst.length / 2)];
+      const ny = [];
+      for (let i = 0; d && i < dager.length; i++) {
+        if (i) { let k = 0; do { d = addDays(d, 1); k++; } while (parseD(d).getDate() !== dager[i].n && k < 10); if (k >= 10) { d = null; break; } }
+        ny.push({dato: d, x0: dager[i].xm - dw / 2, x1: dager[i].xm + dw / 2});
+      }
+      if (d && ny.length === dager.length) kol.splice(0, kol.length, ...ny);
+    }
+  }
+  // Eksporten kan starte (eller slutte) midt i en uke uten ukeetikett. Kolonnene forlenges da mot sonerutene til venstre
+  // og mot høyre kant, med samme dagbredde og uten skjulte helgedager.
+  {
+    const lysC = c => c[0] > 235 && c[1] > 235 && c[2] > 235, topp = Math.max(...uker.map(u => u.y1));
+    const dw = kol[0].x1 - kol[0].x0, fem = kol.filter(k => mondayOf(k.dato) === mondayOf(kol[0].dato)).length === 5;
+    const graC = c => Math.abs(c[0] - c[1]) < 6 && Math.abs(c[1] - c[2]) < 6;
+    const hopp = (d, steg) => { let x = addDays(d, steg); if (fem) while ([0, 6].includes(parseD(x).getDay())) x = addDays(x, steg); return x; };
+    const kantV = Math.max(0, ...rects.filter(r => lysC(r.c) && r.y0 >= topp && r.x1 <= kol[0].x0 + 4 && r.x1 > kol[0].x0 - 8 * dw && r.x1 - r.x0 > 15 && r.y1 - r.y0 > 12).map(r => r.x1));
+    if (kantV) while (kol[0].x0 - dw > kantV - dw * .5) kol.unshift({dato: hopp(kol[0].dato, -1), x0: kol[0].x0 - dw, x1: kol[0].x0});
+    const stolpeH = Math.max(0, ...rects.filter(r => !lysC(r.c) && !graC(r.c) && r.y0 >= topp && r.y1 - r.y0 >= 12 && r.y1 - r.y0 <= 300 && r.x1 - r.x0 >= 10 && r.x0 >= kantV - 3).map(r => r.x1));
+    while (stolpeH > kol[kol.length - 1].x1 + dw * .5) kol.push({dato: hopp(kol[kol.length - 1].dato, 1), x0: kol[kol.length - 1].x1, x1: kol[kol.length - 1].x1 + dw});
+  }
   const gL = kol[0].x0, gR = kol[kol.length - 1].x1;
   const gT = Math.max(...dagT.map(t => t.y1), ...uker.map(u => u.y1)) + 1;
   const lys = c => c[0] > 235 && c[1] > 235 && c[2] > 235;
@@ -3909,7 +3941,10 @@ function sdTolk(rects, tekster) {
     return {y0: r.y0, y1: r.y1, raa: farNavn ? `${farNavn} / ${r.navn}` : r.navn};
   }).sort((p, q) => p.y0 - q.y0);
   if (!soner.length) throw new Error('Fant ikke sonene til venstre i PDF-en.');
-  const stolper = rects.filter(r => !lys(r.c) && !gra(r.c) && r.x0 >= gL - 3 && r.x1 <= gR + 3 && r.y0 >= gT - 1 && r.y1 - r.y0 >= 12 && r.x1 - r.x0 >= 10);
+  const tol = Math.max(3, (gR - gL) / kol.length * .6);
+  // Markeringer som går over flere soner (f.eks. juleferie) er ikke aktiviteter.
+  const sonH = Math.max(...soner.map(z => z.y1 - z.y0));
+  const stolper = rects.filter(r => !lys(r.c) && !gra(r.c) && r.x0 >= gL - tol && r.x1 <= gR + tol && r.y0 >= gT - 1 && r.y1 - r.y0 >= 12 && r.y1 - r.y0 <= sonH + 4 && r.x1 - r.x0 >= 10);
   // Farge → team, lært fra stolper som har teamet skrevet i seg.
   const fkey = c => c.map(v => Math.round(v / 8)).join(',');
   const rader = stolper.map(r => {
@@ -3935,7 +3970,7 @@ function sdTolk(rects, tekster) {
     const sonenavn = sone ? sone.raa : '';
     const team = metaTekst.find(m => !soner.some(z => sdNorm(z.raa).endsWith(sdNorm(m))) && !/^\d{4}\s*-/.test(m)) || '';
     return {sone: sonenavn, team, start: kol[Math.max(0, sKol)].dato, slutt: kol[Math.max(0, eKol)].dato, navn, avkortet,
-      startKant: r.x0 <= gL + 3, sluttKant: r.x1 >= gR - 3, farge: fkey(r.c), rgb: r.c, y: r.y0};
+      startKant: r.x0 <= gL + tol, sluttKant: r.x1 >= gR - tol, farge: fkey(r.c), rgb: r.c, y: r.y0};
   }).filter(r => r.navn);
   const fargeTeam = {};
   rader.filter(r => r.team).forEach(r => { (fargeTeam[r.farge] = fargeTeam[r.farge] || {})[r.team] = ((fargeTeam[r.farge] || {})[r.team] || 0) + 1; });
@@ -4156,12 +4191,15 @@ function sdStatusFarge(c) {
   const [d, s] = SD_STATUSFARGER.map(([f, s]) => [Math.hypot(f[0] - c[0], f[1] - c[1], f[2] - c[2]), s]).sort((p, q) => p[0] - q[0])[0];
   return d <= 30 ? s : null;
 }
-const sdErStatusplan = res => res.rader.length > 0 && res.rader.every(r => sdStatusFarge(r.rgb));
+const sdErStatusplan = res => res.rader.length > 0 && res.rader.filter(r => sdStatusFarge(r.rgb)).length >= res.rader.length * .9;
 // Kobler statusplanens rader til firmaplanens: samme sone, start og slutt, og navn som stemmer (navnene kan være brutt ulikt i PDF-ene).
 function sdKobleStatus(rader, statusRader) {
   const kort = s => sdNorm(s).replace(/ /g, ''), brukt = new Set();
   return rader.map(r => {
-    const kand = statusRader.map((x, j) => ({x, j})).filter(({x, j}) => !brukt.has(j) && sdNorm(x.sone) === sdNorm(r.sone) && x.start === r.start && x.slutt === r.slutt);
+    // Ved planens kanter kan start/slutt avvike mellom filene (ulik periode), så der holder det at begge ligger i kanten.
+    const likStart = x => x.start === r.start || (x.startKant && r.startKant) || (x.startKant && x.start >= r.start) || (r.startKant && r.start >= x.start);
+    const likSlutt = x => x.slutt === r.slutt || (x.sluttKant && r.sluttKant) || (x.sluttKant && x.slutt <= r.slutt) || (r.sluttKant && r.slutt <= x.slutt);
+    const kand = statusRader.map((x, j) => ({x, j})).filter(({x, j}) => !brukt.has(j) && sdNorm(x.sone) === sdNorm(r.sone) && likStart(x) && likSlutt(x));
     const a = kort(r.navn);
     const best = kand.find(({x}) => kort(x.navn) === a) || kand.find(({x}) => { const b = kort(x.navn); return b.length >= 4 && (a.startsWith(b) || b.startsWith(a)); }) || (kand.length === 1 ? kand[0] : null);
     if (!best) return null;

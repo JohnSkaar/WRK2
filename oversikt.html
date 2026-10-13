@@ -243,6 +243,9 @@ select.week-sel{padding:7px 8px;border:1px solid #d0d7de;border-radius:6px;font-
 .roles{margin:6px 0 8px 18px;font-size:13px}
 .roles li{margin-bottom:3px}
 tr.main-row.archived td{background:#f6f6f6}
+tr.utfort:not(.editing) td{background:#eceef0 !important;color:#8c959f}
+tr.utfort:not(.editing) td > *:not(.icon-btn):not(button){opacity:.6;filter:grayscale(1)}
+tr.utfort:not(.editing) .akt-name{text-decoration:line-through;text-decoration-color:#8c959f}
 tr.main-row.archived .akt-name{color:#57606a}
 .arkiv-tag{background:#e1e4e8;color:#57606a;font-size:10.5px;padding:1px 6px}
 .archive-btn.on{background:#57606a;color:#fff;border-color:#57606a}
@@ -290,7 +293,7 @@ tr.main-row.flash-main td{animation:flash 1.6s}
 .sv-bar:hover,.sv-bar.hover{box-shadow:0 0 0 2px #24292f,0 3px 8px rgba(0,0,0,.25);z-index:2}
 .sv-bar.cut-l{border-top-left-radius:0;border-bottom-left-radius:0}
 .sv-bar.cut-r{border-top-right-radius:0;border-bottom-right-radius:0}
-.sv-bar.done{opacity:.45}
+.sv-bar.done{opacity:.45;filter:grayscale(1)}
 .sv-bar .txt{overflow:hidden;text-overflow:ellipsis}
 .sv-switch{display:inline-flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;user-select:none;padding:4px 2px;position:relative}
 .sv-switch input{position:absolute;opacity:0;width:1px;height:1px}
@@ -1008,7 +1011,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-13.1';
+const APP_VERSION = '2026-10-13.2';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1462,7 +1465,7 @@ function mainRow(a, page) {
       : `<span class="icon-btn lock-ico" title="Bare ${esc(a.firma)} eller systemadministrator kan endre">🔒</span>`;
   }
   const ark = erArkiv(a);
-  return `<tr class="main-row${editing ? ' editing' : ''}${ark ? ' archived' : ''}" data-id="${esc(a.id)}" data-at="">
+  return `<tr class="main-row${editing ? ' editing' : ''}${ark ? ' archived' : ''}${a.status === 'Utført' ? ' utfort' : ''}" data-id="${esc(a.id)}" data-at="">
     <td class="col-ctrl">
       <button class="icon-btn expand" data-action="expand" title="${exp ? 'Skjul' : 'Vis'} AT-rader">${exp ? '−' : '+'}</button>
       ${editBtn}
@@ -1511,7 +1514,7 @@ function detailRows(a, page) {
   a.at.forEach((t, i) => {
     const ed = editing && canEditAT(a, t);
     const c = commonCells(t, ed, editing && canEditAct(a), '', atOmrade(t, a), atFirmaFor(t, a));
-    h += `<tr class="at-row${editing ? ' editing' : ''}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(a.id)}-${esc(t.nr)}">
+    h += `<tr class="at-row${editing ? ' editing' : ''}${a.status === 'Utført' ? ' utfort' : ''}" data-id="${esc(a.id)}" data-at="${i}" id="row-${page}-${esc(a.id)}-${esc(t.nr)}">
       <td class="col-ctrl">${actEd ? `<button class="icon-btn danger" data-action="del-at" title="Slett ${esc(t.nr)}">🗑</button> ` : ''}<span class="conn">↳</span></td>
       <td class="col-akt">${ed ? `<input type="text" class="w-text" data-field="navn" value="${esc(t.navn)}">` : esc(t.navn)}<div class="sub">${esc(t.nr)}${t.metode ? ` · MB ${esc(t.metode)} ${mbDokLenker(t.metode, false)}` : ''}</div></td>
       ${c.omrade}${c.uke}${c.dato}${c.varighet}${c.firma}
@@ -4041,10 +4044,14 @@ function sdBrukStatus(statusRes) {
   const s = sdImp;
   s.status = sdKobleStatus(s.rader, statusRes.rader);
   s.statusMeta = {...statusRes.meta, koblet: s.status.filter(Boolean).length, rader: statusRes.rader.length};
-  // Grønt i statusplanen = fullført: aktiviteten utgår (som de som står som utført i WRK2), og lages ikke på nytt.
+  // Grønt i statusplanen = utført. Første gang blir aktiviteten stående som utført (grået ut); var den allerede
+  // meldt utført i en tidligere statusplan, utgår den nå. Grønne rader som ikke finnes i WRK2, lages ikke.
+  s.nyUtfort = new Set();
   s.status.forEach((st, i) => {
     if (s.valg[i] === 'ny' || !st) return;
-    if (st === 'Utført') { s.fullfort.add(s.valg[i]); if (!s.fullfortAlle.includes(s.valg[i])) s.fullfortAlle.push(s.valg[i]); }
+    const a = actById(s.valg[i]);
+    if (st === 'Utført' && a && a.sdUtfort) { s.fullfort.add(a.id); if (!s.fullfortAlle.includes(a.id)) s.fullfortAlle.push(a.id); }
+    else if (st === 'Utført') { s.fullfort.delete(s.valg[i]); s.nyUtfort.add(s.valg[i]); }
     else s.fullfort.delete(s.valg[i]); // statusplanen sier at den ikke er ferdig – beholdes (kan krysses av i forhåndsvisningen)
   });
 }
@@ -4117,6 +4124,7 @@ function sdVisForhandsvisning() {
         <table class="sd-tab"><tr><th>Utgår</th><th>Aktivitet</th><th>I den nye planen</th></tr>${s.fullfortAlle.map(actById).filter(Boolean).map(a => { const i = s.valg.indexOf(a.id), r = i >= 0 && s.rader[i];
           return `<tr><td class="c"><input type="checkbox" data-sd-ff="${esc(a.id)}" ${s.fullfort.has(a.id) ? 'checked' : ''}></td><td><b>${esc(a.id)}</b> ${esc(a.navn)}<div class="sub">${esc(a.omrade)} · ${esc(a.firma)} · ${fmtShort(a.startdato)}–${fmtShort(endDate(a))}</div></td>
             <td class="sub">${r ? `${fmtShort(r.start)}–${fmtShort(r.slutt)}${s.status && s.status[i] ? ` · <span class="badge ${STATUS_CLS[s.status[i]]}">${s.status[i] === 'Utført' ? 'grønn i statusplanen' : s.status[i].toLowerCase() + ' i statusplanen'}</span>` : r.slutt >= TODAY ? ' <b style="color:var(--red)">· fortsetter etter i dag</b>' : ''}` : 'Ikke med'}</td></tr>`; }).join('')}</table>` : ''}
+      ${s.nyUtfort && s.nyUtfort.size ? `<h4 style="color:var(--green)">Utført – grønn i statusplanen <span class="sub">– settes til utført og grås ut; de utgår ved neste oppdatering</span></h4><ul class="sub">${[...s.nyUtfort].map(actById).filter(Boolean).map(a => `<li><b>${esc(a.id)}</b> ${esc(a.navn)} · ${esc(a.omrade)} · ${esc(a.firma)}</li>`).join('')}</ul>` : ''}
       ${s.status && s.status.includes('Forsinket oppstart') ? `<h4 style="color:var(--red)">Forsinket oppstart <span class="sub">– rødt i statusplanen</span></h4><ul class="sub">${s.rader.map((r, i) => s.status[i] === 'Forsinket oppstart' ? `<li>${s.valg[i] !== 'ny' ? `<b>${esc(s.valg[i])}</b> ` : ''}${esc(r.navn)} · ${esc(r.omrade)} · start ${fmtShort(r.start)}</li>` : '').join('')}</ul>` : ''}
       ${o.brudd.length ? `<h4 style="color:var(--red)">Avhengigheter som blir brutt</h4><ul class="sub">${o.brudd.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
       ${!o.endret.length && !o.nye.length && !o.utenfor.length && !s.fullfort.size ? '<p>Planen er lik det som ligger i WRK2. Ingenting å oppdatere.</p>' : ''}
@@ -4157,9 +4165,12 @@ function sdUtfor() {
       if (r.startKant) merknad.push(`Kan ha startet før eksportens første dag (${fmtShort(m.fra)})`);
       DATA.push(a); ny++;
     }
-    a.status = s.status && s.status[i] && s.status[i] !== 'Utført' ? s.status[i] : statusFor(a.startdato, a.varighet);
+    a.status = s.status && s.status[i] ? s.status[i] : statusFor(a.startdato, a.varighet);
+    if (s.status && s.status[i] === 'Utført') a.sdUtfort = a.sdUtfort || m.eksportert || tid; else delete a.sdUtfort;
     a.sd = sdInfo(r, merknad);
   });
+  // AT-er der alle aktivitetene er utført, settes også til utført.
+  if (s.status) ATS.forEach(t => { const ak = t.aktiviteter.map(actById).filter(Boolean); if (ak.length && ak.every(a => a.status === 'Utført') && ak.some(a => s.nyUtfort && s.nyUtfort.has(a.id))) t.status = 'Utført'; });
   const slett = new Set(fullfort.map(x => x.id)), merket = [];
   utenfor.forEach(a => {
     if (s.fjern[a.id] === 'slett') slett.add(a.id);
@@ -4177,6 +4188,7 @@ function sdUtfor() {
   const rapp = lagPlanrapport(forBilde, m, forrigeImport, [...slett].filter(id => !fullfort.some(x => x.id === id)), merket, sdBilde(),
     {fullfort: fullfort.map(x => ({id: x.id, navn: x.navn, sone: x.omrade, firma: x.firma, start: x.start, slutt: x.slutt})),
      statusplan: s.statusMeta ? {eksportert: s.statusMeta.eksportert || '', koblet: s.statusMeta.koblet} : null,
+     utfortNa: s.nyUtfort ? [...s.nyUtfort].map(actById).filter(Boolean).map(a => ({id: a.id, navn: a.navn, sone: a.omrade, firma: a.firma, start: a.startdato, slutt: endDate(a)})) : [],
      forsinket: s.status ? DATA.filter(a => a.status === 'Forsinket oppstart').map(a => ({id: a.id, navn: a.navn, sone: a.omrade, firma: a.firma, start: a.startdato})) : []});
   PLANRAPPORTER.push(rapp);
   logg('Import fra Sitedrive', '', `${m.plan}${m.visning ? ' (' + m.visning + ')' : ''}, eksportert ${m.eksportert ? fmtNo(m.eksportert.slice(0, 10)) : '?'}: ${ny} nye, ${oppdatert} endret, ${fullfort.length} utført og tatt ut${fullfort.length ? ' (' + fullfort.map(x => x.id).join(', ') + ')' : ''}, ${nSlettet} slettet${nSlettet ? ' (' + [...slett].filter(id => !fullfort.some(x => x.id === id)).join(', ') + ')' : ''}, ${merket.length} beholdt utenfor planen${merket.length ? ' (' + merket.join(', ') + ')' : ''}`);
@@ -4549,8 +4561,9 @@ function renderEndringer() {
       </div>
       ${apen ? `<div class="rp-kropp">
         ${r.notat ? `<p class="sub">${esc(r.notat)}</p>` : ''}
-        ${(r.fullfort || []).length || r.nye.length || (r.forsinket || []).length ? `<div class="rp-inn-ut">
+        ${(r.fullfort || []).length || r.nye.length || (r.forsinket || []).length || (r.utfortNa || []).length ? `<div class="rp-inn-ut">
           <div><h4>Fullført og ute <span class="sub">(${(r.fullfort || []).length})</span></h4>${(r.fullfort || []).length ? `<ul class="rp-liste">${r.fullfort.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${esc(x.firma || '')} · ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : '<p class="sub">Ingen.</p>'}</div>
+          ${(r.utfortNa || []).length ? `<div style="grid-column:1/-1;order:2"><h4 style="color:var(--green)">Utført (grønn i statusplanen) <span class="sub">(${r.utfortNa.length}) – står grået ut i planen og utgår ved neste oppdatering</span></h4><ul class="rp-liste">${r.utfortNa.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${esc(x.firma || '')} · ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul></div>` : ''}
           ${(r.forsinket || []).length ? `<div style="grid-column:1/-1;order:3"><h4 style="color:var(--red)">Forsinket oppstart <span class="sub">(${r.forsinket.length}) – rødt i statusplanen</span></h4><ul class="rp-liste">${r.forsinket.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${esc(x.firma || '')} · planlagt start ${fmtShort(x.start)}</span></li>`).join('')}</ul></div>` : ''}
           <div><h4>Nye i planen <span class="sub">(${r.nye.length})</span></h4>${r.nye.length ? `<ul class="rp-liste">${r.nye.map(x => `<li><b>${esc(x.id)}</b> ${esc(x.navn)} <span class="sub">${esc(x.sone)} · ${esc(x.firma || '')} · ${fmtShort(x.start)}–${fmtShort(x.slutt)}</span></li>`).join('')}</ul>` : '<p class="sub">Ingen.</p>'}</div>
         </div>` : ''}

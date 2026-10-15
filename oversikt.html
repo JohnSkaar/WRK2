@@ -792,6 +792,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <input type="search" data-search="statustavle" placeholder="Søk aktivitet, ID, AT-nr, område …">
         <label class="sv-switch" title="Når bryteren er på, åpner et trykk på en aktivitet den i «Klargjøring av aktiviteter»"><input type="checkbox" id="sv-lenke"><span class="sl"></span>Hyperlink mot aktivitet</label>
         <label class="sv-switch" title="Vis avhengigheter og lag nye ved å koble forsiden eller baksiden av to aktiviteter"><input type="checkbox" id="sv-avh"><span class="sl"></span>Avhengigheter</label>
+        <label class="sv-switch" title="Vis bare aktiviteter som har avhengigheter i planen, med linjene mellom dem. Alle andre aktiviteter skjules."><input type="checkbox" id="sv-bareavh"><span class="sl"></span>Kun vis avhengigheter</label>
         <button class="btn" data-action="sv-edit" id="sv-edit-btn" hidden>✏️ Rediger tidslinje</button>
         <button class="btn primary" data-action="sv-new" id="sv-new-btn" hidden>+ Ny aktivitet</button>
         <label id="sv-flytt-lbl" hidden title="AT-er som bare hører til aktiviteten, flyttes like mange dager"><input type="checkbox" id="sv-flytt" checked> Flytt AT-er med</label>
@@ -1038,7 +1039,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-13.3';
+const APP_VERSION = '2026-10-15.1';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1421,7 +1422,7 @@ const ui = {
   hindringer: {search: '', vis: 'apne', mine: false, apen: new Set(), utvidet: new Set(), alleLogg: new Set()},
   endringer: {apen: new Set(), lukket: new Set()},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
-  statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: [], lenke: false, avh: false},
+  statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: [], lenke: false, avh: false, bareAvh: false},
   metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set(), atFirma: null},
   firma: {search: '', uten: false},
   admin: {firmDel: null, firmEdit: null, regSearch: '', loggSearch: ''},
@@ -2482,13 +2483,17 @@ function renderStatustavle() {
   document.getElementById('sv-panel').classList.toggle('deps', st.avh);
   document.getElementById('sv-lenke').checked = st.lenke;
   document.getElementById('sv-avh').checked = st.avh;
+  document.getElementById('sv-bareavh').checked = st.bareAvh;
   document.getElementById('sv-avh-hint').hidden = !st.avh;
   const from = mondayOf(TODAY), to = addDays(from, SV_DAYS - 1);
   const pct = d => (daysBetween(from, d) / SV_DAYS * 100);
 
-  const items = DATA.filter(a => !a.generell && matches(a, st) && a.startdato <= to && endDate(a) >= from).map(a => ({a, s: totalStatus(a)}))
+  // «Kun vis avhengigheter»: bare aktiviteter som er med i en avhengighet.
+  const iAvh = new Set(st.bareAvh ? AVH.flatMap(d => [d.fra, d.til]) : []);
+  const items = DATA.filter(a => !a.generell && matches(a, st) && a.startdato <= to && endDate(a) >= from && (!st.bareAvh || iAvh.has(a.id))).map(a => ({a, s: totalStatus(a)}))
     .filter(({s}) => !st.lys || (st.lys === 'avvik' ? s.lys === 'rod' || s.lys === 'gul' : s.lys === st.lys));
-  const zones = [...SK_ZONE_ORDER, ...[...new Set(items.map(x => x.a.omrade))].filter(z => !SK_ZONE_ORDER.includes(z)).sort()];
+  const zones = [...SK_ZONE_ORDER, ...[...new Set(items.map(x => x.a.omrade))].filter(z => !SK_ZONE_ORDER.includes(z)).sort()]
+    .filter(z => !st.bareAvh || items.some(x => x.a.omrade === z));
   svItems = [];
   const rows = zones.map((z, zi) => {
     const zs = items.filter(x => x.a.omrade === z).sort((p, q) => p.a.startdato.localeCompare(q.a.startdato) || p.a.id.localeCompare(q.a.id));
@@ -2943,7 +2948,7 @@ function svRoute(x1, y1, d1, x2, y2, d2) {
 function svDrawLinks() {
   const body = document.getElementById('sv-body'); if (!body) return;
   const old = document.getElementById('sv-links'); if (old) old.remove();
-  if (!ui.statustavle.avh) return;
+  if (!ui.statustavle.avh && !ui.statustavle.bareAvh) return;
   const c = body.getBoundingClientRect(), pos = new Map();
   document.querySelectorAll('#sv-chart .sv-bar').forEach(b => {
     const r = b.getBoundingClientRect();
@@ -6099,6 +6104,7 @@ document.addEventListener('change', e => {
   }
   if (el.id === 'sv-lenke') { ui.statustavle.lenke = el.checked; svShowTip(null); return; }
   if (el.id === 'sv-avh') { ui.statustavle.avh = el.checked; svLinkCancel(); svPopClose(); renderStatustavle(); return; }
+  if (el.id === 'sv-bareavh') { ui.statustavle.bareAvh = el.checked; svPopClose(); renderStatustavle(); return; }
   if (el.id === 'sv-flytt') { ui.statustavle.flyttAT = el.checked; return; }
   if (el.id === 'sv-lys') { ui.statustavle.lys = el.value; renderStatustavle(); return; }
   if (el.id === 'sk-niva' || el.id === 'sk-uker') { ui.skrastrek[el.id === 'sk-niva' ? 'niva' : 'uker'] = el.value; renderSkrastrek(); return; }

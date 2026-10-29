@@ -23,3 +23,6 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           channelId: live
           projectId: wrk2-utkikk
+          # Låst versjon: 15.34.2 krever i tillegg rettigheten serviceusage.services.get, som tjenestekontoen ikke har.
+          # Gi tjenestekontoen rollen «Service Usage Consumer» i Google Cloud før en går over til nyere versjoner.
+          firebaseToolsVersion: 15.34.0

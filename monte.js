@@ -215,17 +215,19 @@ const mcOpt = (liste, v) => liste.map(([k, l]) => `<option value="${k}" ${k === 
 const mcNyId = () => { let k = MC.akt.length + 1; while (MC.akt.some(a => a.id === 'M' + k)) k++; return 'M' + k; };
 function renderMonte() {
   mcLast();
+  mcSynkPlan();
   const el = document.getElementById('mc-root'); if (!el) return;
   const ids = MC.akt.map(a => a.id), feil = mcSjekk();
   const aktRad = (a, i) => { const l = a.laas || {}, rk = a.risiko || {};
     return `<tr data-mci="${i}">
       <td><input class="mc-id" data-mc="id" value="${esc(a.id)}" maxlength="12"></td>
-      <td><input class="mc-navn" data-mc="navn" value="${esc(a.navn)}" maxlength="80">${a.ref ? `<div class="sub">fra ${esc(a.ref)}</div>` : ''}</td>
+      <td>${a.ref ? `<b>${esc(a.navn)}</b><div class="sub">${a.auto ? '🔗 har avhengighet i planen' : 'fra planen'} · ${esc(a.ref)}${+a.min === +a.ml && +a.max === +a.ml ? ' · <span class="mc-ingen">ingen usikkerhet ennå</span>' : ''}</div>` : `<input class="mc-navn" data-mc="navn" value="${esc(a.navn)}" maxlength="80">`}</td>
       <td><select data-mc="ford">${mcOpt(MC_FORD, a.ford)}</select></td>
       <td><input type="number" step="0.5" min="0" class="mc-n" data-mc="min" value="${a.min}"></td>
       <td><input type="number" step="0.5" min="0" class="mc-n" data-mc="ml" value="${a.ml}"></td>
       <td><input type="number" step="0.5" min="0" class="mc-n" data-mc="max" value="${a.max}"></td>
       <td><select data-mc="laas.type">${mcOpt(MC_LAAS, l.type || '')}</select>
+        ${l.auto ? '<div class="sub">planlagt start (følger planen)</div>' : ''}
         ${l.type ? `<div class="mc-dat"><input type="date" data-mc="laas.d1" value="${esc(l.d1 || '')}">${l.type === 'vindu' ? `–<input type="date" data-mc="laas.d2" value="${esc(l.d2 || '')}">` : ''}</div>` : ''}</td>
       <td><input class="mc-grp" data-mc="gruppe" value="${esc(a.gruppe || '')}" placeholder="f.eks. kran" title="Aktiviteter med samme gruppenavn kan ikke pågå samtidig (flere grupper skilles med komma)"></td>
       <td class="mc-risk"><input type="number" min="0" max="100" class="mc-n" data-mc="risiko.p" value="${rk.p || 0}" title="Sannsynlighet (%)">%
@@ -255,6 +257,7 @@ function renderMonte() {
       <h3>Aktiviteter <span class="sub">${MC.akt.length} stk.</span></h3>
       <div class="toolbar"><button class="btn" data-action="mc-akt-ny">+ Ny aktivitet</button>
         <button class="btn" data-action="mc-hent">⤓ Hent fra planen …</button>
+        ${MC.akt.some(a => +a.min === +a.ml && +a.max === +a.ml) ? `<button class="btn" data-action="mc-std-usikker" title="Gir alle aktiviteter som ennå ikke har usikkerhet: best 80 %, verst 150 % av sannsynlig">± Standard usikkerhet (80–150 %) på ${MC.akt.filter(a => +a.min === +a.ml && +a.max === +a.ml).length} uten</button>` : ''}
         ${MC.akt.length ? '<button class="btn danger" data-action="mc-tom">Tøm modellen</button>' : ''}
         <span class="sub">Varighet i ${MC.kalender === 'arbeid' ? 'arbeidsdager' : 'kalenderdager'}. Normal/lognormal bruker «sannsynlig» som midtverdi og (verst − best)/6 som standardavvik.</span></div>
       <div class="mc-hent" id="mc-hent" hidden></div>
@@ -354,34 +357,84 @@ function mcTornadoSvg(R) {
 function mcHentHtml() {
   const kand = DATA.filter(a => !a.generell && !erArkiv(a) && a.status !== 'Utført' && !MC.akt.some(m => m.ref === a.id))
     .sort((x, y) => x.startdato.localeCompare(y.startdato) || x.id.localeCompare(y.id));
-  return `<div class="sub" style="margin-bottom:6px">Velg aktiviteter fra planen. Varigheten i planen brukes som «sannsynlig», «best» settes til 80 % og «verst» til 150 % (kan endres etterpå). Avhengigheter mellom valgte aktiviteter tas med.</div>
+  return `<div class="sub" style="margin-bottom:6px">Aktiviteter med avhengigheter i planen er allerede med. Her kan du ta med flere. Varigheten i planen blir «sannsynlig», og best = verst = sannsynlig til du legger inn usikkerhet. Avhengigheter mellom aktivitetene tas med.</div>
     <div class="toolbar"><button class="btn small-dark" data-action="mc-hent-alle">Velg alle</button><button class="btn small-dark" data-action="mc-hent-ingen">Ingen</button>
       <span style="flex:1"></span><button class="btn" data-action="mc-hent-avbryt">Avbryt</button><button class="btn primary" data-action="mc-hent-ok">Legg til valgte</button></div>
     <div class="mc-hent-liste">${kand.map(a => `<label><input type="checkbox" value="${esc(a.id)}"> <b>${esc(a.id)}</b> ${esc(a.navn)} <span class="sub">${esc(a.omrade)} · ${fmtShort(a.startdato)}–${fmtShort(endDate(a))} · ${a.varighet} d</span></label>`).join('') || '<span class="sub">Ingen flere aktiviteter å hente.</span>'}</div>`;
 }
+// ----- speiling av planen -----
+// Varighet fra planen (arbeidsdager eller kalenderdager etter modellens kalender).
+function mcPlanVarighet(a) {
+  if (MC.kalender !== 'arbeid') return Math.max(1, a.varighet);
+  let n = 0; for (let k = 0; k < a.varighet; k++) if (mcErArbeid(addDays(a.startdato, k))) n++;
+  return Math.max(1, n);
+}
+const mcAvhType = t => ['FS', 'SS', 'FF', 'SF'].includes(t) ? t : t === 'SAM' ? 'SAM' : 'FS';
+// Ny aktivitet fra planen: varigheten i planen er «sannsynlig», og best = verst = sannsynlig til usikkerheten legges inn.
+function mcFraPlan(a, auto) {
+  const d = mcPlanVarighet(a), mid = MC.akt.some(x => x.id === a.id) ? mcNyId() : a.id;
+  const m = {id: mid, ref: a.id, navn: a.navn, ford: 'pert', min: d, ml: d, max: d, laas: {type: '', d1: '', d2: ''}, gruppe: '', risiko: {p: 0, min: 0, ml: 0, max: 0}};
+  if (auto) m.auto = true;
+  MC.akt.push(m);
+  return m;
+}
+// Holder modellen lik planen på Statustavlen: aktiviteter som har avhengigheter i planen tas med automatisk,
+// navn og varighet oppdateres, planlagt start legges inn som «start tidligst» der aktiviteten ikke styres av en forgjenger,
+// og avhengighetene fra planen speiles. Usikkerhet som er lagt inn (best/verst), beholdes.
+function mcSynkPlan() {
+  const for_ = JSON.stringify(MC), utelatt = new Set(MC.utelatt || []);
+  const gyldig = a => a && !a.generell && a.status !== 'Utført' && !erArkiv(a);
+  const linket = new Set(AVH.flatMap(d => [d.fra, d.til]).filter(id => gyldig(actById(id)) && !utelatt.has(id)));
+  // Automatisk tatt med, men ikke lenger koblet i planen (eller borte/utført): tas ut.
+  const ut = new Set(MC.akt.filter(m => m.auto && !linket.has(m.ref)).map(m => m.id));
+  MC.akt.filter(m => m.ref && !m.auto && !gyldig(actById(m.ref))).forEach(m => ut.add(m.id));
+  if (ut.size) { MC.akt = MC.akt.filter(m => !ut.has(m.id)); MC.avh = MC.avh.filter(d => !ut.has(d.fra) && !ut.has(d.til)); }
+  linket.forEach(id => { if (!MC.akt.some(m => m.ref === id)) mcFraPlan(actById(id), true); });
+  const refs = new Map(MC.akt.filter(m => m.ref).map(m => [m.ref, m]));
+  // Avhengigheter fra planen (merket med planens id) – legges til, oppdateres og fjernes i takt med planen.
+  const planAvh = AVH.filter(d => refs.has(d.fra) && refs.has(d.til));
+  const planIds = new Set(planAvh.map(d => d.id));
+  MC.avh = MC.avh.filter(d => !d.plan || planIds.has(d.plan));
+  planAvh.forEach(d => {
+    const fra = refs.get(d.fra).id, til = refs.get(d.til).id, x = MC.avh.find(y => y.plan === d.id);
+    if (x) Object.assign(x, {fra, til, type: mcAvhType(d.type), lag: +d.lag || 0});
+    else if (!MC.avh.some(y => y.fra === fra && y.til === til)) MC.avh.push({id: uid(), plan: d.id, fra, til, type: mcAvhType(d.type), lag: +d.lag || 0});
+  });
+  refs.forEach((m, ref) => {
+    const a = actById(ref); if (!a) return;
+    m.navn = a.navn;
+    const d = mcPlanVarighet(a);
+    if (m.ml !== d) {
+      const utenUsikkerhet = +m.min === +m.ml && +m.max === +m.ml;
+      if (utenUsikkerhet) { m.min = d; m.max = d; }
+      else { const dl = d - m.ml; m.min = Math.max(0, +m.min + dl); m.max = Math.max(d, +m.max + dl); }
+      m.ml = d;
+    }
+    // Planlagt start som «start tidligst» når aktiviteten ikke har forgjengere i modellen (låsen er merket auto og følger planen).
+    const harForg = MC.avh.some(x => x.til === m.id && x.type !== 'NS');
+    const auto = !m.laas || !m.laas.type || m.laas.auto;
+    if (auto) m.laas = !harForg && a.startdato > MC.start ? {type: 'snet', d1: a.startdato, d2: '', auto: true} : {type: '', d1: '', d2: ''};
+  });
+  if (JSON.stringify(MC) !== for_) { mcRes = null; mcLagre(); }
+}
 function mcHentLeggTil(ids) {
-  const arb = MC.kalender === 'arbeid';
-  ids.forEach(id => {
-    const a = actById(id); if (!a) return;
-    let d = a.varighet; if (arb) { let n = 0; for (let k = 0; k < a.varighet; k++) if (mcErArbeid(addDays(a.startdato, k))) n++; d = Math.max(1, n); }
-    const mid = MC.akt.some(x => x.id === a.id) ? mcNyId() : a.id;
-    const laas = a.startdato > MC.start && !AVH.some(x => x.til === a.id && ids.includes(x.fra)) ? {type: 'snet', d1: a.startdato, d2: ''} : {type: '', d1: '', d2: ''};
-    MC.akt.push({id: mid, ref: a.id, navn: a.navn, ford: 'pert', min: Math.max(0, Math.round(d * .8 * 2) / 2), ml: d, max: Math.round(d * 1.5 * 2) / 2, laas, gruppe: '', risiko: {p: 0, min: 0, ml: 0, max: 0}});
-  });
-  const map = new Map(MC.akt.filter(m => m.ref).map(m => [m.ref, m.id]));
-  AVH.filter(d => ids.includes(d.fra) && ids.includes(d.til)).forEach(d => {
-    const fra = map.get(d.fra), til = map.get(d.til);
-    if (fra && til && !MC.avh.some(x => x.fra === fra && x.til === til)) MC.avh.push({id: uid(), fra, til, type: ['FS', 'SS', 'FF', 'SF'].includes(d.type) ? d.type : d.type === 'SAM' ? 'SAM' : 'FS', lag: +d.lag || 0});
-  });
+  const utelatt = new Set(MC.utelatt || []);
+  ids.forEach(id => { const a = actById(id); if (a && !MC.akt.some(m => m.ref === id)) { mcFraPlan(a, false); utelatt.delete(id); } });
+  MC.utelatt = [...utelatt];
+  mcSynkPlan();
 }
 function mcAction(action, btn) {
   if (!isSys()) return;
   mcLast();
   if (action === 'mc-akt-ny') { MC.akt.push({id: mcNyId(), navn: 'Ny aktivitet', ford: 'pert', min: 4, ml: 5, max: 8, laas: {type: '', d1: '', d2: ''}, gruppe: '', risiko: {p: 0, min: 0, ml: 0, max: 0}}); mcRes = null; mcLagre(); renderMonte(); return; }
-  if (action === 'mc-akt-slett') { const a = MC.akt[+btn.dataset.i]; if (!a || !confirm(`Slette ${a.id} ${a.navn}?`)) return; MC.akt.splice(+btn.dataset.i, 1); MC.avh = MC.avh.filter(d => d.fra !== a.id && d.til !== a.id); mcRes = null; mcLagre(); renderMonte(); return; }
+  if (action === 'mc-akt-slett') { const a = MC.akt[+btn.dataset.i]; if (!a || !confirm(`Slette ${a.id} ${a.navn}?`)) return; MC.akt.splice(+btn.dataset.i, 1); MC.avh = MC.avh.filter(d => d.fra !== a.id && d.til !== a.id); if (a.ref) MC.utelatt = [...new Set([...(MC.utelatt || []), a.ref])]; mcRes = null; mcLagre(); renderMonte(); return; }
   if (action === 'mc-avh-ny') { const [x, y] = MC.akt.slice(-2).map(a => a.id); MC.avh.push({id: uid(), fra: x, til: y, type: 'FS', lag: 0}); mcRes = null; mcLagre(); renderMonte(); return; }
   if (action === 'mc-avh-slett') { MC.avh.splice(+btn.dataset.i, 1); mcRes = null; mcLagre(); renderMonte(); return; }
-  if (action === 'mc-tom') { if (!confirm('Tømme hele modellen (alle aktiviteter og avhengigheter)?')) return; MC.akt = []; MC.avh = []; mcRes = null; mcLagre(); renderMonte(); return; }
+  if (action === 'mc-tom') { if (!confirm('Tømme modellen? Aktivitetene med avhengigheter i planen hentes inn igjen automatisk; alt du har lagt inn av usikkerhet forsvinner.')) return; MC.akt = []; MC.avh = []; MC.utelatt = []; mcRes = null; mcLagre(); renderMonte(); return; }
+  if (action === 'mc-std-usikker') {
+    MC.akt.filter(a => +a.min === +a.ml && +a.max === +a.ml).forEach(a => { a.min = Math.max(0, Math.round(a.ml * .8 * 2) / 2); a.max = Math.round(a.ml * 1.5 * 2) / 2; });
+    mcRes = null; mcLagre(); renderMonte(); return;
+  }
   if (action === 'mc-hent') { const b = document.getElementById('mc-hent'); b.hidden = !b.hidden; if (!b.hidden) b.innerHTML = mcHentHtml(); return; }
   if (action === 'mc-hent-alle' || action === 'mc-hent-ingen') { document.querySelectorAll('#mc-hent input[type=checkbox]').forEach(x => { x.checked = action === 'mc-hent-alle'; }); return; }
   if (action === 'mc-hent-avbryt') { document.getElementById('mc-hent').hidden = true; return; }

@@ -380,6 +380,22 @@ table.logg td.h{white-space:nowrap;font-weight:600}
 .gen-ny input{flex:1;min-width:180px}
 .tegn-boks .mb-dok-rad{font-size:12px}
 .tegn-drop{font-size:12px;padding:4px 6px;margin-top:4px}
+.mc-innst{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:8px}
+.mc-innst label{display:flex;flex-direction:column;font-size:12.5px;font-weight:600;gap:2px}
+.mc-innst input,.mc-innst select{font:inherit;font-weight:normal;padding:3px 6px}
+.mc-tab-wrap{overflow-x:auto}
+.mc-tab{border-collapse:collapse;width:100%;font-size:13px}
+.mc-tab th,.mc-tab td{border-bottom:1px solid var(--line);padding:4px 5px;text-align:left;vertical-align:top}
+.mc-tab input,.mc-tab select{font:inherit;font-size:12.5px;padding:2px 4px}
+.mc-tab .mc-id{width:60px}.mc-tab .mc-navn{width:100%;min-width:180px}.mc-tab .mc-n{width:58px}.mc-tab .mc-grp{width:90px}
+.mc-dat{display:flex;gap:2px;align-items:center;margin-top:2px}.mc-dat input{width:125px}
+.mc-risk .sub input{width:42px}
+.mc-feil{background:#fff1f0;border:1px solid #ffa198;border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:13px;color:#b42318}
+.mc-hent{border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0;background:#f6f8fa}
+.mc-hent-liste{max-height:300px;overflow:auto;display:flex;flex-direction:column;gap:2px;font-size:13px}
+.mc-svg{width:100%;height:auto;max-width:1000px;display:block}
+.mc-graf{border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0 10px;background:#fff}
+.mc-krit{display:inline-block;min-width:54px;padding:1px 6px;border-radius:10px;background:linear-gradient(90deg,#ffd8d3 var(--k),#f6f8fa var(--k))}
 .rp-topptekst{font-size:17px;font-weight:700;margin-bottom:2px}
 .rp-periode{font-size:13.5px;margin-bottom:4px}
 .rp-hind td{vertical-align:top}
@@ -638,6 +654,7 @@ td.firma-cell{white-space:normal;min-width:130px}
   <button data-tab="koordinering">AT-koordinering</button>
   <button data-tab="skrastrek">Skråstreksdiagram</button>
   <button data-tab="endringer">Endringslogg</button>
+  <button data-tab="monte">Monte Carlo-simulering</button>
   <button data-tab="admin">Admin</button>
 </nav>
 <main>
@@ -681,6 +698,8 @@ td.firma-cell{white-space:normal;min-width:130px}
       </form>
     </dialog>
   </section>
+
+  <section class="page" id="page-monte"><div id="mc-root"></div></section>
 
   <section class="page" id="page-endringer">
     <div class="panel">
@@ -926,6 +945,7 @@ td.firma-cell{white-space:normal;min-width:130px}
     </dialog>
 </main>
 
+<script src="monte.js?v=2026-10-29.1"></script>
 <script>
 const EXCEL = [["A001", "8300 - Utomhus", "Byggegjerde", null, "OK", "1.1"], ["A008", "8300 - Utomhus", "Grave ut for prov.strøm", null, "OK", "2.1"], ["A010", "8300 - Utomhus", "Opprigg kontorrigg", null, "OK", "1.1"], ["A014", "8300 - Utomhus", "Opprigg mannskapsrigg", null, "OK", "1.1"], ["A016", "8300 - Utomhus", "Grave trase (del 1…", null, "OK", "2.1"], ["A018", "8300 - Utomhus", "Boring for spillvan…", null, "OK", "2.2"], ["A019", "8300 - Utomhus", "Graving hovedgrøft (S)", null, "OK", "2.1"], ["A020", "8300 - Utomhus", "Prov.strøm, fiber og vann til brakkerigg", null, "OK", "1.1, 1.3"], ["A021", "8300 - Utomhus", "Provstrøm/bygge…", null, "OK", "1.1, 1.3"], ["A022", "8300 - Utomhus", "Støpe kranfundament", null, "OK", "3.1"], ["A002", "8300 - Utomhus", "Montering kran 2", "2026-08-10", "OK", "1.4"], ["A017", "8300 - Utomhus", "Rondell", "2026-08-10", null, null], ["A003", "8300 - Utomhus", "06-C010 Trykkluft ledning i grunn", "2026-08-24", null, null], ["A011", "8300 - Utomhus", "06-C010 Vitnepunkt Trykkluft i bakken", "2026-08-24", null, null], ["A004", "8300 - Utomhus", "Hovedstrøm til kran", "2026-08-31", "OK", "1.3"], ["A005", "8300 - Utomhus", "Montering av kran 1 (hovedkran)", "2026-09-07", "OK", "1.4"], ["A009", "8300 - Utomhus", "Tilbakefylling hovedgrøft (S)", "2026-09-07", "OK", "2.1"], ["A006", "8300 - Utomhus", "Kum for Trykkluft", "2026-09-21", "OK", "2.1"], ["A012", "8300 - Utomhus", "Klargjøring for overvann (Ø)", "2026-09-28", "OK", "2.1"], ["A015", "8300 - Utomhus", "Kople på spillvannsledning", "2026-09-28", "OK", "2.1"], ["A013", "8300 - Utomhus", "Betongarbeid boregrop (Ø)", "2026-10-05", "OK", "3.1"], ["A007", "8300 - Utomhus", "39-C010 Ringjord tverrforbindelse", "2026-10-12", null, null], ["A023", "8301 - Ovnshall", "Magring", null, "OK", "3.1"], ["A028", "8301 - Ovnshall", "Rensk av fjell", null, "OK", "2.1"], ["A032", "8301 - Ovnshall", "boring av fjellbolt", null, "OK", "2.1"], ["A036", "8301 - Ovnshall", "Industrivann etappe 1", null, "OK", "2.1"], ["A040", "8301 - Ovnshall", "Støttemur for tilbakefylling av ovnsgrube", null, "OK", "3.2"], ["A042", "8301 - Ovnshall", "Fundamenter", null, "OK", "3.1"], ["A043", "8301 - Ovnshall", "Opprigg kran 3 (s…", null, "OK", "1.4"], ["A024", "8301 - Ovnshall", "Pelefundamenter (ovnsgrube)", "2026-08-17", "OK", "3.1"], ["A025", "8301 - Ovnshall", "Boring resterende bergbolter", "2026-08-31", "OK", "2.1"], ["A029", "8301 - Ovnshall", "Tilbakefylling ovnsgrube (fundament)", "2026-08-31", "OK", "2.1"], ["A026", "8301 - Ovnshall", "Ovnsgrube bunnplate", "2026-09-07", "OK", "3.1"], ["A030", "8301 - Ovnshall", "3 stk RD pel + 3 stk Gewi stag", "2026-09-14", "OK", "2.3, 3.1"], ["A033", "8301 - Ovnshall", "Boring til gewistag", "2026-09-14", null, null], ["A037", "8301 - Ovnshall", "Trekking gewistag (spennteknikk)", "2026-09-14", "OK", "3.1"], ["A027", "8301 - Ovnshall", "Ovnsgrube Vegger", "2026-09-28", "OK", "3.2"], ["A031", "8301 - Ovnshall", "Fundamentering drossrom og fundament F1 FD F3 FI F5 FI", "2026-09-28", "OK", "3.1"], ["A034", "8301 - Ovnshall", "Oppspenning gewistag (?)", "2026-09-28", "OK", "3.1"], ["A038", "8301 - Ovnshall", "Støp bunnplate ovnsgrube", "2026-09-28", "OK", "3.1"], ["A041", "8301 - Ovnshall", "Trekking gewistag (spennteknikk)", "2026-09-28", "OK", "3.1"], ["A044", "8301 - Ovnshall", "Vitnepunkt før støp ovnsgrube plate og vegger", "2026-09-28", null, null], ["A035", "8301 - Ovnshall", "Tilbakefylding Drossrom", "2026-10-05", "OK", "2.1"], ["A039", "8301 - Ovnshall", "Vegger og dekker drossrom (ink innstøpt stålpl…", "2026-10-12", "OK", "3.2"], ["A045", "8302 - Kjeller / Vest", "Fjellsikringsbolte…", null, "OK", "2.1"], ["A053", "8302 - Kjeller / Vest", "Rens til fjell (grube)", null, "OK", "2.1"], ["A046", "8302 - Kjeller / Vest", "Magring grube", "2026-08-10", "OK", "3.1"], ["A059", "8302 - Kjeller / Vest", "Rens til fjell", "2026-08-10", "OK", "2.1"], ["A062", "8302 - Kjeller / Vest", "Magring fundamenter", "2026-08-17", "OK", "3.1"], ["A047", "8302 - Kjeller / Vest", "Boring fjellbolter i grube", "2026-08-24", "OK", "2.1"], ["A054", "8302 - Kjeller / Vest", "Boring fjellbolter i fundament", "2026-08-31", "OK", "2.1"], ["A048", "8302 - Kjeller / Vest", "Fundamenter Vest (Kun yttervegg)", "2026-09-07", "OK", "3.1"], ["A055", "8302 - Kjeller / Vest", "Drens Yttervegg Vest", "2026-09-14", "OK", "2.1"], ["A060", "8302 - Kjeller / Vest", "Fundament Støpepit", "2026-09-14", "OK", "3.1"], ["A049", "8302 - Kjeller / Vest", "39-C010 Jording trafogrube", "2026-09-21", null, null], ["A056", "8302 - Kjeller / Vest", "Fundamenter vegg og søyle W2-W3/A-FD", "2026-09-21", "OK", "3.1"], ["A063", "8302 - Kjeller / Vest", "Vegg, trafo og yttervegger Del 1", "2026-09-21", "OK", "3.2"], ["A050", "8302 - Kjeller / Vest", "Pelefundamenter (Akse C til WB)", "2026-09-28", "OK", "3.1"], ["A064", "8302 - Kjeller / Vest", "Stillas yttervegg mot ovn", "2026-09-28", null, null], ["A051", "8302 - Kjeller / Vest", "Meisling for bunnledninger", "2026-10-05", "OK", "2.1"], ["A057", "8302 - Kjeller / Vest", "Tilbakefylling støpepit W1-W4 / WB-C", "2026-10-05", "OK", "2.1"], ["A061", "8302 - Kjeller / Vest", "Tilbakefylling W1-W3 / A-WB", "2026-10-05", "OK", "2.1"], ["A052", "8302 - Kjeller / Vest", "Vegger Støpepit", "2026-10-12", "OK", "3.2"], ["A058", "8302 - Kjeller / Vest", "Yttervegger Vest og sør", "2026-10-12", "OK", "3.2"], ["A065", "8302 - Kjeller / Øst", "Fjellsikringsbolte…", null, "OK", "2.1"], ["A066", "8302 - Kjeller / Øst", "Boring fjellbolter", "2026-09-07", "OK", "2.1"], ["A067", "8302 - Kjeller / Øst", "Magring kjeller", "2026-09-07", "OK", "3.1"], ["A068", "8302 - Kjeller / Øst", "Rens til fjell", "2026-09-07", "OK", "2.1"], ["A070", "8302 - Kjeller / Øst", "Fundamenter Yttervegg Øst og Sør", "2026-09-14", "OK", "3.1"], ["A069", "8302 - Kjeller / Øst", "Tilbakefylling og drens (S og Ø)", "2026-09-21", "OK", "2.1"], ["A071", "8302 - Kjeller / Kjellerinnkjøring", "Pilotboring (overv…", null, "OK", "2.2"], ["A072", "8302 - Kjeller / Kjellerinnkjøring", "Oljeholdig overvann", "2026-09-07", null, null], ["A073", "8302 - Kjeller / Kjellerinnkjøring", "Opprømming (pilotboring)", "2026-09-21", "OK", "2.2"], ["A074", "8302 - Kjeller / Kjellerinnkjøring", "Boring for overvann (N)", "2026-09-28", "OK", "2.2"], ["A075", "8302 - Kjeller / Kjellerinnkjøring", "39-C010 Ringjord tverrforbindelse", "2026-10-12", null, null], ["A076", "8302 - Kjeller / Kjellerinnkjøring", "Plannering nedkjøringsrampe (drenering)", "2026-10-12", "OK", "2.1"], ["A077", "8302 - Kjeller / Kjellerinnkjøring", "Trekke 710", "2026-10-12", "OK", "2.2"], ["A078", "8302 - Trådhall", "Rensk til fjell", "2026-08-17", "OK", "2.1"], ["A079", "8302 - Trådhall", "Magring", "2026-09-07", "OK", "3.1"], ["A080", "8302 - Trådhall", "Boring Gewi S1", "2026-09-14", null, null], ["A081", "8302 - Trådhall", "Boring fjellbolter", "2026-09-21", "OK", "2.1"], ["A082", "8302 - Trådhall", "Mager punktfundamentering", "2026-09-21", "OK", "3.1"], ["A083", "8302 - Trådhall", "Punktfundamenter", "2026-09-28", "OK", "3.1"], ["A084", "8304 - Lagerhall", "Sprenging Utomhus Sandfang", "2026-09-28", "OK", "2.1"]];
 
@@ -1039,7 +1059,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-15.1';
+const APP_VERSION = '2026-10-29.1';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -4512,7 +4532,7 @@ function mbRisikoHtml(m) {
 // Prosjektrollen følger firmaet: valgt under «Firma og fargekoder», ellers fra firmaregisteret (byggherre/hovedentreprenør/UE).
 const FANER = [['statustavle', 'Statustavle'], ['hindringer', 'Hindringer prioritet'], ['metoder', 'Metodebeskrivelser'], ['firma', 'Utførelse av firma'],
   ['klargjoring', 'Klargjøring av aktiviteter'], ['oversikt', 'Totaloversikt'], ['koordinering', 'AT-koordinering'], ['skrastrek', 'Skråstreksdiagram'],
-  ['endringer', 'Endringslogg'], ['admin', 'Admin']];
+  ['endringer', 'Endringslogg'], ['monte', 'Monte Carlo-simulering'], ['admin', 'Admin']];
 const PROSJEKTROLLER = [['hovedentreprenor', 'Hovedentreprenør'], ['byggherre', 'Byggherre'], ['ue', 'UE']];
 const TILGANG_STD = {
   hovedentreprenor: FANER.map(([k]) => k),
@@ -4546,10 +4566,12 @@ function rolleHar(tab, rolle) {
   return t && rolle in t ? !!t[rolle] : (TILGANG_STD[rolle] || []).includes(tab);
 }
 // Firma-admin ser alltid Admin-fanen (der de inviterer brukere til sitt firma).
-const harTilgang = (tab, rolle = minRolle(), somSys = isSys()) => modulPa(tab) && (somSys || (tab === 'admin' && me().rolle === 'firmaadmin') || rolleHar(tab, rolle));
+// Monte Carlo-simulering er foreløpig bare for systemadministrator.
+const harTilgang = (tab, rolle = minRolle(), somSys = isSys()) => tab === 'monte' ? somSys : modulPa(tab) && (somSys || (tab === 'admin' && me().rolle === 'firmaadmin') || rolleHar(tab, rolle));
 const forsteFane = () => (FANER.find(([k]) => harTilgang(k)) || ['statustavle'])[0];
 function tilgangPanelHtml(sys) {
   const rad = ([k, navn]) => {
+    if (k === 'monte') return `<tr><td><b>${navn}</b><div class="sub">Usikkerhetsanalyse av fremdriften. Foreløpig bare for systemadministrator.</div></td><td class="c"><span class="sub">Fast</span></td><td class="c" colspan="${PROSJEKTROLLER.length + 1}"><span class="sub">Kun systemadministrator</span></td></tr>`;
     const m = MODULER[k], pa = modulPa(k);
     return `<tr class="${pa ? '' : 'av'}"><td><b>${navn}</b>${m ? `<div class="sub">${m[2]}</div>` : ''}</td>
       <td class="c">${m ? `<input type="checkbox" data-modul="${k}" ${pa ? 'checked' : ''} ${sys ? '' : 'disabled'} title="Slå fanen av eller på for hele prosjektet">` : '<span class="sub" title="Grunnfane som ikke kan slås av for prosjektet. Hvem som ser den, styres i rollekolonnene.">Fast</span>'}</td>
@@ -5652,6 +5674,7 @@ function renderCurrent() {
   else if (currentTab === 'hindringer') renderHindringer();
   else if (currentTab === 'koordinering') renderKoord();
   else if (currentTab === 'endringer') renderEndringer();
+  else if (currentTab === 'monte') renderMonte();
   else if (currentTab === 'admin') renderAdmin();
 }
 function showTab(tab) {
@@ -5803,6 +5826,7 @@ document.addEventListener('click', e => {
   if (action.startsWith('sd-')) { sdAction(action); return; }
   if (action.startsWith('rp-')) { rpAction(action, btn); return; }
   if (action.startsWith('gen-')) { genAction(action, btn); return; }
+  if (action.startsWith('mc-')) { mcAction(action, btn); return; }
   if (action.startsWith('hi-') || action.startsWith('hif-')) { hindAction(action, btn); return; }
   if (action.startsWith('fu-')) { fuAction(action, btn); return; }
   if (action === 'logg-csv') { loggCsv(); return; }

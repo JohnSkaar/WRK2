@@ -320,6 +320,8 @@ function startSync(uid) {
 
   unsubs.push(onSnapshot(collection(db, 'users'), s => { st.users = s.docs.map(d => ({id: d.id, ...d.data()})); apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'firmaregister'), s => { st.register = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
+  // Monte Carlo-modellen (kun systemadministrator bruker den). Feil ignoreres; modellen ligger da bare lokalt.
+  unsubs.push(onSnapshot(doc(db, 'config', 'montecarlo'), s => { if (s.exists() && window.mcFraSky) window.mcFraSky(s.data().modell); }, () => {}));
   unsubs.push(onSnapshot(doc(db, 'config', 'metoder'), s => { st.metoder = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'firms'), s => { st.firms = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'settings'), s => { st.settings = s.exists() ? s.data() : {}; apply(); }, fail));
@@ -418,6 +420,8 @@ async function importMbRisiko() {
   try { await batch.commit(); showToast('Risiko og dødsrisikoer fra metodebeskrivelsene er lagt inn på AT-ene og aktivitetene.'); }
   catch (err) { showToast('Innleggingen av risiko fra metodebeskrivelsene feilet: ' + errText(err)); }
 }
+
+window.cloudMcLagre = m => { if (isSys()) setDoc(doc(db, 'config', 'montecarlo'), {modell: m, tid: new Date().toISOString()}).catch(err => showToast('Monte Carlo-modellen ble ikke lagret: ' + errText(err))); };
 
 async function importAnsvarRydd() {
   const atFør = new Map(ATS.map(t => [t.id, stable(toATDoc(t))])), aktFør = new Map(DATA.map(a => [a.id, stable(toDoc(a))]));

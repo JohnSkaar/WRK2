@@ -145,7 +145,7 @@ td.empty{text-align:center;color:var(--muted);padding:30px}
 .kk-dod .dod-icon{cursor:help;display:block;width:auto !important;height:var(--dh) !important;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 #kk-print .kp-dodleg{display:none}
 .kk-dod.kp-dod-etter{position:static;transform:none;margin-left:0}
-.kk-txt{font-size:11px;line-height:1.15;background:rgba(255,255,255,.9);padding:0 3px;border-radius:3px;white-space:nowrap;max-width:118px;overflow:hidden;text-overflow:ellipsis;color:#24292f}
+.kk-txt{font-size:11px;line-height:1.15;background:rgba(255,255,255,.9);padding:0 3px;border-radius:3px;max-width:118px;overflow:hidden;color:#24292f;text-align:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
 .kk-mark.aktiv .kk-nr{border:3px solid #1a7f37;box-shadow:0 0 0 2px #fff,0 0 6px 2px rgba(26,127,55,.6)}
 .kk-mark.ikke-gyldig .kk-nr{opacity:.75;border-style:dotted;border-color:#57606a}
 .kk-mark.mangler .kk-nr{background:#fff !important;color:#cf222e !important;border:2px dashed #cf222e}
@@ -207,6 +207,7 @@ td.empty{text-align:center;color:var(--muted);padding:30px}
 .snitt-wrap svg{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none}
 .snitt-wrap .kk-mark{cursor:ns-resize}
 .snitt-wrap .kk-mark.locked{cursor:pointer}
+.snitt-wrap .kk-txt{font-size:10px;max-width:100px}
 .snitt-tittel{font-weight:700;margin:12px 0 0;font-size:14px}
 .kk-st.aktiv b{color:#1a7f37}.kk-st.mangler b{color:#cf222e}
 .kk-leg{display:inline-block;width:22px;height:12px;border-radius:7px;vertical-align:-2px;background:#2a78d6}
@@ -1059,7 +1060,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-10-29.2';
+const APP_VERSION = '2026-11-10.1';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1790,7 +1791,7 @@ function renderSelBar() {
 // ---------- AT-koordinering: aktivitetene fra Statustavlen lagt ut i sonene, med AT-nummer og godkjenningsstatus ----------
 // Utomhus har ingen egen sone på kartet; aktivitetene legges i to frie felt (nederst til venstre, øverst til høyre).
 const KK_UTOMHUS = [[40, 612, 540, 705], [1255, 45, 1880, 285]];
-const KK_CELL = {w: 118, h: 42}, KK_SMAL = {w: 58, h: 26};   // markørstørrelse i piksler (vanlig / kompakt i trange soner)
+const KK_CELL = {w: 118, h: 54}, KK_SMAL = {w: 58, h: 26};   // markørstørrelse i piksler (vanlig / kompakt i trange soner)
 function kkAktive() {
   const [from, to] = periodRange();
   return DATA.filter(a => a.startdato <= to && endDate(a) >= from && !erArkiv(a) && (!a.generell || a.at.some(atAktivIPerioden)))
@@ -1879,21 +1880,28 @@ function snittSvg() {
 }
 // Standardhøyde: midt i sonens bånd. Ligger flere markører over hverandre i plan (samme x), spres de i høyden.
 function snittPos(acts, planPos) {
-  const ut = new Map(), grupper = new Map();
+  // Ønsket høyde: markørene i samme sone og omtrent samme x fordeles over sonens bånd.
+  const ut = new Map(), grupper = new Map(), onsket = [];
   acts.forEach(a => {
-    const s = snittFor(a.omrade), p = planPos(a);
-    const k = s.navn + '|' + Math.round(p.x / 2.5);
+    const s = snittFor(a.omrade), p = planPos(a), k = s.navn + '|' + Math.round(p.x / 2.5);
     if (!grupper.has(k)) grupper.set(k, {s, liste: []});
     grupper.get(k).liste.push({a, p});
   });
   grupper.forEach(({s, liste}) => {
     liste.sort((u, v) => u.p.y - v.p.y);
-    // Minst 40 enheter mellom markørene; går de ikke inn i båndet, sentreres stabelen om båndets midte.
-    const [b1, b2] = s.band, n = liste.length, steg = Math.max((b2 - b1) / n, 40), y0 = (b1 + b2) / 2 - steg * (n - 1) / 2;
-    liste.forEach(({a, p}, i) => {
-      const y = Math.max(12, Math.min(SNITT_H - 12, y0 + steg * i));
-      ut.set(a.id, {x: p.x, y: a.snittY !== undefined ? a.snittY : y / SNITT_H * 100});
-    });
+    const [b1, b2] = s.band, n = liste.length, steg = (b2 - b1) / n;
+    liste.forEach(({a, p}, i) => onsket.push({a, x: p.x, y: b1 + steg * (i + .5)}));
+  });
+  // Markørene har nummer og to linjer tekst: de som står så tett sideveis at tekstene ville gått i hverandre, skyves fra hverandre i høyden.
+  const H = 80, B = 10, kant = 44, plassert = [];
+  const kolliderer = (x, y) => plassert.find(q => Math.abs(q.x - x) < B && Math.abs(q.y - y) < H);
+  onsket.sort((u, v) => u.y - v.y).forEach(m => {
+    let y = m.y, q;
+    while ((q = kolliderer(m.x, y))) y = q.y + H;
+    if (y > SNITT_H - kant) { y = m.y; while ((q = kolliderer(m.x, y))) y = q.y - H; }
+    y = Math.max(kant, Math.min(SNITT_H - kant, y));
+    plassert.push({x: m.x, y});
+    ut.set(m.a.id, {x: m.x, y: m.a.snittY !== undefined ? m.a.snittY : y / SNITT_H * 100});
   });
   return ut;
 }
@@ -1960,7 +1968,7 @@ function renderKoord() {
   const snWrap = document.getElementById('snitt-wrap');
   snWrap.classList.toggle('stort', !!ui.koord.stort);
   const snPos = snittPos(acts, a => a.kart || auto.get(a.id));
-  snWrap.innerHTML = snittSvg() + acts.map(a => kkMarkHtml(a, snPos.get(a.id), true, sel, 'Dra opp/ned for å angi høyden i snittet')).join('');
+  snWrap.innerHTML = snittSvg() + acts.map(a => kkMarkHtml(a, snPos.get(a.id), true, sel, 'Dra opp/ned for å angi høyden i snittet', true)).join('');
   renderKkBar();
   document.getElementById('placed-list').innerHTML = `<div class="legend"><span><b>Markører:</b></span>
     <span><span class="kk-leg aktiv"></span> Godkjent AT i perioden (grønn ramme)</span><span><span class="kk-leg ikke-gyldig"></span> AT gjelder ikke i perioden</span>
@@ -1970,15 +1978,15 @@ function renderKoord() {
 // Dødsrisiko på markørene: bare risikoene som er markert på selve aktiviteten, ikke de som kommer fra AT-en.
 const kkVisDod = () => readRaw('wrk2_kk_dod') === '1';
 const kkDod = (a, str) => kkVisDod() && a.dodsrisiko && a.dodsrisiko.length ? `<span class="kk-dod" style="--dh:${Math.round(str * .91)}px">${a.dodsrisiko.filter(k => DOD[k]).map(k => dodIcon(k, str)).join('')}</span>` : '';
-function kkMarkHtml(a, p, smal, sel, hint) {
+function kkMarkHtml(a, p, smal, sel, hint, medTekst = !smal) {
   const s = kkStatus(a), c = firmColor(a.firma);
   const nrs = a.at.map(t => t.nr);
-  const kort = a.navn.length > 20 ? a.navn.slice(0, 19) + '…' : a.navn;
+  const kort = a.navn.length > 48 ? a.navn.slice(0, 47) + '…' : a.navn;   // inntil to linjer under nummeret
   const tittel = `${a.id} ${a.navn} · ${a.omrade} · ${a.firma}\n${s === 'mangler' ? 'Mangler AT' : a.at.map(t => `${t.nr} ${t.navn} – ${atAktivIPerioden(t) ? 'godkjent i perioden' : 'gjelder ikke i perioden'}`).join('\n')}${canEditAct(a) ? '\n' + hint : ''}`;
   const nrTxt = s === 'mangler' ? (smal ? '⚠' : '⚠ AT?') : smal ? nrs[0] + (nrs.length > 1 ? '+' : '') : nrs.slice(0, 2).join(' · ') + (nrs.length > 2 ? ' +' + (nrs.length - 2) : '');
   return `<div class="kk-mark ${s}${smal ? ' kompakt' : ''}${sel === a.id ? ' selected' : ''}${canEditAct(a) ? '' : ' locked'}" data-akt="${esc(a.id)}" style="left:${p.x}%;top:${p.y}%" title="${esc(tittel)}">
     <span class="kk-nr" style="background:${c};color:${textOn(c)}">${esc(nrTxt)}${kkDod(a, smal ? 23 : 28)}</span>
-    ${smal ? '' : `<span class="kk-txt">${esc(kort)}</span>`}</div>`;
+    ${medTekst ? `<span class="kk-txt">${esc(kort)}</span>` : ''}</div>`;
 }
 // Utskrift: plan og snitt på ett liggende A4-ark, AT-oversikten på neste ark.
 function kkUtskrift() {

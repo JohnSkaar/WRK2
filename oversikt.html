@@ -805,7 +805,7 @@ td.firma-cell{white-space:normal;min-width:130px}
   <section class="page" id="page-statustavle">
     <div class="panel">
       <h2>Statustavle – 8 uker <span class="readonly-tag" id="sv-ro-tag">Kun visning</span></h2>
-      <p class="intro">Aktivitetene de neste 8 ukene, per sone. Fargen på stolpen er firmaet, og trafikklyset er totalstatusen for aktiviteten. Den er satt sammen av metodebeskrivelsen, de sju forutsetningene og åpne hindringer på aktiviteten. Det dårligste lyset gjelder. Hold over en aktivitet for å se hva som mangler og hva som er kommentert. Slå på «Hyperlink mot aktivitet» for å åpne aktiviteten i «Klargjøring av aktiviteter» med et trykk. Med «✏️ Rediger tidslinje» kan du flytte startdatoer, endre varighet og legge inn nye aktiviteter.</p>
+      <p class="intro">Aktivitetene de neste 8 ukene, per sone. Fargen på stolpen er firmaet, og trafikklyset er totalstatusen for aktiviteten. Den er satt sammen av metodebeskrivelsen, de sju forutsetningene og åpne hindringer på aktiviteten. Det dårligste lyset gjelder. Hold over en aktivitet for å se hva som mangler og hva som er kommentert. Slå på «Hyperlink mot aktivitet» for å åpne aktiviteten i «Klargjøring av aktiviteter» med et trykk. Med «✏️ Rediger tidslinje» kan du flytte startdatoer, endre varighet og legge inn nye aktiviteter. Slå på «Sunnhet» for å farge stolpene etter metodebeskrivelsen og de sju forutsetningene i stedet for firmaet.</p>
       <div class="toolbar">
         <div class="firm-filter" data-page="statustavle"></div>
         <button class="btn" data-action="ff-mine" data-page="statustavle">Bare mitt firma</button>
@@ -813,6 +813,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <label class="sv-switch" title="Når bryteren er på, åpner et trykk på en aktivitet den i «Klargjøring av aktiviteter»"><input type="checkbox" id="sv-lenke"><span class="sl"></span>Hyperlink mot aktivitet</label>
         <label class="sv-switch" title="Vis avhengigheter og lag nye ved å koble forsiden eller baksiden av to aktiviteter"><input type="checkbox" id="sv-avh"><span class="sl"></span>Avhengigheter</label>
         <label class="sv-switch" title="Vis bare aktiviteter som har avhengigheter i planen, med linjene mellom dem. Alle andre aktiviteter skjules."><input type="checkbox" id="sv-bareavh"><span class="sl"></span>Kun vis avhengigheter</label>
+        <label class="sv-switch" title="Farg stolpene etter metodebeskrivelsen og de sju forutsetningene: rød hvis en eller flere er røde, ellers gul hvis en eller flere er gule, grønn når alle er grønne"><input type="checkbox" id="sv-sunnhet"><span class="sl"></span>Sunnhet</label>
         <button class="btn" data-action="sv-edit" id="sv-edit-btn" hidden>✏️ Rediger tidslinje</button>
         <button class="btn primary" data-action="sv-new" id="sv-new-btn" hidden>+ Ny aktivitet</button>
         <label id="sv-flytt-lbl" hidden title="AT-er som bare hører til aktiviteten, flyttes like mange dager"><input type="checkbox" id="sv-flytt" checked> Flytt AT-er med</label>
@@ -1060,7 +1061,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-11-10.1';
+const APP_VERSION = '2026-11-11.1';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1443,7 +1444,7 @@ const ui = {
   hindringer: {search: '', vis: 'apne', mine: false, apen: new Set(), utvidet: new Set(), alleLogg: new Set()},
   endringer: {apen: new Set(), lukket: new Set()},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
-  statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: [], lenke: false, avh: false, bareAvh: false},
+  statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: [], lenke: false, avh: false, bareAvh: false, sunnhet: false},
   metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set(), atFirma: null},
   firma: {search: '', uten: false},
   admin: {firmDel: null, firmEdit: null, regSearch: '', loggSearch: ''},
@@ -2491,6 +2492,13 @@ function totalStatus(a) {
   return {lys, punkter};
 }
 const svTextColor = textOn;
+// Sunnhet: bare metodebeskrivelsen og de sju forutsetningene. Én rød gjør aktiviteten rød, ellers gjør én gul den gul;
+// grønn krever at alle er grønne. Er noe ikke vurdert (og ingenting rødt eller gult), blir den grå.
+const SUNN_FARGE = {rod: '#cf222e', gul: '#e3b341', gronn: '#2da44e', ikke: '#afb8c1'};
+function sunnhet(a) {
+  const l = [LYS[a.metode.status] ? a.metode.status : 'ikke', ...FORUTSETNINGER.map(([k]) => a.forutsetninger[k] || 'ikke')];
+  return l.includes('rod') ? 'rod' : l.includes('gul') ? 'gul' : l.every(x => x === 'gronn') ? 'gronn' : 'ikke';
+}
 
 function renderStatustavle() {
   const st = ui.statustavle;
@@ -2512,6 +2520,7 @@ function renderStatustavle() {
   document.getElementById('sv-lenke').checked = st.lenke;
   document.getElementById('sv-avh').checked = st.avh;
   document.getElementById('sv-bareavh').checked = st.bareAvh;
+  document.getElementById('sv-sunnhet').checked = st.sunnhet;
   document.getElementById('sv-avh-hint').hidden = !st.avh;
   const from = mondayOf(TODAY), to = addDays(from, SV_DAYS - 1);
   const pct = d => (daysBetween(from, d) / SV_DAYS * 100);
@@ -2542,7 +2551,7 @@ function renderStatustavle() {
     const [grp, sub] = z.includes(' / ') ? z.split(' / ') : [null, z];
     const firstInGrp = grp && !(zones[zi - 1] || '').startsWith(grp + ' / ');
     const bars = zs.map(it => {
-      const i = svItems.push(it) - 1, a = it.a, c = firmColor(a.firma);
+      const i = svItems.push(it) - 1, a = it.a, c = st.sunnhet ? SUNN_FARGE[sunnhet(a)] : firmColor(a.firma);
       const cutL = a.startdato < from, cutR = endDate(a) > to;
       const edCls = st.edit ? (canEditAct(a) ? ' editable' : ' locked') : '';
       return `<div class="sv-bar${cutL ? ' cut-l' : ''}${cutR ? ' cut-r' : ''}${a.status === 'Utført' ? ' done' : ''}${a.endretIWRK2 ? ' wrk2' : ''}${edCls}" data-i="${i}"
@@ -2577,14 +2586,17 @@ function renderStatustavle() {
     </div>
   </div></div>`;
 
-  const cnt = k => items.filter(x => x.s.lys === k).length;
-  document.getElementById('stats-statustavle').innerHTML = `<span><b>${items.length}</b> aktiviteter uke ${isoWeek(from)}–${isoWeek(to)}</span>
+  const cnt = k => items.filter(x => (st.sunnhet ? sunnhet(x.a) : x.s.lys) === k).length;
+  document.getElementById('stats-statustavle').innerHTML = `${st.sunnhet ? '<span><b>Sunnhet:</b></span>' : ''}<span><b>${items.length}</b> aktiviteter uke ${isoWeek(from)}–${isoWeek(to)}</span>
     <span><span class="sv-lys rod" style="display:inline-block;vertical-align:-2px"></span> <b>${cnt('rod')}</b> røde</span>
     <span><span class="sv-lys gul" style="display:inline-block;vertical-align:-2px"></span> <b>${cnt('gul')}</b> gule</span>
     <span><span class="sv-lys ikke" style="display:inline-block;vertical-align:-2px"></span> <b>${cnt('ikke')}</b> ikke ferdig vurdert</span>
     <span><span class="sv-lys gronn" style="display:inline-block;vertical-align:-2px"></span> <b>${cnt('gronn')}</b> grønne</span>`;
   const firmsShown = FIRMS.map(f => f.navn).filter(n => items.some(x => x.a.firma === n));
-  document.getElementById('sv-legend').innerHTML = `<span><b>Totalstatus:</b></span>
+  document.getElementById('sv-legend').innerHTML = st.sunnhet ? `<span><b>Sunnhet</b> (stolpefargen – metodebeskrivelse og de sju forutsetningene):</span>
+    <span><span class="sv-lys rod"></span> Rød – en eller flere er røde</span><span><span class="sv-lys gul"></span> Gul – en eller flere er gule, ingen røde</span>
+    <span><span class="sv-lys gronn"></span> Grønn – alle er grønne</span><span><span class="sv-lys ikke"></span> Grå – noe er ikke vurdert</span>
+    <span class="muted">Det lille lyset på stolpen er fortsatt totalstatusen (med hindringer) · blek stolpe = utført</span>` : `<span><b>Totalstatus:</b></span>
     <span><span class="sv-lys rod"></span> Rød – noe er ikke avklart</span><span><span class="sv-lys gul"></span> Gul – under avklaring</span>
     <span><span class="sv-lys ikke"></span> Grå – ikke ferdig vurdert</span><span><span class="sv-lys gronn"></span> Grønn – alt avklart</span>
     ${firmsShown.length ? `<span style="margin-left:10px"><b>Firma:</b></span>${firmsShown.map(f => firmBadge(f)).join(' ')}` : ''}
@@ -2615,7 +2627,9 @@ function svTipHtml(it) {
   FORUTSETNINGER.forEach(([k, l]) => { const v = (a.fuKommentar || {})[k]; if (v) kom.push([l, v]); });
   a.at.forEach(t => { if (t.kommentar) kom.push([t.nr + ' ' + t.navn, t.kommentar]); });
   const chain = ueChainHtml(a, false) + chainHtml(actMbNrs(a));
+  const sh = sunnhet(a), shTxt = {rod: 'rød', gul: 'gul', gronn: 'grønn', ikke: 'ikke ferdig vurdert'}[sh];
   return `<h4>${esc(a.id)} ${esc(a.navn)}</h4>
+    ${ui.statustavle.sunnhet ? `<div class="sub"><span class="sv-lys ${sh}"></span> <b>Sunnhet: ${shTxt}</b> (metodebeskrivelse og forutsetninger)</div>` : ''}
     <div class="sub">${esc(a.omrade)} · ${fmtNo(a.startdato)}–${fmtNo(endDate(a))} · ${a.varighet} dager</div>
     <div style="margin-top:5px">${firmBadge(a.firma)} <span class="badge ${STATUS_CLS[a.status] || ''}">${esc(a.status)}</span>${a.at.length ? ` <span class="sub">${a.at.length} AT</span>` : ''}</div>
     ${chain ? `<div style="margin-top:3px">${chain}</div>` : ''}
@@ -6136,6 +6150,7 @@ document.addEventListener('change', e => {
   }
   if (el.id === 'sv-lenke') { ui.statustavle.lenke = el.checked; svShowTip(null); return; }
   if (el.id === 'sv-avh') { ui.statustavle.avh = el.checked; svLinkCancel(); svPopClose(); renderStatustavle(); return; }
+  if (el.id === 'sv-sunnhet') { ui.statustavle.sunnhet = el.checked; svShowTip(null); renderStatustavle(); return; }
   if (el.id === 'sv-bareavh') { ui.statustavle.bareAvh = el.checked; svPopClose(); renderStatustavle(); return; }
   if (el.id === 'sv-flytt') { ui.statustavle.flyttAT = el.checked; return; }
   if (el.id === 'sv-lys') { ui.statustavle.lys = el.value; renderStatustavle(); return; }

@@ -1061,7 +1061,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-11-11.1';
+const APP_VERSION = '2026-11-11.2';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -2492,11 +2492,17 @@ function totalStatus(a) {
   return {lys, punkter};
 }
 const svTextColor = textOn;
-// Sunnhet: bare metodebeskrivelsen og de sju forutsetningene. Én rød gjør aktiviteten rød, ellers gjør én gul den gul;
-// grønn krever at alle er grønne. Er noe ikke vurdert (og ingenting rødt eller gult), blir den grå.
+// Sunnhet: metodebeskrivelsen og de sju forutsetningene – på aktiviteten og på AT-ene under den (radene i Klargjøring).
+// Én rød gjør aktiviteten rød, ellers gjør én gul den gul; grønn krever at alle er grønne. Er noe ikke vurdert (og ingenting rødt eller gult), blir den grå.
 const SUNN_FARGE = {rod: '#cf222e', gul: '#e3b341', gronn: '#2da44e', ikke: '#afb8c1'};
+function sunnhetPunkter(a) {
+  const p = [{kilde: 'Aktiviteten', hva: 'Metodebeskrivelse', lys: LYS[a.metode.status] ? a.metode.status : 'ikke'}];
+  [{kilde: 'Aktiviteten', o: a}, ...(a.at || []).map(t => ({kilde: t.nr, o: t}))].forEach(({kilde, o}) =>
+    FORUTSETNINGER.forEach(([k, l]) => p.push({kilde, hva: l, lys: LYS[(o.forutsetninger || {})[k]] ? o.forutsetninger[k] : 'ikke'})));
+  return p;
+}
 function sunnhet(a) {
-  const l = [LYS[a.metode.status] ? a.metode.status : 'ikke', ...FORUTSETNINGER.map(([k]) => a.forutsetninger[k] || 'ikke')];
+  const l = sunnhetPunkter(a).map(x => x.lys);
   return l.includes('rod') ? 'rod' : l.includes('gul') ? 'gul' : l.every(x => x === 'gronn') ? 'gronn' : 'ikke';
 }
 
@@ -2593,7 +2599,7 @@ function renderStatustavle() {
     <span><span class="sv-lys ikke" style="display:inline-block;vertical-align:-2px"></span> <b>${cnt('ikke')}</b> ikke ferdig vurdert</span>
     <span><span class="sv-lys gronn" style="display:inline-block;vertical-align:-2px"></span> <b>${cnt('gronn')}</b> grønne</span>`;
   const firmsShown = FIRMS.map(f => f.navn).filter(n => items.some(x => x.a.firma === n));
-  document.getElementById('sv-legend').innerHTML = st.sunnhet ? `<span><b>Sunnhet</b> (stolpefargen – metodebeskrivelse og de sju forutsetningene):</span>
+  document.getElementById('sv-legend').innerHTML = st.sunnhet ? `<span><b>Sunnhet</b> (stolpefargen – metodebeskrivelse og de sju forutsetningene, også på AT-ene under aktiviteten):</span>
     <span><span class="sv-lys rod"></span> Rød – en eller flere er røde</span><span><span class="sv-lys gul"></span> Gul – en eller flere er gule, ingen røde</span>
     <span><span class="sv-lys gronn"></span> Grønn – alle er grønne</span><span><span class="sv-lys ikke"></span> Grå – noe er ikke vurdert</span>
     <span class="muted">Det lille lyset på stolpen er fortsatt totalstatusen (med hindringer) · blek stolpe = utført</span>` : `<span><b>Totalstatus:</b></span>
@@ -2629,7 +2635,7 @@ function svTipHtml(it) {
   const chain = ueChainHtml(a, false) + chainHtml(actMbNrs(a));
   const sh = sunnhet(a), shTxt = {rod: 'rød', gul: 'gul', gronn: 'grønn', ikke: 'ikke ferdig vurdert'}[sh];
   return `<h4>${esc(a.id)} ${esc(a.navn)}</h4>
-    ${ui.statustavle.sunnhet ? `<div class="sub"><span class="sv-lys ${sh}"></span> <b>Sunnhet: ${shTxt}</b> (metodebeskrivelse og forutsetninger)</div>` : ''}
+    ${ui.statustavle.sunnhet ? `<div class="sub"><span class="sv-lys ${sh}"></span> <b>Sunnhet: ${shTxt}</b> (metodebeskrivelse og forutsetninger, også på AT-ene)${sh === 'rod' || sh === 'gul' ? '<br>' + sunnhetPunkter(a).filter(x => x.lys === sh).map(x => `${esc(x.kilde)}: ${esc(x.hva)}`).join(' · ') : ''}</div>` : ''}
     <div class="sub">${esc(a.omrade)} · ${fmtNo(a.startdato)}–${fmtNo(endDate(a))} · ${a.varighet} dager</div>
     <div style="margin-top:5px">${firmBadge(a.firma)} <span class="badge ${STATUS_CLS[a.status] || ''}">${esc(a.status)}</span>${a.at.length ? ` <span class="sub">${a.at.length} AT</span>` : ''}</div>
     ${chain ? `<div style="margin-top:3px">${chain}</div>` : ''}

@@ -41,10 +41,12 @@ function smCeller() {
 
 // ----- standardoppsett: soner med samme navn som i planen, og kjelleren delt i B1–B4 og OpCB -----
 function smStandard() {
-  const fase = {id: 'f' + uid(), type: 'fase', navn: 'Grunn og betong', utkikk: true, rekkefolge: 0};
+  // Faste id-er: legger to økter inn standardoppsettet samtidig, skriver de de samme dokumentene (ingen duplikater).
+  const fase = {id: 'f-standard', type: 'fase', navn: 'Grunn og betong', utkikk: true, rekkefolge: 0};
+  const slug = t => t.toLowerCase().replace(/[^a-z0-9æøå]+/g, '-').replace(/^-|-$/g, '');
   const soner = [];
   let n = 0;
-  const ny = (navn, forelder, celler = [], merknad = '') => { const s = {id: 's' + uid(), type: 'sone', fase: fase.id, navn, forelder: forelder ? forelder.id : null, celler, farge: SM_FARGER[n % SM_FARGER.length], rekkefolge: n++, merknad}; soner.push(s); return s; };
+  const ny = (navn, forelder, celler = [], merknad = '') => { const s = {id: 's-' + (forelder ? forelder.id.slice(2) + '-' : '') + slug(navn), type: 'sone', fase: fase.id, navn, forelder: forelder ? forelder.id : null, celler, farge: SM_FARGER[n % SM_FARGER.length], rekkefolge: n++, merknad}; soner.push(s); return s; };
   const C = smCeller(), i = navn => C.filter(c => c.bygg.includes(navn)).map(c => c.id);
   const kj = c => c.bygg.some(b => b.startsWith('8302 - Kjeller / ') && b !== '8302 - Kjeller / Kjellerinnkjøring');
   const kjDel = (f) => C.filter(c => kj(c) && f(c)).map(c => c.id);
@@ -77,7 +79,8 @@ function smLast() {
   if (SM) return SM;
   try { SM = JSON.parse(localStorage.getItem(SM_KEY)); } catch (e) { SM = null; }
   SM = smNorm(SM);
-  if (!SM.faser.length && (typeof CLOUD === 'undefined' || !CLOUD)) SM = smStandard();
+  // Vises med en gang, også før skyen har svart; svaret fra skyen erstatter det etterpå.
+  if (!SM.faser.length) SM = smStandard();
   return SM;
 }
 const smDocs = () => ({sonemod: tilKart([...smLast().faser, ...smLast().soner])});
@@ -94,7 +97,7 @@ window.smFraSamlinger = remote => {
   const alle = fraKart(smSynk.flett(remote, lokal).sonemod);
   SM = smNorm({faser: alle.filter(d => d.type === 'fase'), soner: alle.filter(d => d.type === 'sone')});
   // Første gang i skyen: legg inn standardoppsettet.
-  if (!SM.faser.length && smErSys()) { SM = smStandard(); smLagre(); }
+  if (!SM.faser.length) { SM = smStandard(); smLagre(); }
   else if (lokal) smLagre();
   try { localStorage.setItem(SM_KEY, JSON.stringify(SM)); } catch (e) {}
   if (smPa()) renderSonemod();
@@ -136,8 +139,8 @@ function smEndre(fn) {
 // ----- visning -----
 function renderSonemod() {
   const M = smLast(), root = document.getElementById('sm-root'), f = smFase();
-  if (!f && smErSys() && (typeof CLOUD === 'undefined' || !CLOUD || smSynk.klar)) { SM = smStandard(); smLagre(); return renderSonemod(); }
-  if (!f) { root.innerHTML = '<div class="panel"><h2>Sonemodul</h2><p class="sub">Laster …</p></div>'; return; }
+  if (!f) { SM = smStandard(); return renderSonemod(); }
+  const skyFeil = typeof CLOUD !== 'undefined' && CLOUD && (window.samlingFeil || {}).sonemod;
   smUi.fase = f.id;
   if (smUi.valgt && !smSone(smUi.valgt)) smUi.valgt = null;
   const soner = smSonerI(f.id), valgt = smUi.valgt && smSone(smUi.valgt);
@@ -171,6 +174,7 @@ function renderSonemod() {
   };
   root.innerHTML = `<div class="panel">
     <h2>Sonemodul <span class="readonly-tag">Brukes foreløpig bare av Utkikksplan</span></h2>
+    ${skyFeil ? '<p class="sub warn"><b>Lagres ikke i skyen ennå:</b> databasereglene for Sonemodul er ikke publisert. Kopier firestore.rules fra GitHub og publiser i Firebase-konsollen (Firestore Database → Rules → Publish), og last siden på nytt. Til da lagres endringer bare i denne nettleseren.</p>' : ''}
     <p class="intro">Bygg opp sonene fra de minste rutene mellom aksene: <b>marker ruter</b> på kartet (trykk eller dra), <b>lag en sone</b> av dem, og <b>knytt den til en overliggende sone</b>. Hver fase har sitt eget sonetre. Fasen som er valgt for Utkikksplan, styrer sonene der.</p>
     <div class="toolbar">
       <label>Fase: <select id="sm-fase">${M.faser.map(x => `<option value="${x.id}" ${x.id === f.id ? 'selected' : ''}>${esc(x.navn)}${x.utkikk ? ' (Utkikksplan)' : ''}</option>`).join('')}</select></label>

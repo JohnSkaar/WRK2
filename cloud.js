@@ -444,7 +444,7 @@ function lyttSamlinger(samlinger, gammelDok, felt, fraSamlinger, migrer) {
     }
   };
   samlinger.forEach(n => unsubs.push(onSnapshot(collection(db, n), s => { data[n] = s.docs.map(d => ({...d.data(), id: d.id})); fikk.add(n); send(); },
-    () => { if (!feil && (() => { try { return isSys(); } catch (e) { return false; } })()) showToast(`Fikk ikke lese ${samlinger.join(', ')} – publiser firestore.rules på nytt i Firebase-konsollen.`); feil = true; data[n] = []; fikk.add(n); })));
+    () => { if (!feil && (() => { try { return isSys(); } catch (e) { return false; } })()) showToast(`Fikk ikke lese ${samlinger.join(', ')} – publiser firestore.rules på nytt i Firebase-konsollen.`); const forste = !feil; feil = true; window.samlingFeil = {...(window.samlingFeil || {}), [n]: true}; data[n] = []; fikk.add(n); if (forste && typeof renderCurrent === 'function') setTimeout(() => { try { if (me()) renderCurrent(); } catch (e) {} }, 0); })));
   unsubs.push(onSnapshot(doc(db, 'config', gammelDok), s => { if (!harGammel) { gammel = s.exists() ? s.data() : null; harGammel = true; send(); } }, () => { harGammel = true; send(); }));
 }
 // Skriver bare dokumentene som er endret (lagt til, endret eller slettet), i bolker på 400.

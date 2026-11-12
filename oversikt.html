@@ -507,6 +507,43 @@ table.sd-tab select{max-width:330px;font-size:12.5px}
 .uk-c.we{background:#f0f2f4}
 .uk-bg{position:absolute;top:0;bottom:0;border-left:1px solid #f0f2f4;box-sizing:border-box}
 .uk-bg.wk{border-left-color:#d0d7de}.uk-bg.dg{border-left-color:#e1e4e8}.uk-bg.we{background:#f6f7f9}
+.uk-sone{cursor:pointer;user-select:none}
+.uk-sone .uk-caret{display:inline-block;width:14px;color:var(--muted);font-size:11px}
+.uk-sone.barn{font-weight:500}
+.uk-sone.valgt{background:#ddf4ff;box-shadow:inset 4px 0 #1f6feb}
+.uk-sonebar{position:fixed;bottom:12px;z-index:25;display:flex;flex-direction:column;gap:4px;width:186px;box-sizing:border-box;background:#fff;border:1px solid #d0d7de;border-radius:8px;padding:6px;box-shadow:0 4px 14px rgba(0,0,0,.15);font-size:12px}
+.uk-sonebar:empty{display:none}
+.uk-sonebar .btn{width:100%;padding:5px 8px;font-size:12.5px}
+.uk-planhint{flex-basis:100%;background:#f3f0ff;border:1px solid #c5b8f5;border-radius:6px;padding:4px 8px;font-size:12px}
+.uk-hl{position:absolute;top:0;bottom:0;background:rgba(31,111,235,.08);border:1px dashed #1f6feb;box-sizing:border-box;pointer-events:none;z-index:0}
+.uk-plus{position:absolute;left:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:#1f6feb;color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);font-weight:700;font-size:13px;line-height:16px;padding:0;cursor:pointer;pointer-events:auto}
+#uk-panel.planlegg .sv-row .sv-time{cursor:crosshair}
+.uk-bar.uk-plan{outline:2px dashed rgba(255,255,255,.85);outline-offset:-3px}
+.uk-bar.uk-ny{opacity:.7}
+.uk-bar.uk-valgt{box-shadow:0 0 0 3px #ffd33d,0 3px 8px rgba(0,0,0,.25);z-index:3}
+.uk-bar .uk-splitt{display:none;margin-left:auto;background:#fff;color:#24292f;border-radius:4px;padding:0 4px;font-size:12px;line-height:16px;cursor:pointer;flex:none}
+#uk-panel.planlegg .uk-bar:hover .uk-splitt{display:inline-block}
+.uk-dlg{position:fixed;z-index:60;width:420px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;box-sizing:border-box;background:#fff;border:1px solid #d0d7de;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.28);padding:12px 14px;font-size:13px}
+.uk-dlg h4{margin:0 0 2px;font-size:14px}
+.uk-dlg .uk-tittel{font-weight:700;font-size:15px;margin-bottom:4px}
+.uk-dlg label.f{display:block;font-weight:600;margin:8px 0 2px;font-size:12px}
+.uk-dlg input[type=text],.uk-dlg input[type=datetime-local],.uk-dlg select{display:block;width:100%;box-sizing:border-box;padding:6px 7px;border:1px solid #d0d7de;border-radius:6px;font-size:13px}
+.uk-dlg input[type=number]{width:80px;padding:4px 6px;border:1px solid #d0d7de;border-radius:6px;font-size:13px}
+.uk-dlg .uk-to{display:flex;gap:8px}.uk-dlg .uk-to>div{flex:1}
+.uk-dlg .uk-tim{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}
+.uk-dlg .uk-mor.aktiv{outline:2px solid #8250df;outline-offset:2px;border-radius:6px}
+.uk-dlg .uk-morhint{font-size:11.5px;color:#8250df;margin-top:3px}
+.uk-dlg .uk-morliste{border:1px solid #d0d7de;border-radius:6px;max-height:190px;overflow:auto;margin-top:3px}
+.uk-dlg .uk-morliste div{padding:4px 7px;cursor:pointer;border-bottom:1px solid #f0f2f4}
+.uk-dlg .uk-morliste div:hover{background:#f3f0ff}
+.uk-dlg .uk-sec{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:12px 0 3px}
+.uk-dlg table.uk-ford{width:100%;border-collapse:collapse}
+.uk-dlg table.uk-ford td{padding:3px 4px;border-bottom:1px solid #f0f2f4;vertical-align:middle}
+.uk-dlg table.uk-ford tr.meg td{background:#fff8c5}
+.uk-dlg table.uk-ford tr.rest td{color:#57606a}
+.uk-laas{border:1px solid #d0d7de;background:#fff;border-radius:5px;cursor:pointer;width:30px;height:26px;padding:0}
+.uk-laas.on{background:#fff8c5;border-color:#d4a72c}
+.uk-dlg .uk-knapper{display:flex;gap:6px;margin-top:12px;align-items:center}
 .uk-etter{position:absolute;top:0;bottom:0;right:0;background:rgba(140,149,159,.08);border-left:2px dashed #8c959f}
 .sv-lab.done{opacity:.55}
 .sv-lys{display:inline-block;flex:none;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);box-sizing:border-box;vertical-align:-2px}
@@ -677,7 +714,7 @@ td.firma-cell{white-space:normal;min-width:130px}
   <button data-tab="admin">Admin</button>
 </nav>
 <main>
-  <section class="page" id="page-utkikk">
+  <section class="page" id="page-utkikk" style="padding-bottom:110px">
     <div class="panel">
       <div class="toolbar">
         <div class="firm-filter" data-page="utkikk"></div>
@@ -686,6 +723,7 @@ td.firma-cell{white-space:normal;min-width:130px}
         <label class="sv-switch" title="Gi også aktivitetene etter de første 8 ukene firmafarge"><input type="checkbox" id="uk-farg"><span class="sl"></span>Fargelegg 8 uker+</label>
         <label>Vis: <select class="week-sel" id="uk-lys"><option value="">Alle</option><option value="avvik">Bare røde og gule</option><option value="rod">Bare røde</option><option value="ikke">Ikke ferdig vurdert</option></select></label>
         <button class="btn" data-action="uk-reset" id="uk-reset" hidden title="Lukk alle dager, perioder og timer">↺ Tilbake til ukenivå</button>
+        <button class="btn" data-action="uk-plan" id="uk-plan-btn" title="Legg inn og splitt aktiviteter, fordel timeverk og velg soner">🛠 Planleggingsmodus</button>
       </div>
       <div class="legend" id="uk-legend"></div>
     </div>
@@ -693,6 +731,8 @@ td.firma-cell{white-space:normal;min-width:130px}
       <div id="uk-chart"></div>
       <div class="sv-tip" id="uk-tip" hidden></div>
     </div>
+    <div class="uk-sonebar" id="uk-sonebar"></div>
+    <div class="uk-dlg" id="uk-dlg" hidden></div>
   </section>
   <section class="page" id="page-hindringer">
     <div class="panel">
@@ -983,7 +1023,7 @@ td.firma-cell{white-space:normal;min-width:130px}
 </main>
 
 <script src="monte.js?v=2026-10-29.2"></script>
-<script src="utkikk.js?v=2026-11-12.1"></script>
+<script src="utkikk.js?v=2026-11-12.2"></script>
 <script>
 const EXCEL = [["A001", "8300 - Utomhus", "Byggegjerde", null, "OK", "1.1"], ["A008", "8300 - Utomhus", "Grave ut for prov.strøm", null, "OK", "2.1"], ["A010", "8300 - Utomhus", "Opprigg kontorrigg", null, "OK", "1.1"], ["A014", "8300 - Utomhus", "Opprigg mannskapsrigg", null, "OK", "1.1"], ["A016", "8300 - Utomhus", "Grave trase (del 1…", null, "OK", "2.1"], ["A018", "8300 - Utomhus", "Boring for spillvan…", null, "OK", "2.2"], ["A019", "8300 - Utomhus", "Graving hovedgrøft (S)", null, "OK", "2.1"], ["A020", "8300 - Utomhus", "Prov.strøm, fiber og vann til brakkerigg", null, "OK", "1.1, 1.3"], ["A021", "8300 - Utomhus", "Provstrøm/bygge…", null, "OK", "1.1, 1.3"], ["A022", "8300 - Utomhus", "Støpe kranfundament", null, "OK", "3.1"], ["A002", "8300 - Utomhus", "Montering kran 2", "2026-08-10", "OK", "1.4"], ["A017", "8300 - Utomhus", "Rondell", "2026-08-10", null, null], ["A003", "8300 - Utomhus", "06-C010 Trykkluft ledning i grunn", "2026-08-24", null, null], ["A011", "8300 - Utomhus", "06-C010 Vitnepunkt Trykkluft i bakken", "2026-08-24", null, null], ["A004", "8300 - Utomhus", "Hovedstrøm til kran", "2026-08-31", "OK", "1.3"], ["A005", "8300 - Utomhus", "Montering av kran 1 (hovedkran)", "2026-09-07", "OK", "1.4"], ["A009", "8300 - Utomhus", "Tilbakefylling hovedgrøft (S)", "2026-09-07", "OK", "2.1"], ["A006", "8300 - Utomhus", "Kum for Trykkluft", "2026-09-21", "OK", "2.1"], ["A012", "8300 - Utomhus", "Klargjøring for overvann (Ø)", "2026-09-28", "OK", "2.1"], ["A015", "8300 - Utomhus", "Kople på spillvannsledning", "2026-09-28", "OK", "2.1"], ["A013", "8300 - Utomhus", "Betongarbeid boregrop (Ø)", "2026-10-05", "OK", "3.1"], ["A007", "8300 - Utomhus", "39-C010 Ringjord tverrforbindelse", "2026-10-12", null, null], ["A023", "8301 - Ovnshall", "Magring", null, "OK", "3.1"], ["A028", "8301 - Ovnshall", "Rensk av fjell", null, "OK", "2.1"], ["A032", "8301 - Ovnshall", "boring av fjellbolt", null, "OK", "2.1"], ["A036", "8301 - Ovnshall", "Industrivann etappe 1", null, "OK", "2.1"], ["A040", "8301 - Ovnshall", "Støttemur for tilbakefylling av ovnsgrube", null, "OK", "3.2"], ["A042", "8301 - Ovnshall", "Fundamenter", null, "OK", "3.1"], ["A043", "8301 - Ovnshall", "Opprigg kran 3 (s…", null, "OK", "1.4"], ["A024", "8301 - Ovnshall", "Pelefundamenter (ovnsgrube)", "2026-08-17", "OK", "3.1"], ["A025", "8301 - Ovnshall", "Boring resterende bergbolter", "2026-08-31", "OK", "2.1"], ["A029", "8301 - Ovnshall", "Tilbakefylling ovnsgrube (fundament)", "2026-08-31", "OK", "2.1"], ["A026", "8301 - Ovnshall", "Ovnsgrube bunnplate", "2026-09-07", "OK", "3.1"], ["A030", "8301 - Ovnshall", "3 stk RD pel + 3 stk Gewi stag", "2026-09-14", "OK", "2.3, 3.1"], ["A033", "8301 - Ovnshall", "Boring til gewistag", "2026-09-14", null, null], ["A037", "8301 - Ovnshall", "Trekking gewistag (spennteknikk)", "2026-09-14", "OK", "3.1"], ["A027", "8301 - Ovnshall", "Ovnsgrube Vegger", "2026-09-28", "OK", "3.2"], ["A031", "8301 - Ovnshall", "Fundamentering drossrom og fundament F1 FD F3 FI F5 FI", "2026-09-28", "OK", "3.1"], ["A034", "8301 - Ovnshall", "Oppspenning gewistag (?)", "2026-09-28", "OK", "3.1"], ["A038", "8301 - Ovnshall", "Støp bunnplate ovnsgrube", "2026-09-28", "OK", "3.1"], ["A041", "8301 - Ovnshall", "Trekking gewistag (spennteknikk)", "2026-09-28", "OK", "3.1"], ["A044", "8301 - Ovnshall", "Vitnepunkt før støp ovnsgrube plate og vegger", "2026-09-28", null, null], ["A035", "8301 - Ovnshall", "Tilbakefylding Drossrom", "2026-10-05", "OK", "2.1"], ["A039", "8301 - Ovnshall", "Vegger og dekker drossrom (ink innstøpt stålpl…", "2026-10-12", "OK", "3.2"], ["A045", "8302 - Kjeller / Vest", "Fjellsikringsbolte…", null, "OK", "2.1"], ["A053", "8302 - Kjeller / Vest", "Rens til fjell (grube)", null, "OK", "2.1"], ["A046", "8302 - Kjeller / Vest", "Magring grube", "2026-08-10", "OK", "3.1"], ["A059", "8302 - Kjeller / Vest", "Rens til fjell", "2026-08-10", "OK", "2.1"], ["A062", "8302 - Kjeller / Vest", "Magring fundamenter", "2026-08-17", "OK", "3.1"], ["A047", "8302 - Kjeller / Vest", "Boring fjellbolter i grube", "2026-08-24", "OK", "2.1"], ["A054", "8302 - Kjeller / Vest", "Boring fjellbolter i fundament", "2026-08-31", "OK", "2.1"], ["A048", "8302 - Kjeller / Vest", "Fundamenter Vest (Kun yttervegg)", "2026-09-07", "OK", "3.1"], ["A055", "8302 - Kjeller / Vest", "Drens Yttervegg Vest", "2026-09-14", "OK", "2.1"], ["A060", "8302 - Kjeller / Vest", "Fundament Støpepit", "2026-09-14", "OK", "3.1"], ["A049", "8302 - Kjeller / Vest", "39-C010 Jording trafogrube", "2026-09-21", null, null], ["A056", "8302 - Kjeller / Vest", "Fundamenter vegg og søyle W2-W3/A-FD", "2026-09-21", "OK", "3.1"], ["A063", "8302 - Kjeller / Vest", "Vegg, trafo og yttervegger Del 1", "2026-09-21", "OK", "3.2"], ["A050", "8302 - Kjeller / Vest", "Pelefundamenter (Akse C til WB)", "2026-09-28", "OK", "3.1"], ["A064", "8302 - Kjeller / Vest", "Stillas yttervegg mot ovn", "2026-09-28", null, null], ["A051", "8302 - Kjeller / Vest", "Meisling for bunnledninger", "2026-10-05", "OK", "2.1"], ["A057", "8302 - Kjeller / Vest", "Tilbakefylling støpepit W1-W4 / WB-C", "2026-10-05", "OK", "2.1"], ["A061", "8302 - Kjeller / Vest", "Tilbakefylling W1-W3 / A-WB", "2026-10-05", "OK", "2.1"], ["A052", "8302 - Kjeller / Vest", "Vegger Støpepit", "2026-10-12", "OK", "3.2"], ["A058", "8302 - Kjeller / Vest", "Yttervegger Vest og sør", "2026-10-12", "OK", "3.2"], ["A065", "8302 - Kjeller / Øst", "Fjellsikringsbolte…", null, "OK", "2.1"], ["A066", "8302 - Kjeller / Øst", "Boring fjellbolter", "2026-09-07", "OK", "2.1"], ["A067", "8302 - Kjeller / Øst", "Magring kjeller", "2026-09-07", "OK", "3.1"], ["A068", "8302 - Kjeller / Øst", "Rens til fjell", "2026-09-07", "OK", "2.1"], ["A070", "8302 - Kjeller / Øst", "Fundamenter Yttervegg Øst og Sør", "2026-09-14", "OK", "3.1"], ["A069", "8302 - Kjeller / Øst", "Tilbakefylling og drens (S og Ø)", "2026-09-21", "OK", "2.1"], ["A071", "8302 - Kjeller / Kjellerinnkjøring", "Pilotboring (overv…", null, "OK", "2.2"], ["A072", "8302 - Kjeller / Kjellerinnkjøring", "Oljeholdig overvann", "2026-09-07", null, null], ["A073", "8302 - Kjeller / Kjellerinnkjøring", "Opprømming (pilotboring)", "2026-09-21", "OK", "2.2"], ["A074", "8302 - Kjeller / Kjellerinnkjøring", "Boring for overvann (N)", "2026-09-28", "OK", "2.2"], ["A075", "8302 - Kjeller / Kjellerinnkjøring", "39-C010 Ringjord tverrforbindelse", "2026-10-12", null, null], ["A076", "8302 - Kjeller / Kjellerinnkjøring", "Plannering nedkjøringsrampe (drenering)", "2026-10-12", "OK", "2.1"], ["A077", "8302 - Kjeller / Kjellerinnkjøring", "Trekke 710", "2026-10-12", "OK", "2.2"], ["A078", "8302 - Trådhall", "Rensk til fjell", "2026-08-17", "OK", "2.1"], ["A079", "8302 - Trådhall", "Magring", "2026-09-07", "OK", "3.1"], ["A080", "8302 - Trådhall", "Boring Gewi S1", "2026-09-14", null, null], ["A081", "8302 - Trådhall", "Boring fjellbolter", "2026-09-21", "OK", "2.1"], ["A082", "8302 - Trådhall", "Mager punktfundamentering", "2026-09-21", "OK", "3.1"], ["A083", "8302 - Trådhall", "Punktfundamenter", "2026-09-28", "OK", "3.1"], ["A084", "8304 - Lagerhall", "Sprenging Utomhus Sandfang", "2026-09-28", "OK", "2.1"]];
 
@@ -1097,7 +1137,7 @@ const PLAN_FRA = '2026-09-28';
 const ROLLER = {systemadmin: 'Systemadministrator', firmaadmin: 'Firma-admin', leser: 'Leser'};
 // Lokal fil = demo i nettleseren; publisert side = innlogging og database (cloud.js).
 // Versjonsnummeret legges på cloud.js så nettleseren ikke bruker en gammel utgave fra hurtigbufferen etter en oppdatering.
-const APP_VERSION = '2026-11-12.1';
+const APP_VERSION = '2026-11-12.2';
 const CLOUD = location.protocol !== 'file:';
 const AVH_KEY = 'wrk2_avhengigheter', LOGG_KEY = 'wrk2_endringslogg';
 const SETTINGS_KEY = 'wrk2_settings', METHODS_KEY = 'wrk2_metoder', ATS_KEY = 'wrk2_at', REGISTER_KEY = 'wrk2_firmaregister';
@@ -1481,7 +1521,7 @@ const ui = {
   endringer: {apen: new Set(), lukket: new Set()},
   skrastrek: {firms: null, search: '', niva: 'akt', uker: '8', showArchive: false},
   statustavle: {firms: null, search: '', lys: '', edit: false, flyttAT: true, undo: [], lenke: false, avh: false, bareAvh: false, sunnhet: false},
-  utkikk: {firms: null, search: '', lys: '', farg: false, uker: new Set(), dager: new Set(), perioder: new Set()},
+  utkikk: {firms: null, search: '', lys: '', farg: false, uker: new Set(), dager: new Set(), perioder: new Set(), plan: false, sonerApne: new Set(['8302 - Kjeller']), soneFilter: null, velger: false, valgte: new Set()},
   metoder: {search: '', bareUkoblede: false, showArchive: false, editMb: null, closed: new Set(), atFirma: null},
   firma: {search: '', uten: false},
   admin: {firmDel: null, firmEdit: null, regSearch: '', loggSearch: ''},

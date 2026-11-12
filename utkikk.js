@@ -57,7 +57,7 @@ function ukNaturligBredde(st) {
 
 
 // ---------- Planleggingsaktiviteter (egne for Utkikksplan, påvirker ikke den vanlige planen) ----------
-// En planleggingsaktivitet: {id, navn, mor, omrade, fra, til, timer, laast}. fra/til er 'ÅÅÅÅ-MM-DDTtt:mm'.
+// En planleggingsaktivitet: {id, navn, mor, omrade, soner, fra, til, timer, laast}. soner: alle sonene den står i (omrade = den første). fra/til er 'ÅÅÅÅ-MM-DDTtt:mm'.
 // «mor» er en aktivitet i planen (eller en annen planleggingsaktivitet). Navnet vises som «Mor - Navn», og timeverket
 // til mora er en fast sum som deles mellom delene; det som ikke er fordelt, ligger igjen på mora. Uten mor blir den grå.
 const UK_KEY = 'wrk2_utkikk', UK_UTEN_MOR = '#8c959f';
@@ -67,7 +67,8 @@ function ukLast() {
   try { UKP = JSON.parse(localStorage.getItem(UK_KEY)); } catch (e) { UKP = null; }
   if (!UKP || !Array.isArray(UKP.akt)) UKP = {akt: [], restLaast: {}};
   if (!UKP.restLaast) UKP.restLaast = {};
-  if (!UKP.sone) UKP.sone = {};   // aktiviteter fra planen som er flyttet til en annen (under)sone i Utkikksplan
+  if (!UKP.sone) UKP.sone = {};   // aktiviteter fra planen som er flyttet til andre (under)soner i Utkikksplan: id → [soner]
+  if (!UKP.tid) UKP.tid = {};     // aktiviteter fra planen som er forlenget/forkortet i Utkikksplan: id → {fra, til}
   return UKP;
 }
 let ukLagreT = null;
@@ -83,7 +84,7 @@ function ukLagre() {
 window.ukFraSky = m => {
   if (!m || !Array.isArray(m.akt) || ukDlg) return;
   if (UKP && JSON.stringify(m) === JSON.stringify({...UKP, akt: UKP.akt.filter(p => !p.ny)})) return;
-  UKP = {restLaast: {}, sone: {}, ...m};
+  UKP = {restLaast: {}, sone: {}, tid: {}, ...m};
   try { localStorage.setItem(UK_KEY, JSON.stringify(UKP)); } catch (e) {}
   if (ukPa()) renderUtkikk();
 };
@@ -108,7 +109,24 @@ function ukStdTimer(t0, t1) {
 }
 const ukDataT = a => [daysBetween(ukFra(), a.startdato) * 24, (daysBetween(ukFra(), endDate(a)) + 1) * 24];
 const ukPlan = id => ukLast().akt.find(p => p.id === id);
-const ukSone = a => ukLast().sone[a.id] || a.omrade;
+// Sonene en aktivitet står i (kan være flere når den er kopiert med Ctrl), og tiden den har i Utkikksplan.
+function ukSonerAv(id) {
+  const p = ukPlan(id);
+  if (p) return p.soner && p.soner.length ? p.soner : [p.omrade];
+  const v = ukLast().sone[id], a = actById(id);
+  return Array.isArray(v) && v.length ? v : v ? [v] : [a ? a.omrade : ''];
+}
+function ukSettSoner(id, list) {
+  list = [...new Set(list)].filter(Boolean);
+  if (!list.length) return;
+  const p = ukPlan(id);
+  if (p) { p.soner = list; p.omrade = list[0]; return; }
+  const a = actById(id);
+  if (a && list.length === 1 && list[0] === a.omrade) delete UKP.sone[id]; else UKP.sone[id] = list;
+}
+const ukSone = a => ukSonerAv(a.id)[0];
+const ukDataTid = a => { const o = ukLast().tid[a.id]; return o ? [ukT(o.fra), ukT(o.til)] : ukDataT(a); };
+function ukForfedre(z) { const l = [], f = ukSoneInfo ? ukSoneInfo.forelder : new Map(); let n = 0; while (f.has(z) && n++ < 10) { z = f.get(z); l.push(z); } return l; }
 const ukErData = id => !ukPlan(id) && !!actById(id);
 function ukNavn(id, n = 0) {
   const p = ukPlan(id);
@@ -189,8 +207,8 @@ function renderUtkikk() {
   const tGrense = UK_FARGE_UKER * 168, xGrense = ukX(tGrense);
 
   const items = DATA.filter(a => !a.generell && matches(a, st) && a.startdato <= to && endDate(a) >= from).map(a => {
-    const [t0, t1] = ukDataT(a);
-    return {a, s: totalStatus(a), id: a.id, omrade: ukSone(a), t0, t1, navn: a.navn, farge: firmColor(a.firma), start: a.startdato, ferdig: a.status === 'Utført'};
+    const [t0, t1] = ukDataTid(a), soner = ukSonerAv(a.id);
+    return {a, s: totalStatus(a), id: a.id, omrade: soner[0], soner, t0, t1, navn: a.navn, farge: firmColor(a.firma), start: a.startdato, ferdig: a.status === 'Utført'};
   }).filter(({s}) => !st.lys || (st.lys === 'avvik' ? s.lys === 'rod' || s.lys === 'gul' : s.lys === st.lys));
   // Planleggingsaktivitetene vises bare når «Vis» står på alle (de har ikke statuslys).
   if (!st.lys) ukLast().akt.forEach(p => {
@@ -198,10 +216,10 @@ function renderUtkikk() {
     if (t1 <= 0 || t0 >= tMax) return;
     if (st.firms && !(rot && st.firms.has(rot.firma))) return;
     if (q && ![ukNavn(p.id), p.omrade].some(x => String(x).toLowerCase().includes(q))) return;
-    items.push({p, plan: true, id: p.id, omrade: p.omrade, t0, t1, navn: ukNavn(p.id), farge: p.mor ? (rot ? firmColor(rot.firma) : '#6e7781') : UK_UTEN_MOR, start: p.fra});
+    items.push({p, plan: true, id: p.id, omrade: ukSonerAv(p.id)[0], soner: ukSonerAv(p.id), t0, t1, navn: ukNavn(p.id), farge: p.mor ? (rot ? firmColor(rot.firma) : '#6e7781') : UK_UTEN_MOR, start: p.fra});
   });
 
-  const S = ukSoneInfo = ukSoner([...DATA.map(ukSone), ...ukLast().akt.map(p => p.omrade)]);
+  const S = ukSoneInfo = ukSoner([...DATA.flatMap(a => ukSonerAv(a.id)), ...ukLast().akt.flatMap(p => ukSonerAv(p.id))]);
   const under = z => [z, ...(S.barn.get(z) || []).flatMap(under)];
   const forfedre = z => { const l = []; let n = 0; while (S.forelder.has(z) && n++ < 10) { z = S.forelder.get(z); l.push(z); } return l; };
   const filter = st.soneFilter;
@@ -216,7 +234,7 @@ function renderUtkikk() {
     if (synlig(z)) {
       const sum = apen && !st.plan;
       rader.push({z, d, erF, apen, sum, soner: under(z)});
-      if (sum && items.some(x => x.omrade === z)) rader.push({z, d: d + 1, uten: true, soner: [z]});
+      if (sum && items.some(x => x.soner.includes(z))) rader.push({z, d: d + 1, uten: true, soner: [z]});
       if (apen) barn.forEach(c => besok(c, d + 1));
     }
     else if (filter && valgtUnder(z)) barn.forEach(c => besok(c, d));
@@ -226,7 +244,7 @@ function renderUtkikk() {
   ukItems = [];
   const rows = rader.map(r => {
     // Kopier: samme aktivitet kan stå i flere rader (overliggende og underliggende sone).
-    const zs = items.filter(x => r.soner.includes(x.omrade)).map(x => ({...x})).sort((p, q) => p.t0 - q.t0 || p.id.localeCompare(q.id));
+    const zs = items.filter(x => x.soner.some(z => r.soner.includes(z))).map(x => ({...x, her: x.soner.includes(r.z)})).sort((p, q) => p.t0 - q.t0 || p.id.localeCompare(q.id));
     const navnHtml = r.uten ? `<span class="uk-uten">uten undersone</span>` : `<span>${r.erF ? `<span class="uk-caret">${r.apen ? '▾' : '▸'}</span>` : ''}${esc(ukSoneNavn(r.z, S.forelder))}</span>`;
     const cnt = zs.length ? `<span class="cnt">${zs.length} aktivitet${zs.length === 1 ? '' : 'er'}${r.erF && (!r.apen || r.sum || st.plan) ? ' i alt' : ''}</span>` : '';
     const valgt = st.velger && !r.uten ? st.valgte.has(r.z) : false;
@@ -250,7 +268,9 @@ function renderUtkikk() {
     });
     const h = zs.length ? lanes.length * UK_LANE + UK_PAD * 2 - 6 : 38;
     const bars = zs.map(it => {
-      const i = ukItems.push(it) - 1, c = it.farge;
+      // I planleggingsmodus er aktiviteter som er fordelt til en underliggende sone grå i de overliggende sonene.
+      const nedover = st.plan && !it.her;
+      const i = ukItems.push(it) - 1, c = nedover ? UK_GRA : it.farge;
       // Etter 8 uker blir stolpen grå (også den delen av en stolpe som strekker seg forbi grensen).
       let bg = c, fg = svTextColor(c);
       if (!st.farg && it.x1 > xGrense) {
@@ -259,9 +279,9 @@ function renderUtkikk() {
       }
       const idTxt = it.a ? esc(it.id) + ' ' : '';
       const lab = it.ute ? `<div class="sv-lab uk-lab${it.ferdig ? ' done' : ''}" data-i="${i}" style="left:${it.x1 + 3}px;top:${UK_PAD + it.k * UK_LANE}px">${it.cutL ? '◂ ' : ''}${it.a ? `<b>${esc(it.id)}</b> ` : ''}${esc(it.navn.length > 34 ? it.navn.slice(0, 33) + '…' : it.navn)}</div>` : '';
-      return `<div class="sv-bar uk-bar${it.plan ? ' uk-plan' : ''}${it.cutL ? ' cut-l' : ''}${it.cutR ? ' cut-r' : ''}${it.ferdig ? ' done' : ''}${ukDlg && ukDlg.id === it.id ? ' uk-valgt' : ''}${it.p && it.p.ny ? ' uk-ny' : ''}" data-i="${i}"
+      return `<div class="sv-bar uk-bar${it.plan ? ' uk-plan' : ''}${nedover ? ' uk-nedover' : ''}${it.cutL ? ' cut-l' : ''}${it.cutR ? ' cut-r' : ''}${it.ferdig ? ' done' : ''}${ukDlg && ukDlg.id === it.id ? ' uk-valgt' : ''}${it.p && it.p.ny ? ' uk-ny' : ''}" data-i="${i}"
         style="left:${it.x0}px;width:${Math.max(4, it.x1 - it.x0 - 2)}px;top:${UK_PAD + it.k * UK_LANE}px;background:${bg};color:${fg}">
-        ${it.a ? `<span class="sv-lys ${it.s.lys}"></span>` : ''}${it.ute ? '' : `<span class="txt">${it.cutL ? '◂ ' : ''}${idTxt}${esc(it.navn)}</span>`}${st.plan ? '<span class="uk-splitt" title="Splitt aktiviteten: lag en ny del rett bak">✂</span>' : ''}</div>${lab}`;
+        ${it.a ? `<span class="sv-lys ${it.s.lys}"></span>` : ''}${it.ute ? '' : `<span class="txt">${it.cutL ? '◂ ' : ''}${idTxt}${esc(it.navn)}</span>`}${st.plan ? '<span class="uk-splitt" title="Splitt aktiviteten: lag en ny del rett bak">✂</span>' : ''}${st.plan && !it.cutL ? '<span class="uk-rs l" data-side="l" title="Dra for å endre start"></span>' : ''}${st.plan && !it.cutR ? '<span class="uk-rs r" data-side="r" title="Dra for å forlenge eller forkorte"></span>' : ''}</div>${lab}`;
     }).join('');
     return `<div class="sv-row" data-zone="${esc(r.z)}">
       ${venstre}
@@ -315,16 +335,16 @@ function ukTimeTipHtml(it) {
   const id = it.id, rader = (morId) => {
     const barn = ukBarn(morId), rest = ukRest(morId);
     return `<ul>${barn.map(c => `<li><span>${c.laast ? '🔒' : '·'}</span><span>${esc(c.navn)}: <b>${fmtTimer(c.timer)}</b></span></li>`).join('')}
-      <li><span>${ukLast().restLaast[morId] ? '🔒' : '·'}</span><span>Ikke fordelt: <b style="${rest < 0 ? 'color:var(--red)' : ''}">${fmtTimer(rest)}</b></span></li></ul>`;
+      <li><span>${ukLast().restLaast[morId] ? '🔒' : '·'}</span><span>${esc(ukIdTekst(morId) + ukNavn(morId))}: <b style="${rest < 0 ? 'color:var(--red)' : ''}">${fmtTimer(rest)}</b></span></li></ul>`;
   };
   const p = it.p, mor = p && p.mor;
   return `<h4>${it.a ? esc(id) + ' ' : ''}${esc(it.navn)}</h4>
-    <div class="sub">${esc(ukSoneInfo ? ukSoneNavn(it.omrade, ukSoneInfo.forelder) : it.omrade)} · ${it.a ? `${fmtNo(it.a.startdato)}–${fmtNo(endDate(it.a))}` : ukTidTekst(it.t0, it.t1)}</div>
+    <div class="sub">${it.soner.map(z => esc(ukSoneInfo ? ukSoneNavn(z, ukSoneInfo.forelder) : z)).join(' + ')} · ${it.a && !ukLast().tid[it.id] ? `${fmtNo(it.a.startdato)}–${fmtNo(endDate(it.a))}` : ukTidTekst(it.t0, it.t1)}</div>
     <div class="tot ikke">⏱ Timeverk: ${fmtTimer(ukTotal(id))}</div>
     ${it.a ? '<div class="sub">Foreløpig: 2 personer × 12 timer per dag, mandag–lørdag.</div>' : ''}
     ${p && !mor ? '<div class="sub">Uten overordnet aktivitet (grå).</div>' : ''}
     ${mor ? `<div class="sec">Del av ${esc(ukIdTekst(mor) + ukNavn(mor))} · fast sum ${fmtTimer(ukTotal(mor))}</div>${rader(mor)}` : ''}
-    ${ukBarn(id).length ? `<div class="sec">Fordelt på delene</div>${rader(id)}` : ''}
+    ${ukBarn(id).length ? `<div class="sec">Delt med</div>${rader(id)}` : ''}
     ${ui.utkikk.plan ? '<div class="sub" style="margin-top:6px">Dobbeltrykk for å endre · ✂ for å splitte</div>' : ''}`;
 }
 const fmtTimer = t => `${String(Math.round((+t || 0) * 10) / 10).replace('.', ',')} t`;
@@ -365,8 +385,8 @@ function ukNy(omrade, t0, t1, mor) {
 }
 function ukSplitt(it) {
   const mor = it.p ? (it.p.mor || it.p.id) : it.id, len = it.t1 - it.t0;
-  const p = {id: ukNyId(), navn: 'Ny del', mor, omrade: it.omrade, fra: ukDt(it.t1), til: ukDt(it.t1 + len), timer: 0, laast: false};
-  // Den nye delen får halvparten av det som ikke er fordelt på mora.
+  const p = {id: ukNyId(), navn: 'Ny del', mor, omrade: it.omrade, soner: [...it.soner], fra: ukDt(it.t1), til: ukDt(it.t1 + len), timer: 0, laast: false};
+  // Den nye delen får halvparten av timene aktiviteten den splittes fra har igjen.
   p.timer = Math.max(0, Math.round(ukRest(mor) / 2 * 10) / 10);
   ukLast().akt.push(p);
   ukLagre(); renderUtkikk();
@@ -400,8 +420,9 @@ function ukFordelingHtml(morId, egen) {
   return `<table class="uk-ford">
     ${barn.map(c => `<tr class="${c.id === egen ? 'meg' : ''}"><td>${esc(c.navn || '(uten navn)')}${c.id === egen ? ' <span class="sub">(denne)</span>' : ''}</td>
       <td><input type="number" min="0" step="0.5" data-ukt="${esc(c.id)}" value="${Math.round((+c.timer || 0) * 10) / 10}"> t</td><td>${laas(c.id, c.laast)}</td></tr>`).join('')}
-    <tr class="rest"><td>Ikke fordelt (på ${esc(ukNavn(morId))})</td><td><b style="${rest < 0 ? 'color:var(--red)' : ''}">${fmtTimer(rest)}</b></td><td>${laas('rest:' + morId, restL)}</td></tr>
-    </table><div class="sub">Fast sum ${fmtTimer(ukTotal(morId))}.${rest < 0 ? ' <b style="color:var(--red)">Delene har flere timer enn summen.</b>' : ''} Endrer du timene på en del, tas eller gis differansen til de åpne (🔓).</div>`;
+    <tr class="${morId === egen ? 'meg' : ''}"><td>${esc(ukIdTekst(morId) + ukNavn(morId))}${morId === egen ? ' <span class="sub">(denne)</span>' : ''}</td>
+      <td><input type="number" min="0" step="0.5" data-ukt="rest:${esc(morId)}" value="${Math.round(rest * 10) / 10}" style="${rest < 0 ? 'color:var(--red)' : ''}"> t</td><td>${laas('rest:' + morId, restL)}</td></tr>
+    </table><div class="sub">Summen er fast: ${fmtTimer(ukTotal(morId))}.${rest < 0 ? ' <b style="color:var(--red)">Delene har flere timer enn summen.</b>' : ''} Endrer du timene på en aktivitet, tas eller gis differansen til de åpne (🔓).</div>`;
 }
 function ukMorListe() {
   const q = (ukDlg.morSok || '').trim().toLowerCase(), id = ukDlg.id;
@@ -418,9 +439,10 @@ function ukDlgRender(plasser) {
   if (a) {
     const [t0, t1] = ukDataT(a);
     html = `<h4>${esc(a.id)} ${esc(a.navn)}</h4>
-      <div class="sub">${esc(ukSone(a))}${ukSone(a) !== a.omrade ? ` <span class="muted">(flyttet hit i Utkikksplan, i planen: ${esc(a.omrade)})</span>` : ''} · ${fmtNo(a.startdato)}–${fmtNo(endDate(a))} · ${firmBadge(a.firma)}</div>
+      <div class="sub">${ukLast().tid[id] ? `${ukTidTekst(...ukDataTid(a))} <span class="muted">(endret i Utkikksplan, i planen ${fmtNo(a.startdato)}–${fmtNo(endDate(a))})</span> <button class="link-btn" data-action="uk-dlg-tidplan">↺ som i planen</button>` : `${fmtNo(a.startdato)}–${fmtNo(endDate(a))}`} · ${firmBadge(a.firma)}${ukSonerAv(id).join() !== a.omrade ? ` <span class="muted">· sone i planen: ${esc(a.omrade)}</span>` : ''}</div>
       <div class="uk-tim"><b>Timeverk:</b> ${fmtTimer(ukStdTimer(t0, t1))} <span class="sub">(foreløpig 2 personer × 12 t per dag, man–lør)</span></div>
-      ${ukBarn(id).length ? `<div class="uk-sec">Fordeling på delene</div>${ukFordelingHtml(id)}` : '<div class="sub" style="margin-top:6px">Ingen deler ennå. Bruk ✂ Splitt, eller lag en ny aktivitet med denne som overordnet.</div>'}
+      ${ukSoneChips(id)}
+      ${ukBarn(id).length ? `<div class="uk-sec">Timene deles med</div>${ukFordelingHtml(id, id)}` : '<div class="sub" style="margin-top:6px">Ingen deler ennå. Bruk ✂ Splitt, eller lag en ny aktivitet med denne som overordnet.</div>'}
       <div class="uk-knapper"><button class="btn" data-action="uk-dlg-splitt">✂ Splitt</button><span style="flex:1"></span><button class="btn primary" data-action="uk-dlg-ok">Lukk</button></div>`;
   } else {
     const morTxt = p.mor ? ukIdTekst(p.mor) + ukNavn(p.mor) : '';
@@ -431,13 +453,13 @@ function ukDlgRender(plasser) {
       <div class="uk-mor${ukDlg.morAktiv ? ' aktiv' : ''}"><input type="text" data-ukf="mor" value="${esc(ukDlg.morSok !== null ? ukDlg.morSok : morTxt)}" placeholder="Søk, eller trykk på en aktivitet i planen" autocomplete="off">
         ${ukDlg.morAktiv ? `<div class="uk-morhint">Velg i listen, eller trykk på en aktivitet i planen.</div><div class="uk-morliste">${ukMorListe()}</div>` : ''}</div>
       ${p.mor ? '' : '<div class="sub warn">Uten overordnet aktivitet blir den grå.</div>'}
-      <label class="f">Sone</label><select data-ukf="omrade">${S.alleNokler.map(({z, d}) => `<option value="${esc(z)}" ${z === p.omrade ? 'selected' : ''}>${' '.repeat(d)}${esc(ukSoneNavn(z, S.forelder))}</option>`).join('')}${S.alleNokler.some(x => x.z === p.omrade) ? '' : `<option selected>${esc(p.omrade)}</option>`}</select>
+      ${ukSoneChips(id)}
       <div class="uk-to"><div><label class="f">Fra</label><input type="datetime-local" data-ukf="fra" value="${esc(p.fra)}"></div><div><label class="f">Til</label><input type="datetime-local" data-ukf="til" value="${esc(p.til)}"></div></div>
       <label class="f">Timeverk</label><div class="uk-tim"><input type="number" min="0" step="0.5" data-ukf="timer" value="${Math.round((+p.timer || 0) * 10) / 10}"> t
         <button type="button" class="uk-laas${p.laast ? ' on' : ''}" data-uklaas="${esc(p.id)}" title="Lås timene">${p.laast ? '🔒' : '🔓'}</button>
         <span class="sub">Timene er ikke bundet til timene i døgnet.</span></div>
-      ${p.mor ? `<div class="uk-sec">Fordeling fra ${esc(ukIdTekst(p.mor) + ukNavn(p.mor))}</div>${ukFordelingHtml(p.mor, p.id)}` : ''}
-      ${ukBarn(p.id).length ? `<div class="uk-sec">Fordeling på delene av denne</div>${ukFordelingHtml(p.id)}` : ''}
+      ${p.mor ? `<div class="uk-sec">Timene deles med</div>${ukFordelingHtml(p.mor, p.id)}` : ''}
+      ${ukBarn(p.id).length ? `<div class="uk-sec">Delt videre med</div>${ukFordelingHtml(p.id, p.id)}` : ''}
       <div class="uk-knapper">${p.ny ? '' : '<button class="btn" data-action="uk-dlg-splitt">✂ Splitt</button><button class="btn" data-action="uk-dlg-slett">🗑 Slett</button>'}<span style="flex:1"></span>
         ${p.ny ? '<button class="btn" data-action="uk-dlg-avbryt">Avbryt</button>' : ''}<button class="btn primary" data-action="uk-dlg-ok">${p.ny ? 'Opprett (Enter)' : 'Ferdig (Enter)'}</button></div>`;
   }
@@ -454,6 +476,13 @@ function ukDlgRender(plasser) {
     box.style.top = Math.max(8, Math.min(top, innerHeight - box.offsetHeight - 8)) + 'px';
   }
 }
+// Sonene aktiviteten står i, med × for å fjerne en kopi og en liste for å legge til en sone.
+function ukSoneChips(id) {
+  const S = ukSoneInfo || ukSoner([]), soner = ukSonerAv(id);
+  return `<label class="f">Sone${soner.length > 1 ? 'r' : ''}</label><div class="uk-chips">${soner.map(z => `<span class="uk-chip">${esc(ukSoneNavn(z, S.forelder))}${soner.length > 1 ? `<button type="button" data-action="uk-dlg-fjernsone" data-sone="${esc(z)}" title="Fjern fra denne sonen">×</button>` : ''}</span>`).join('')}
+    <select data-ukf="leggsone"><option value="">＋ Legg til sone …</option>${S.alleNokler.filter(({z}) => !soner.includes(z)).map(({z, d}) => `<option value="${esc(z)}">${'\u2003'.repeat(d)}${esc(ukSoneNavn(z, S.forelder))}</option>`).join('')}</select></div>
+    <div class="sub">× fjerner sonen. I planen: dra for å flytte, hold Ctrl mens du drar for å kopiere til flere soner.</div>`;
+}
 function ukSettMor(morId) {
   const p = ukPlan(ukDlg.id);
   if (!p) return;
@@ -466,13 +495,19 @@ function ukSettMor(morId) {
 function ukDlgFelt(el) {
   if (!ukDlg) return;
   const p = ukPlan(ukDlg.id);
-  if (el.dataset.ukt !== undefined) {
-    const c = ukPlan(el.dataset.ukt), v = Math.max(0, +el.value || 0);
-    if (c && c.mor && !ukFordel(c.mor, c.id, v)) showToast('Lås opp en annen del (🔓) for å flytte timer.');
+  if (el.dataset.ukf === 'leggsone') {
+    if (!el.value) return;
+    // Legg til sonen; overliggende soner til den nye fjernes fra lista, siden undersonen også tar plass i dem.
+    const fj = ukForfedre(el.value);
+    ukSettSoner(ukDlg.id, [...ukSonerAv(ukDlg.id).filter(z => !fj.includes(z)), el.value]);
+  } else if (el.dataset.ukt !== undefined) {
+    const k = el.dataset.ukt, v = Math.max(0, +el.value || 0);
+    if (k.startsWith('rest:')) { if (!ukFordel(k.slice(5), 'rest', v)) showToast('Lås opp en annen del (🔓) for å flytte timer.'); }
+    else { const c = ukPlan(k); if (c && c.mor && !ukFordel(c.mor, c.id, v)) showToast('Lås opp en annen del (🔓) for å flytte timer.'); }
   } else if (p && el.dataset.ukf) {
     const f = el.dataset.ukf;
     if (f === 'navn') { p.navn = el.value.trim(); ukLagre(); renderUtkikk(); return; }
-    else if (f === 'omrade') p.omrade = el.value;
+    else if (f === 'leggsone') return;
     else if (f === 'timer') { const v = Math.max(0, +el.value || 0); if (p.mor) { if (!ukFordel(p.mor, p.id, v)) showToast('Lås opp en annen del (🔓) for å flytte timer.'); } else p.timer = v; }
     else if (f === 'fra' && el.value) { const len = ukT(p.til) - ukT(p.fra); p.fra = el.value; p.til = ukDt(ukT(p.fra) + len); }
     else if (f === 'til' && el.value) p.til = ukT(el.value) > ukT(p.fra) ? el.value : ukDt(ukT(p.fra) + 1);
@@ -509,6 +544,8 @@ function ukAction(action, btn) {
   }
   if (!ukDlg) return;
   if (action === 'uk-dlg-ok') { ukLukk(true); return; }
+  if (action === 'uk-dlg-fjernsone') { ukSettSoner(ukDlg.id, ukSonerAv(ukDlg.id).filter(z => z !== btn.dataset.sone)); ukLagre(); renderUtkikk(); ukDlgRender(); return; }
+  if (action === 'uk-dlg-tidplan') { delete UKP.tid[ukDlg.id]; ukLagre(); renderUtkikk(); ukDlgRender(); return; }
   if (action === 'uk-dlg-avbryt') { ukLukk(false); return; }
   if (action === 'uk-dlg-splitt') { const it = ukItems.find(x => x.id === ukDlg.id); if (it) { ukLukk(true); ukSplitt(it); } return; }
   if (action === 'uk-dlg-slett') {
@@ -616,7 +653,7 @@ document.addEventListener('pointerover', e => {
   if (!ukPa() || e.pointerType === 'touch') return;
   ukShowTip(ukBarOf(e.target));
 });
-document.addEventListener('pointermove', e => { if (ukPa() && ui.utkikk.plan) { ukDragFlytt(e); ukHl(e); } });
+document.addEventListener('pointermove', e => { if (ukPa() && ui.utkikk.plan) { if (ukRsFlytt(e)) return; ukDragFlytt(e); ukHl(e); } });
 
 // Flytting mellom soner (planleggingsmodus): dra en aktivitet opp eller ned til en annen sone, f.eks. fra Kjellerinnkjøring til Rampe.
 // Aktiviteter fra planen får sonen sin i Utkikksplan (planen ellers endres ikke); planleggingsaktiviteter får ny sone.
@@ -625,8 +662,29 @@ document.addEventListener('pointerdown', e => {
   if (!ukPa() || !ui.utkikk.plan || ukDlg || e.button > 0 || e.target.closest('.uk-splitt')) return;
   const bar = ukBarOf(e.target);
   if (!bar || !e.target.closest('.uk-bar')) return;
-  ukDrag = {bar, it: ukItems[+bar.dataset.i], y0: e.clientY, x0: e.clientX, moved: false, mal: null};
+  const rs = e.target.closest('.uk-rs');
+  if (rs) { e.preventDefault(); ukRs = {bar, it: ukItems[+bar.dataset.i], side: rs.dataset.side, time: bar.parentElement, moved: false}; ukShowTip(null); return; }
+  ukDrag = {bar, it: ukItems[+bar.dataset.i], src: bar.closest('.sv-row').dataset.zone, y0: e.clientY, x0: e.clientX, moved: false, mal: null};
 });
+// Endepunktene (planleggingsmodus): dra i start eller slutt for å endre lengden. Tiden låses til enheten tidslinjen står i der.
+let ukRs = null;
+function ukTFraX(x) {
+  const l = ukLeaves.find(q => x < q.x0 + q.w) || ukLeaves[ukLeaves.length - 1];
+  if (!l) return 0;
+  return x - l.x0 < l.w / 2 ? l.t0 : l.t1;
+}
+function ukRsFlytt(e) {
+  const d = ukRs;
+  if (!d) return false;
+  d.moved = true;
+  document.body.classList.add('uk-rs-body');
+  const r = d.time.getBoundingClientRect(), t = ukTFraX(e.clientX - r.left), it = d.it;
+  if (d.side === 'l') d.t0 = Math.min(t, it.t1 - 0.5), d.t1 = it.t1; else d.t0 = it.t0, d.t1 = Math.max(t, it.t0 + 0.5);
+  const x0 = ukX(Math.max(0, d.t0)), x1 = ukX(d.t1);
+  d.bar.style.left = x0 + 'px'; d.bar.style.width = Math.max(4, x1 - x0 - 2) + 'px';
+  d.bar.title = ukTidTekst(d.t0, d.t1);
+  return true;
+}
 function ukDragFlytt(e) {
   const d = ukDrag;
   if (!d) return;
@@ -634,30 +692,48 @@ function ukDragFlytt(e) {
   if (!d.moved && Math.abs(dy) < 6) return;
   if (!d.moved) { d.moved = true; ukShowTip(null); d.bar.classList.add('uk-drar'); d.bar.style.pointerEvents = 'none'; document.body.classList.add('uk-drar-body'); }
   d.bar.style.transform = `translateY(${dy}px)`;
+  document.body.classList.toggle('uk-kopi-body', e.ctrlKey || e.metaKey);
   const under = document.elementFromPoint(e.clientX, e.clientY), rad = under && under.closest('#uk-chart .sv-row');
   const mal = rad ? rad.dataset.zone : null;
   if (mal !== d.mal) {
     document.querySelectorAll('#uk-chart .sv-row.uk-mal').forEach(x => x.classList.remove('uk-mal'));
-    if (rad && mal !== d.it.omrade) rad.classList.add('uk-mal');
+    if (rad && !d.it.soner.includes(mal)) rad.classList.add('uk-mal');
     d.mal = mal;
   }
 }
-document.addEventListener('pointerup', () => {
+document.addEventListener('pointerup', e => {
+  if (ukRs) {
+    const d = ukRs; ukRs = null; document.body.classList.remove('uk-rs-body');
+    if (!d.moved || d.t0 === undefined) return;
+    ukSvelg = Date.now();
+    const it = d.it, fra = ukDt(d.t0), til = ukDt(d.t1);
+    if (it.p) { it.p.fra = fra; it.p.til = til; }
+    else {
+      const [p0, p1] = ukDataT(it.a);
+      if (Math.abs(p0 - d.t0) < 0.01 && Math.abs(p1 - d.t1) < 0.01) delete UKP.tid[it.id]; else UKP.tid[it.id] = {fra, til};
+    }
+    ukLagre(); renderUtkikk();
+    return;
+  }
   const d = ukDrag;
   if (!d) return;
   ukDrag = null;
-  document.body.classList.remove('uk-drar-body');
+  document.body.classList.remove('uk-drar-body', 'uk-kopi-body');
   document.querySelectorAll('#uk-chart .sv-row.uk-mal').forEach(x => x.classList.remove('uk-mal'));
   if (!d.moved) return;
   ukSvelg = Date.now();
-  const z = d.mal, it = d.it;
-  if (z && z !== it.omrade) {
-    if (it.p) it.p.omrade = z;
-    else if (z === it.a.omrade) delete UKP.sone[it.id]; else UKP.sone[it.id] = z;
+  const z = d.mal, it = d.it, kopi = e.ctrlKey || e.metaKey, soner = ukSonerAv(it.id);
+  if (z && !soner.includes(z)) {
+    // Uten Ctrl flyttes den fra sonen den ble dratt fra (eller undersonene av den); med Ctrl kopieres den, så den står i flere soner.
+    // Overliggende soner til målet fjernes fra lista, siden undersonen også tar plass i dem.
+    const fraHer = soner.filter(x => x === d.src || ukForfedre(x).includes(d.src));
+    const beholdes = kopi ? soner : soner.filter(x => !(fraHer.length ? fraHer : soner).includes(x));
+    const fj = ukForfedre(z);
+    ukSettSoner(it.id, [...beholdes.filter(x => !fj.includes(x)), z]);
     // Sørg for at sonen det ble flyttet til, vises åpen.
     let x = z, n = 0; while (ukSoneInfo && ukSoneInfo.forelder.has(x) && n++ < 10) { x = ukSoneInfo.forelder.get(x); ui.utkikk.sonerApne.add(x); }
     ukLagre();
-    showToast(`${it.a ? it.id + ' ' : ''}${it.navn} → ${ukSoneInfo ? ukSoneNavn(z, ukSoneInfo.forelder) : z}`);
+    showToast(`${it.a ? it.id + ' ' : ''}${it.navn} ${kopi ? 'kopiert til' : '→'} ${ukSoneInfo ? ukSoneNavn(z, ukSoneInfo.forelder) : z}`);
   }
   renderUtkikk();
 });

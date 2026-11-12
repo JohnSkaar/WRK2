@@ -324,6 +324,7 @@ function startSync(uid) {
   unsubs.push(onSnapshot(doc(db, 'config', 'montecarlo'), s => { if (s.exists() && window.mcFraSky) window.mcFraSky(s.data().modell); }, () => {}));
   lyttSamlinger(['ukakt', 'ukmeta'], 'utkikk', 'plan', 'ukFraSamlinger', 'ukMigrer');
   lyttSamlinger(['arposter', 'arendringer', 'arrapporter', 'artilfort'], 'aktrapp', 'data', 'arFraSamlinger', 'arMigrer');
+  lyttSamlinger(['sonemod'], 'sonemod', 'data', 'smFraSamlinger', 'smMigrer');
   unsubs.push(onSnapshot(doc(db, 'config', 'metoder'), s => { st.metoder = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'firms'), s => { st.firms = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'settings'), s => { st.settings = s.exists() ? s.data() : {}; apply(); }, fail));
@@ -443,7 +444,7 @@ function lyttSamlinger(samlinger, gammelDok, felt, fraSamlinger, migrer) {
     }
   };
   samlinger.forEach(n => unsubs.push(onSnapshot(collection(db, n), s => { data[n] = s.docs.map(d => ({...d.data(), id: d.id})); fikk.add(n); send(); },
-    () => { if (!feil && isSys()) showToast(`Fikk ikke lese ${samlinger.join(', ')} – publiser firestore.rules på nytt i Firebase-konsollen.`); feil = true; data[n] = []; fikk.add(n); })));
+    () => { if (!feil && (() => { try { return isSys(); } catch (e) { return false; } })()) showToast(`Fikk ikke lese ${samlinger.join(', ')} – publiser firestore.rules på nytt i Firebase-konsollen.`); feil = true; data[n] = []; fikk.add(n); })));
   unsubs.push(onSnapshot(doc(db, 'config', gammelDok), s => { if (!harGammel) { gammel = s.exists() ? s.data() : null; harGammel = true; send(); } }, () => { harGammel = true; send(); }));
 }
 // Skriver bare dokumentene som er endret (lagt til, endret eller slettet), i bolker på 400.

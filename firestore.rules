@@ -56,6 +56,7 @@ service cloud.firestore {
     match /arendringer/{id} { allow read, write: if sys(); }
     match /arrapporter/{id} { allow read, write: if sys(); }
     match /artilfort/{id} { allow read, write: if sys(); }
+    match /sonemod/{id} { allow read, write: if sys(); }
     match /config/{docId} {
       allow read: if member();
       allow write: if sys();

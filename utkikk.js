@@ -241,9 +241,19 @@ const UK_SONETRE = {
   '8302 - Kjeller / Kjellerinnkjøring': ['8302 - Kjeller / Kjellerinnkjøring / Rampe', '8302 - Kjeller / Kjellerinnkjøring / Uteplass kjeller']
 };
 function ukSoner(omrader) {
-  const barn = new Map(Object.entries(UK_SONETRE).map(([k, v]) => [k, [...v]])), forelder = new Map();
-  barn.forEach((l, k) => l.forEach(c => forelder.set(c, k)));
-  const alle = [...SK_ZONE_ORDER, ...[...new Set(omrader)].filter(z => !SK_ZONE_ORDER.includes(z)).sort()];
+  // Sonetreet kommer fra Sonemodul (fasen som er valgt for Utkikksplan); uten Sonemodul brukes det faste treet under.
+  const tre = typeof window.smTre === 'function' ? window.smTre() : null;
+  let barn, forelder = new Map(), basis;
+  if (tre && tre.length) {
+    barn = new Map(tre.map(t => [t.sti, []]));
+    tre.forEach(t => { if (t.forelder && barn.has(t.forelder)) { barn.get(t.forelder).push(t.sti); forelder.set(t.sti, t.forelder); } });
+    basis = tre.map(t => t.sti);
+  } else {
+    barn = new Map(Object.entries(UK_SONETRE).map(([k, v]) => [k, [...v]]));
+    barn.forEach((l, k) => l.forEach(c => forelder.set(c, k)));
+    basis = SK_ZONE_ORDER;
+  }
+  const alle = [...basis, ...[...new Set(omrader)].filter(z => z && !basis.includes(z)).sort()];
   alle.forEach(z => {
     if (barn.has(z) || forelder.has(z)) return;
     const p = [...barn.keys()].filter(k => z.startsWith(k + ' / ')).sort((x, y) => y.length - x.length)[0];
@@ -258,6 +268,19 @@ function ukSoner(omrader) {
   return {topp, barn, forelder, alleNokler};
 }
 const ukSoneNavn = (z, forelder) => forelder.has(z) ? z.slice(forelder.get(z).length + 3) : z;
+// Fra Sonemodul: en sone har fått nytt navn eller ny plassering (ny sti). Aktivitetene, valgene og filtrene følger med.
+window.ukOmdoepSoner = par => {
+  par = [...par].sort((a, b) => a[0].length - b[0].length);
+  const ny = z => { for (const [g, n] of par) { if (z === g) z = n; else if (z && z.startsWith(g + ' / ')) z = n + z.slice(g.length); } return z; };
+  const M = ukLast();
+  M.akt.forEach(p => { p.omrade = ny(p.omrade); if (p.soner) p.soner = p.soner.map(ny); });
+  Object.keys(M.sone).forEach(id => { const v = M.sone[id]; M.sone[id] = Array.isArray(v) ? v.map(ny) : ny(v); });
+  const st = ui.utkikk;
+  st.sonerApne = new Set([...st.sonerApne].map(ny));
+  if (st.soneFilter) st.soneFilter = new Set([...st.soneFilter].map(ny));
+  st.valgte = new Set([...st.valgte].map(ny));
+  ukLagre();
+};
 
 let ukSoneInfo = null;
 function renderUtkikk() {

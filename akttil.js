@@ -6,7 +6,7 @@
 const AT2_KEY = 'wrk2_akttil', AT2_UKER = 3;
 let AT2 = null;
 const at2Synk = lagSynk(['akttil']);
-const at2Ui = {uker: new Set(), dager: new Set(), perioder: new Set(), valgt: null, zoom: null, akt: null};
+const at2Ui = {uker: new Set(), dager: new Set(), perioder: new Set(), valgt: null, zoom: null, akt: null, tegn: null};
 
 // ----- lagring: én tillatelse per aktivitet og dag/tidsrom -----
 function at2Last() {
@@ -116,6 +116,7 @@ function renderAkttil() {
     if (box[2] / box[3] < 4 / 3) { const w = box[3] * 4 / 3; box[0] -= (w - box[2]) / 2; box[2] = w; }
   }
   const vb = box.join(' ');
+  const pst = ([x, y]) => [(x - box[0]) / box[2] * 100, (y - box[1]) / box[3] * 100];
   // Områdene tegnes med fargen sin; merkede soner for valgt aktivitet får aktivitetens farge.
   const omrCeller = omraader.map(o => ({o, sti: smSti(o), celler: smAlleCeller(o.id)}));
   const eier = new Map();
@@ -131,36 +132,54 @@ function renderAkttil() {
     const erMerket = merket.has(o.id), n = iOmr(o).length;
     return `<rect class="at2-c${erMerket ? ' merket' : ''}" data-at2sone="${o.id}" x="${c.x0}" y="${c.y0}" width="${c.x1 - c.x0}" height="${c.y1 - c.y0}" vector-effect="non-scaling-stroke" style="fill:${erMerket ? valgtAkt.farge : o.farge};fill-opacity:${erMerket ? .6 : n ? .28 : .1}"><title>${esc(smSti(o))}</title></rect>`;
   }).join('');
+  // Tegnede områder: den valgte aktivitetens fylt i fargen dens, de andres som tynn stiplet kant.
+  const pkt = box[2] / 160;
+  const omrSvg = synlige.flatMap(x => ((at2Til(x.id) || {}).omrader || []).map(o => ({x, o}))).map(({x, o}) => {
+    const v = valgtAkt && valgtAkt.id === x.id;
+    return `<polygon points="${o.pts.map(q => q.join(',')).join(' ')}" fill="${x.farge}" fill-opacity="${v ? .35 : .08}" stroke="${x.farge}" stroke-width="${v ? 2.5 : 1.5}" ${v ? '' : 'stroke-dasharray="6 4"'} vector-effect="non-scaling-stroke" style="pointer-events:none"/>`;
+  }).join('') + (at2Ui.tegn ? `<polyline points="${at2Ui.tegn.pts.map(q => q.join(',')).join(' ')}${at2Ui.tegn.pts.length > 2 ? ' ' + at2Ui.tegn.pts[0].join(',') : ''}" fill="${valgtAkt ? valgtAkt.farge : '#1f6feb'}" fill-opacity=".2" stroke="${valgtAkt ? valgtAkt.farge : '#1f6feb'}" stroke-width="2" stroke-dasharray="8 5" vector-effect="non-scaling-stroke" style="pointer-events:none"/>`
+    + at2Ui.tegn.pts.map(q => `<circle cx="${q[0]}" cy="${q[1]}" r="${pkt}" fill="#fff" stroke="#24292f" stroke-width="1.5" vector-effect="non-scaling-stroke" style="pointer-events:none"/>`).join('') : '')
+    // Sonen aktiviteten har i Utkikksplan, markert med kant når den er valgt (der den holder seg).
+    + (valgtAkt ? [...(at2Tillatt(valgtAkt) || [])].map(id => C.find(c => c.id === id)).filter(Boolean).map(c => `<rect x="${c.x0}" y="${c.y0}" width="${c.x1 - c.x0}" height="${c.y1 - c.y0}" fill="none" stroke="${valgtAkt.farge}" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>`).join('') : '');
+  // Aktiviteter som er dratt på plass, står der de er plassert (og ikke i lappene midt i sonen).
+  const plassert = new Set(synlige.filter(x => { const t = at2Til(x.id); return t && t.pos; }).map(x => x.id));
+  const lapp = (x, ekstra = '') => `<div class="at2-lapp${valgtAkt && valgtAkt.id === x.id ? ' valgt' : ''}${at2Til(x.id) ? ' har' : ''}${ekstra}" data-action="at2-akt" data-at2drag="${esc(x.id)}" data-id="${esc(x.id)}" style="border-left-color:${x.farge}" title="${esc((x.a ? x.id + ' ' : '') + x.navn)} – dra for å plassere innenfor sonen">${x.a ? `<b>${esc(x.id)}</b> ` : ''}${esc(x.navn.length > 26 ? x.navn.slice(0, 25) + '…' : x.navn)}</div>`;
+  const plasserte = synlige.filter(x => plassert.has(x.id)).map(x => { const [px, py] = pst(at2Til(x.id).pos);
+    return px < 0 || px > 100 || py < 0 || py > 100 ? '' : `<div class="at2-pin" style="left:${px}%;top:${py}%">${lapp(x, ' pin')}</div>`; }).join('');
   const sentrum = cs => { const l = cs.map(id => C.find(c => c.id === id)).filter(Boolean); return l.length ? [l.reduce((n, c) => n + c.cx, 0) / l.length, l.reduce((n, c) => n + c.cy, 0) / l.length] : null; };
-  const pst = ([x, y]) => [(x - box[0]) / box[2] * 100, (y - box[1]) / box[3] * 100];
   // Aktivitetene står som lapper midt i området sitt (maks 4, så «+N»).
   const lapper = omrCeller.map(({o, celler: cs}) => {
     const s = sentrum(cs); if (!s) return '';
-    const l = iOmr(o), [px, py] = pst(s);
+    const l = iOmr(o).filter(x => !plassert.has(x.id)), [px, py] = pst(s), alle = iOmr(o).length;
     return `<div class="at2-omr" style="left:${px}%;top:${py}%">
-      <button class="at2-omrnavn" data-action="at2-zoom" data-id="${o.id}" title="${smBarn(o.id).length ? 'Zoom inn på ' + esc(o.navn) : esc(o.navn)}">${esc(o.navn)}${smBarn(o.id).length ? ' 🔍' : ''}${l.length ? ` <b>${l.length}</b>` : ''}</button>
-      ${l.slice(0, 4).map(x => `<div class="at2-lapp${valgtAkt && valgtAkt.id === x.id ? ' valgt' : ''}${at2Til(x.id) ? ' har' : ''}" data-action="at2-akt" data-id="${esc(x.id)}" style="border-left-color:${x.farge}" title="${esc((x.a ? x.id + ' ' : '') + x.navn)}">${x.a ? `<b>${esc(x.id)}</b> ` : ''}${esc(x.navn.length > 26 ? x.navn.slice(0, 25) + '…' : x.navn)}</div>`).join('')}
+      <button class="at2-omrnavn" data-action="at2-zoom" data-id="${o.id}" title="${smBarn(o.id).length ? 'Zoom inn på ' + esc(o.navn) : esc(o.navn)}">${esc(o.navn)}${smBarn(o.id).length ? ' 🔍' : ''}${alle ? ` <b>${alle}</b>` : ''}</button>
+      ${l.slice(0, 4).map(x => lapp(x)).join('')}
       ${l.length > 4 ? `<div class="at2-lapp mer">+${l.length - 4} til</div>` : ''}</div>`;
   }).join('') + (zoom && direkte.length ? `<div class="at2-omr at2-direkte"><span class="at2-omrnavn">I ${esc(zoom.navn)}, ikke fordelt <b>${direkte.length}</b></span>
-      ${direkte.slice(0, 6).map(x => `<div class="at2-lapp${valgtAkt && valgtAkt.id === x.id ? ' valgt' : ''}${at2Til(x.id) ? ' har' : ''}" data-action="at2-akt" data-id="${esc(x.id)}" style="border-left-color:${x.farge}">${x.a ? `<b>${esc(x.id)}</b> ` : ''}${esc(x.navn.length > 26 ? x.navn.slice(0, 25) + '…' : x.navn)}</div>`).join('')}${direkte.length > 6 ? `<div class="at2-lapp mer">+${direkte.length - 6} til</div>` : ''}</div>` : '');
+      ${direkte.filter(x => !plassert.has(x.id)).slice(0, 6).map(x => lapp(x)).join('')}${direkte.length > 6 ? `<div class="at2-lapp mer">+${direkte.length - 6} til</div>` : ''}</div>` : '');
   const sti = []; let s = zoom, n = 0; while (s && n++ < 10) { sti.unshift(s); s = smSone(s.forelder); }
   const tidTekst = ukTidTekst(v.t0, v.t1);
-  const radAkt = x => { const t = at2Til(x.id), sonerTxt = t ? t.soner.map(id => (smSone(id) || {}).navn).filter(Boolean).join(', ') : '';
-    return `<div class="at2-rad${valgtAkt && valgtAkt.id === x.id ? ' valgt' : ''}" data-action="at2-akt" data-id="${esc(x.id)}" style="border-left-color:${x.farge}">
+  const radAkt = x => { const t = at2Til(x.id), sonerTxt = t ? (t.soner || []).map(id => (smSone(id) || {}).navn).filter(Boolean).join(', ') : '';
+    return `<div class="at2-rad${valgtAkt && valgtAkt.id === x.id ? ' valgt' : ''}" data-action="at2-akt" data-at2drag="${esc(x.id)}" data-id="${esc(x.id)}" style="border-left-color:${x.farge}">
       <div><b>${x.a ? esc(x.id) + ' ' : ''}${esc(x.navn)}</b></div>
       <div class="sub">${esc(x.soner.map(z => z.split(' / ').pop()).join(', '))}${x.firma ? ' · ' + esc(x.firma) : ''}${x.at.length ? ' · AT ' + esc(x.at.join(', ')) : ' · ⚠ mangler AT'}</div>
-      <div class="at2-status">${t && t.soner.length ? `✅ Tillatelse: ${esc(sonerTxt)}` : '<span class="sub">Ingen soner markert</span>'}</div></div>`; };
+      <div class="at2-status">${t && t.soner.length ? `✅ Tillatelse: ${esc(sonerTxt)}` : t && t.pos ? '📍 Plassert, ikke tegnet' : '<span class="sub">Ikke plassert eller tegnet</span>'}</div>
+      ${valgtAkt && valgtAkt.id === x.id && t && (t.omrader || []).length ? `<div class="at2-omrliste">${t.omrader.map((o, i) => `<div>Område ${i + 1}: ${esc(o.soner.map(z => { const sz = smSone(z), d = (o.dekning || {})[z]; return (sz ? sz.navn : '?') + (d ? ` (${d[0]}/${d[1]} ruter)` : ''); }).join(', ') || 'ingen soner')} <button class="link-btn" data-action="at2-fjern-omr" data-i="${i}">✕ fjern</button></div>`).join('')}</div>` : ''}
+      ${valgtAkt && valgtAkt.id === x.id && t && t.pos ? `<div class="at2-omrliste">📍 Plassert${t.posSone && smSone(t.posSone) ? ' i ' + esc(smSone(t.posSone).navn) : ''} <button class="link-btn" data-action="at2-fjern-pos">✕ fjern plassering</button></div>` : ''}</div>`; };
   root.innerHTML = `<div class="panel">
     <h2>Aktivitetstillatelse <span class="readonly-tag">Prøve – AT-numrene er som før</span></h2>
-    <p class="intro">Velg dag på datolinjen (trykk på en uke for å se dagene; trykk på en valgt dag igjen for å dele den i perioder). Aktivitetene som pågår da, vises på kartet. Trykk på en overliggende sone (🔍) for å zoome inn. Velg en aktivitet, og trykk på sonene den skal være i.</p>
+    <p class="intro">Velg dag på datolinjen (trykk på en uke for å se dagene; trykk på en valgt dag igjen for å dele den i perioder). Aktivitetene som pågår da, vises på kartet. Trykk på en overliggende sone (🔍) for å zoome inn. Aktivitetene står i sonen sin fra Utkikksplan. Dra teksten dit i sonen aktiviteten skal være, og tegn området rundt den – området gjøres om til sonene det dekker.</p>
     ${at2Tidslinje(akt)}
   </div>
   <div class="at2-grid">
     <div class="panel at2-kartpanel">
       <div class="at2-sti"><button class="link-btn" data-action="at2-zoom" data-id="">Hele anlegget</button>${sti.map(x => ` › <button class="link-btn" data-action="at2-zoom" data-id="${x.id}">${esc(x.navn)}</button>`).join('')}
         <span class="sub"> · ${esc(tidTekst)} · ${synlige.length} aktivitet${synlige.length === 1 ? '' : 'er'}</span></div>
-      ${valgtAkt ? `<div class="at2-hint">✏️ <b>${esc((valgtAkt.a ? valgtAkt.id + ' ' : '') + valgtAkt.navn)}:</b> trykk på sonene på kartet for å markere/fjerne. ${zoom || !omraader.some(o => smBarn(o.id).length) ? '' : 'Zoom inn for finere soner.'} <button class="link-btn" data-action="at2-akt" data-id="">Ferdig</button></div>` : ''}
-      <div class="at2-kart" style="aspect-ratio:${box[2]} / ${box[3]};max-width:calc(620px * ${box[2] / box[3]})">${grunn}<svg class="at2-overlay" viewBox="${vb}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">${ruter}</svg>${lapper}</div>
+      ${valgtAkt ? `<div class="at2-hint">✏️ <b>${esc((valgtAkt.a ? valgtAkt.id + ' ' : '') + valgtAkt.navn)}:</b>
+        ${at2Ui.tegn ? `trykk på kartet for å sette hjørnepunkter rundt området (${at2Ui.tegn.pts.length} satt, minst 3). Dobbelttrykk eller Enter for ferdig.
+          <button class="btn small-btn primary" data-action="at2-tegn-ferdig" ${at2Ui.tegn.pts.length < 3 ? 'disabled' : ''}>Ferdig</button> <button class="btn small-btn" data-action="at2-tegn-angre" ${at2Ui.tegn.pts.length ? '' : 'disabled'}>Angre punkt</button> <button class="btn small-btn" data-action="at2-tegn-avbryt">Avbryt</button>`
+        : `sonen fra Utkikksplan er markert med stiplet kant. Dra teksten dit i sonen aktiviteten skal være, og <button class="btn small-btn primary" data-action="at2-tegn">✏️ Tegn område</button> rundt den – området gjøres om til sonene det dekker. ${zoom || !omraader.some(o => smBarn(o.id).length) ? '' : 'Zoom inn først for finere soner.'} <button class="link-btn" data-action="at2-akt" data-id="">Lukk</button>`}</div>` : ''}
+      <div class="at2-kart${at2Ui.tegn ? ' tegner' : ''}" data-box="${box.join(',')}" style="aspect-ratio:${box[2]} / ${box[3]};max-width:calc(620px * ${box[2] / box[3]})">${grunn}<svg class="at2-overlay" viewBox="${vb}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">${ruter}${omrSvg}</svg>${lapper}${plasserte}</div>
       ${direkte.length ? `<p class="sub">${direkte.length} aktivitet${direkte.length === 1 ? '' : 'er'} ligger i ${zoom ? esc(zoom.navn) + ' uten underliggende sone' : 'soner som ikke finnes i Sonemodul'}: ${direkte.map(x => esc((x.a ? x.id + ' ' : '') + x.navn)).join(', ')}</p>` : ''}
     </div>
     <div class="panel at2-liste">
@@ -172,6 +191,69 @@ function renderAkttil() {
 }
 
 // ----- handlinger -----
+// Rutene i sonen(e) aktiviteten har i Utkikksplan. Teksten holder seg der, og tegnede områder regnes bare innenfor.
+// null når sonen ikke finnes i Sonemodul (da er det ingen begrensning).
+function at2Tillatt(x) {
+  const soner = smLast().soner.filter(s => s.fase === at2Fase().id && x.soner.includes(smSti(s)));
+  if (!soner.length) return null;
+  const ut = new Set(soner.flatMap(s => smAlleCeller(s.id)));
+  return ut.size ? ut : null;
+}
+function at2Blader() {
+  const zoom = at2Ui.zoom && smSone(at2Ui.zoom);
+  return (zoom ? smUnder(zoom.id) : smLast().soner.filter(s => s.fase === at2Fase().id).map(s => s.id)).map(smSone).filter(s => s && !smBarn(s.id).length);
+}
+// Det tegnede området gjøres om til sonene det dekker: rutene som har midtpunktet inne i området (eller et hjørnepunkt i seg),
+// og de minste sonene (finsonene) innenfor sonen det er zoomet inn på – og innenfor aktivitetens sone fra Utkikksplan.
+function at2Dekning(pts, x) {
+  const C = smCeller(), zoom = at2Ui.zoom && smSone(at2Ui.zoom), tillatt = x ? at2Tillatt(x) : null;
+  const omfang = new Set((zoom ? smAlleCeller(zoom.id) : C.map(c => c.id)).filter(id => !tillatt || tillatt.has(id)));
+  const inne = new Set(C.filter(c => omfang.has(c.id) && (smInne(c.cx, c.cy, pts) || pts.some(([px, py]) => px >= c.x0 && px <= c.x1 && py >= c.y0 && py <= c.y1))).map(c => c.id));
+  const dekning = {};
+  at2Blader().forEach(s => { const cs = (s.celler || []).filter(id => omfang.has(id)), n = cs.filter(id => inne.has(id)).length; if (n) dekning[s.id] = [n, cs.length]; });
+  return {soner: Object.keys(dekning), dekning, ruter: inne.size};
+}
+function at2TilFor(x) {
+  const M = at2Last(), tid = at2Nokkel(), u = me();
+  let t = M.til.find(q => q.aktId === x && q.tid === tid);
+  if (!t) { t = {id: (tid + '_' + x).replace(/[^\w:-]/g, '_'), aktId: x, tid, soner: [], omrader: [], merknad: '', av: u.name || '', endret: ''}; M.til.push(t); }
+  t.omrader = t.omrader || [];
+  return t;
+}
+// Sonene i tillatelsen: det de tegnede områdene dekker, og finsonen teksten er plassert i.
+function at2Oppdater(t) {
+  t.soner = [...new Set([...t.omrader.flatMap(o => o.soner), ...(t.posSone ? [t.posSone] : [])])];
+  t.endret = new Date().toISOString(); t.av = me().name || '';
+  if (!t.omrader.length && !t.pos && !t.merknad) at2Last().til = at2Last().til.filter(q => q !== t);
+}
+function at2TegnFerdig() {
+  const x = at2Ui.akt, d = at2Ui.tegn, akt = at2Aktiviteter().find(q => q.id === x);
+  if (!x || !d || d.pts.length < 3) return;
+  const rr = v => Math.round(v * 10) / 10, pts = d.pts.map(([a, b]) => [rr(a), rr(b)]), dk = at2Dekning(pts, akt), t = at2TilFor(x);
+  t.omrader.push({id: uid(), pts, soner: dk.soner, dekning: dk.dekning, ruter: dk.ruter});
+  at2Oppdater(t);
+  at2Ui.tegn = null;
+  const navn = dk.soner.map(z => (smSone(z) || {}).navn).join(', ');
+  if (typeof logg === 'function') logg('Aktivitetstillatelse', ukErData(x) ? x : '', `${ukIdTekst(x) + ukNavn(x)} ${ukTidTekst(at2Ui.valgt.t0, at2Ui.valgt.t1)}: tegnet område – ${navn || 'ingen soner'}`);
+  showToast(dk.soner.length ? `Området dekker ${navn}.` : 'Området dekker ingen soner innenfor aktivitetens sone – tegn innenfor den stiplede kanten.');
+  at2Lagre(); renderAkttil();
+}
+// Plasser teksten innenfor sonen fra Utkikksplan: slippes den utenfor, flyttes den til nærmeste rute i sonen.
+function at2Plasser(x, pos) {
+  const C = smCeller(), akt = at2Aktiviteter().find(q => q.id === x), tillatt = akt ? at2Tillatt(akt) : null;
+  let c = C.find(q => pos[0] >= q.x0 && pos[0] <= q.x1 && pos[1] >= q.y0 && pos[1] <= q.y1 && (!tillatt || tillatt.has(q.id)));
+  if (!c && tillatt) {
+    c = C.filter(q => tillatt.has(q.id)).sort((a, b) => Math.hypot(a.cx - pos[0], a.cy - pos[1]) - Math.hypot(b.cx - pos[0], b.cy - pos[1]))[0];
+    if (c) { pos = [Math.min(c.x1 - 4, Math.max(c.x0 + 4, pos[0])), Math.min(c.y1 - 4, Math.max(c.y0 + 4, pos[1]))]; showToast('Aktiviteten holder seg i sonen sin fra Utkikksplan.'); }
+  }
+  const sone = c ? at2Blader().find(s => (s.celler || []).includes(c.id)) || smLast().soner.find(s => s.fase === at2Fase().id && !smBarn(s.id).length && (s.celler || []).includes(c.id)) : null;
+  const t = at2TilFor(x);
+  t.pos = [Math.round(pos[0]), Math.round(pos[1])]; t.posSone = sone ? sone.id : '';
+  at2Oppdater(t);
+  at2Ui.akt = x;
+  if (typeof logg === 'function') logg('Aktivitetstillatelse', ukErData(x) ? x : '', `${ukIdTekst(x) + ukNavn(x)} ${ukTidTekst(at2Ui.valgt.t0, at2Ui.valgt.t1)}: plassert${sone ? ' i ' + smSti(sone) : ''}`);
+  at2Lagre(); renderAkttil();
+}
 function at2SettSone(soneId) {
   const x = at2Ui.akt; if (!x || !at2Ui.valgt) return;
   const M = at2Last(), tid = at2Nokkel(), u = me();
@@ -199,23 +281,68 @@ function at2Action(action, btn) {
     renderAkttil(); return;
   }
   if (action === 'at2-time') { at2Ui.valgt = {t0: +btn.dataset.t0, t1: +btn.dataset.t1}; renderAkttil(); return; }
-  if (action === 'at2-zoom') { const s = btn.dataset.id && smSone(btn.dataset.id); if (s && !smBarn(s.id).length) { if (at2Ui.akt) at2SettSone(s.id); return; } at2Ui.zoom = s ? s.id : null; renderAkttil(); return; }
-  if (action === 'at2-akt') { at2Ui.akt = btn.dataset.id && at2Ui.akt !== btn.dataset.id ? btn.dataset.id : null; renderAkttil(); }
+  if (action === 'at2-zoom') { if (at2Ui.tegn) return; const s = btn.dataset.id && smSone(btn.dataset.id); if (s && !smBarn(s.id).length) return; at2Ui.zoom = s ? s.id : null; renderAkttil(); return; }
+  if (action === 'at2-akt') { if (at2Ui.tegn || Date.now() - at2DragSlutt < 300) return; at2Ui.akt = btn.dataset.id && at2Ui.akt !== btn.dataset.id ? btn.dataset.id : null; renderAkttil(); return; }
+  if (action === 'at2-tegn') { at2Ui.tegn = {pts: []}; renderAkttil(); return; }
+  if (action === 'at2-tegn-angre') { if (at2Ui.tegn) at2Ui.tegn.pts.pop(); renderAkttil(); return; }
+  if (action === 'at2-tegn-avbryt') { at2Ui.tegn = null; renderAkttil(); return; }
+  if (action === 'at2-tegn-ferdig') { at2TegnFerdig(); return; }
+  if (action === 'at2-fjern-omr' || action === 'at2-fjern-pos') {
+    const t = at2Til(at2Ui.akt); if (!t) return;
+    if (action === 'at2-fjern-pos') { delete t.pos; delete t.posSone; } else t.omrader.splice(+btn.dataset.i, 1);
+    at2Oppdater(t); at2Lagre(); renderAkttil();
+  }
 }
 // Trykk på kartet: med en aktivitet valgt markeres sonen; ellers zoomes det inn på en sone som har undersoner.
+const at2KartPunkt = (kart, e) => { const [bx, by, bw, bh] = kart.dataset.box.split(',').map(Number), r = kart.getBoundingClientRect(); return [bx + (e.clientX - r.left) / r.width * bw, by + (e.clientY - r.top) / r.height * bh]; };
 document.addEventListener('click', e => {
-  if (!at2Pa()) return;
+  if (!at2Pa() || Date.now() - at2DragSlutt < 300) return;
+  const kart = e.target.closest && e.target.closest('#at2-root .at2-kart');
+  if (kart && at2Ui.tegn) { at2Ui.tegn.pts.push(at2KartPunkt(kart, e)); renderAkttil(); return; }
   const c = e.target.closest && e.target.closest('#at2-root [data-at2sone]');
   if (!c) return;
-  const s = smSone(c.dataset.at2sone); if (!s) return;
-  if (at2Ui.akt) { at2SettSone(s.id); return; }
-  if (smBarn(s.id).length) { at2Ui.zoom = s.id; renderAkttil(); }
+  const s = smSone(c.dataset.at2sone);
+  if (s && smBarn(s.id).length) { at2Ui.zoom = s.id; renderAkttil(); }
+});
+document.addEventListener('dblclick', e => { if (at2Pa() && at2Ui.tegn && e.target.closest && e.target.closest('#at2-root .at2-kart')) { at2Ui.tegn.pts.pop(); at2TegnFerdig(); } });
+document.addEventListener('keydown', e => {
+  if (!at2Pa() || !at2Ui.tegn) return;
+  if (e.key === 'Enter') { e.preventDefault(); at2TegnFerdig(); }
+  else if (e.key === 'Escape') { at2Ui.tegn = null; renderAkttil(); }
+  else if (e.key === 'Backspace' && !/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) { e.preventDefault(); at2Ui.tegn.pts.pop(); renderAkttil(); }
+});
+// Dra en aktivitet (lapp på kartet eller rad i lista) og slipp den der den skal være på kartet.
+let at2Drag = null, at2DragSlutt = 0;
+document.addEventListener('pointerdown', e => {
+  if (!at2Pa() || at2Ui.tegn || e.button > 0) return;
+  const el = e.target.closest && e.target.closest('#at2-root [data-at2drag]');
+  if (!el || e.target.closest('button, input')) return;
+  at2Drag = {id: el.dataset.at2drag, el, x0: e.clientX, y0: e.clientY, moved: false, spokelse: null};
+});
+document.addEventListener('pointermove', e => {
+  const d = at2Drag; if (!d) return;
+  if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
+  if (!d.moved) {
+    d.moved = true;
+    d.spokelse = document.createElement('div'); d.spokelse.className = 'at2-lapp at2-spokelse'; d.spokelse.innerHTML = d.el.querySelector('b') ? d.el.querySelector('b').outerHTML + ' ' + esc(ukNavn(d.id)).slice(0, 30) : esc(ukNavn(d.id)).slice(0, 30);
+    d.spokelse.style.borderLeftColor = d.el.style.borderLeftColor;
+    document.body.appendChild(d.spokelse); document.body.classList.add('at2-drar');
+  }
+  d.spokelse.style.left = e.clientX + 'px'; d.spokelse.style.top = e.clientY + 'px';
+});
+document.addEventListener('pointerup', e => {
+  const d = at2Drag; if (!d) return;
+  at2Drag = null;
+  if (!d.moved) return;
+  at2DragSlutt = Date.now();
+  d.spokelse.remove(); document.body.classList.remove('at2-drar');
+  const kart = document.querySelector('#at2-root .at2-kart'), r = kart && kart.getBoundingClientRect();
+  if (r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) at2Plasser(d.id, at2KartPunkt(kart, e));
 });
 document.addEventListener('change', e => {
   if (!at2Pa() || e.target.id !== 'at2-merknad' || !at2Ui.akt) return;
   const M = at2Last(), tid = at2Nokkel(), x = at2Ui.akt;
-  let t = M.til.find(q => q.aktId === x && q.tid === tid);
-  if (!t) { t = {id: (tid + '_' + x).replace(/[^\w:-]/g, '_'), aktId: x, tid, soner: [], merknad: '', av: me().name || '', endret: ''}; M.til.push(t); }
+  const t = at2TilFor(x);
   t.merknad = e.target.value.trim(); t.endret = new Date().toISOString();
   at2Lagre();
 });

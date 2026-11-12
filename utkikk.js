@@ -67,6 +67,7 @@ function ukLast() {
   try { UKP = JSON.parse(localStorage.getItem(UK_KEY)); } catch (e) { UKP = null; }
   if (!UKP || !Array.isArray(UKP.akt)) UKP = {akt: [], restLaast: {}};
   if (!UKP.restLaast) UKP.restLaast = {};
+  if (!UKP.sone) UKP.sone = {};   // aktiviteter fra planen som er flyttet til en annen (under)sone i Utkikksplan
   return UKP;
 }
 let ukLagreT = null;
@@ -82,7 +83,7 @@ function ukLagre() {
 window.ukFraSky = m => {
   if (!m || !Array.isArray(m.akt) || ukDlg) return;
   if (UKP && JSON.stringify(m) === JSON.stringify({...UKP, akt: UKP.akt.filter(p => !p.ny)})) return;
-  UKP = {restLaast: {}, ...m};
+  UKP = {restLaast: {}, sone: {}, ...m};
   try { localStorage.setItem(UK_KEY, JSON.stringify(UKP)); } catch (e) {}
   if (ukPa()) renderUtkikk();
 };
@@ -107,6 +108,7 @@ function ukStdTimer(t0, t1) {
 }
 const ukDataT = a => [daysBetween(ukFra(), a.startdato) * 24, (daysBetween(ukFra(), endDate(a)) + 1) * 24];
 const ukPlan = id => ukLast().akt.find(p => p.id === id);
+const ukSone = a => ukLast().sone[a.id] || a.omrade;
 const ukErData = id => !ukPlan(id) && !!actById(id);
 function ukNavn(id, n = 0) {
   const p = ukPlan(id);
@@ -188,7 +190,7 @@ function renderUtkikk() {
 
   const items = DATA.filter(a => !a.generell && matches(a, st) && a.startdato <= to && endDate(a) >= from).map(a => {
     const [t0, t1] = ukDataT(a);
-    return {a, s: totalStatus(a), id: a.id, omrade: a.omrade, t0, t1, navn: a.navn, farge: firmColor(a.firma), start: a.startdato, ferdig: a.status === 'Utført'};
+    return {a, s: totalStatus(a), id: a.id, omrade: ukSone(a), t0, t1, navn: a.navn, farge: firmColor(a.firma), start: a.startdato, ferdig: a.status === 'Utført'};
   }).filter(({s}) => !st.lys || (st.lys === 'avvik' ? s.lys === 'rod' || s.lys === 'gul' : s.lys === st.lys));
   // Planleggingsaktivitetene vises bare når «Vis» står på alle (de har ikke statuslys).
   if (!st.lys) ukLast().akt.forEach(p => {
@@ -199,23 +201,43 @@ function renderUtkikk() {
     items.push({p, plan: true, id: p.id, omrade: p.omrade, t0, t1, navn: ukNavn(p.id), farge: p.mor ? (rot ? firmColor(rot.firma) : '#6e7781') : UK_UTEN_MOR, start: p.fra});
   });
 
-  const S = ukSoneInfo = ukSoner([...DATA.map(a => a.omrade), ...ukLast().akt.map(p => p.omrade)]);
+  const S = ukSoneInfo = ukSoner([...DATA.map(ukSone), ...ukLast().akt.map(p => p.omrade)]);
   const under = z => [z, ...(S.barn.get(z) || []).flatMap(under)];
   const forfedre = z => { const l = []; let n = 0; while (S.forelder.has(z) && n++ < 10) { z = S.forelder.get(z); l.push(z); } return l; };
   const filter = st.soneFilter;
-  const synlig = z => !filter || filter.has(z) || forfedre(z).some(f => filter.has(f));
+  // Under «Velg flere soner» vises alle sonene, også undersonene, og de valgte er uthevet.
+  const synlig = z => st.velger || !filter || filter.has(z) || forfedre(z).some(f => filter.has(f));
   const valgtUnder = z => (S.barn.get(z) || []).some(c => filter.has(c) || valgtUnder(c));
   const rader = [];
+  // En åpen overliggende sone: i planleggingsmodus står alle aktivitetene i undersonene også der (de tar plass der også);
+  // i vanlig visning vises bare en grå stolpe der det skjer noe, og aktiviteter uten undersone får en egen rad.
   const besok = (z, d) => {
-    const barn = S.barn.get(z) || [], erF = barn.length > 0, apen = erF && st.sonerApne.has(z);
-    if (synlig(z)) { rader.push({z, d, erF, apen, soner: apen ? [z] : under(z)}); if (apen) barn.forEach(c => besok(c, d + 1)); }
+    const barn = S.barn.get(z) || [], erF = barn.length > 0, apen = erF && (st.velger || st.sonerApne.has(z));
+    if (synlig(z)) {
+      const sum = apen && !st.plan;
+      rader.push({z, d, erF, apen, sum, soner: under(z)});
+      if (sum && items.some(x => x.omrade === z)) rader.push({z, d: d + 1, uten: true, soner: [z]});
+      if (apen) barn.forEach(c => besok(c, d + 1));
+    }
     else if (filter && valgtUnder(z)) barn.forEach(c => besok(c, d));
   };
   S.topp.forEach(z => besok(z, 0));
 
   ukItems = [];
   const rows = rader.map(r => {
-    const zs = items.filter(x => r.soner.includes(x.omrade)).sort((p, q) => p.t0 - q.t0 || p.id.localeCompare(q.id));
+    // Kopier: samme aktivitet kan stå i flere rader (overliggende og underliggende sone).
+    const zs = items.filter(x => r.soner.includes(x.omrade)).map(x => ({...x})).sort((p, q) => p.t0 - q.t0 || p.id.localeCompare(q.id));
+    const navnHtml = r.uten ? `<span class="uk-uten">uten undersone</span>` : `<span>${r.erF ? `<span class="uk-caret">${r.apen ? '▾' : '▸'}</span>` : ''}${esc(ukSoneNavn(r.z, S.forelder))}</span>`;
+    const cnt = zs.length ? `<span class="cnt">${zs.length} aktivitet${zs.length === 1 ? '' : 'er'}${r.erF && (!r.apen || r.sum || st.plan) ? ' i alt' : ''}</span>` : '';
+    const valgt = st.velger && !r.uten ? st.valgte.has(r.z) : false;
+    const venstre = `<div class="sv-left${r.uten ? ' uk-utenrad' : ' uk-sone'}${valgt ? ' valgt' : ''}${r.d ? ' barn' : ''}" data-sone="${esc(r.z)}" style="padding-left:${10 + r.d * 16}px" title="${r.uten ? 'Aktiviteter som ligger i den overliggende sonen og ikke er flyttet til en undersone' : (r.erF ? (r.apen ? 'Trykk for å lukke undersonene' : 'Trykk for å vise undersonene') : '') + (st.plan ? (r.erF ? ' · ' : '') + 'Ctrl + trykk for å velge sonen' : '')}">${navnHtml}${cnt}</div>`;
+    if (r.sum) {
+      // Grå samlestolpe: perioder der minst én aktivitet i sonen eller undersonene pågår.
+      const iv = zs.map(x => [ukX(Math.max(0, x.t0)), ukX(Math.min(tMax, x.t1))]).sort((u, v) => u[0] - v[0]), slatt = [];
+      iv.forEach(([a0, a1]) => { const l = slatt[slatt.length - 1]; if (l && a0 <= l[1] + 1) l[1] = Math.max(l[1], a1); else slatt.push([a0, a1]); });
+      return `<div class="sv-row" data-zone="${esc(r.z)}">${venstre}
+        <div class="sv-time" style="height:30px;width:${bredde}px;flex:none">${slatt.map(([a0, a1]) => `<div class="uk-sum" style="left:${a0}px;width:${Math.max(3, a1 - a0 - 2)}px" title="Aktivitet i ${esc(ukSoneNavn(r.z, S.forelder))} eller undersonene"></div>`).join('')}</div></div>`;
+    }
     const lanes = [];
     zs.forEach(it => {
       const x0 = ukX(Math.max(0, it.t0)), x1 = ukX(Math.min(tMax, it.t1)), tekst = ((it.a ? it.id + ' ' : '') + it.navn).length * 6.3 + 30;
@@ -241,10 +263,8 @@ function renderUtkikk() {
         style="left:${it.x0}px;width:${Math.max(4, it.x1 - it.x0 - 2)}px;top:${UK_PAD + it.k * UK_LANE}px;background:${bg};color:${fg}">
         ${it.a ? `<span class="sv-lys ${it.s.lys}"></span>` : ''}${it.ute ? '' : `<span class="txt">${it.cutL ? '◂ ' : ''}${idTxt}${esc(it.navn)}</span>`}${st.plan ? '<span class="uk-splitt" title="Splitt aktiviteten: lag en ny del rett bak">✂</span>' : ''}</div>${lab}`;
     }).join('');
-    const valgt = st.velger ? st.valgte.has(r.z) : false;
     return `<div class="sv-row" data-zone="${esc(r.z)}">
-      <div class="sv-left uk-sone${valgt ? ' valgt' : ''}${r.d ? ' barn' : ''}" data-sone="${esc(r.z)}" style="padding-left:${10 + r.d * 16}px" title="${r.erF ? (r.apen ? 'Trykk for å lukke undersonene' : 'Trykk for å vise undersonene') : ''}${st.plan ? (r.erF ? ' · ' : '') + 'Ctrl + trykk for å velge sonen' : ''}">
-        <span>${r.erF ? `<span class="uk-caret">${r.apen ? '▾' : '▸'}</span>` : ''}${esc(ukSoneNavn(r.z, S.forelder))}</span>${zs.length ? `<span class="cnt">${zs.length} aktivitet${zs.length === 1 ? '' : 'er'}${r.erF && !r.apen ? ' i alt' : ''}</span>` : ''}</div>
+      ${venstre}
       <div class="sv-time" style="height:${h}px;width:${bredde}px;flex:none">${bars}</div>
     </div>`;
   }).join('');
@@ -398,7 +418,7 @@ function ukDlgRender(plasser) {
   if (a) {
     const [t0, t1] = ukDataT(a);
     html = `<h4>${esc(a.id)} ${esc(a.navn)}</h4>
-      <div class="sub">${esc(a.omrade)} · ${fmtNo(a.startdato)}–${fmtNo(endDate(a))} · ${firmBadge(a.firma)}</div>
+      <div class="sub">${esc(ukSone(a))}${ukSone(a) !== a.omrade ? ` <span class="muted">(flyttet hit i Utkikksplan, i planen: ${esc(a.omrade)})</span>` : ''} · ${fmtNo(a.startdato)}–${fmtNo(endDate(a))} · ${firmBadge(a.firma)}</div>
       <div class="uk-tim"><b>Timeverk:</b> ${fmtTimer(ukStdTimer(t0, t1))} <span class="sub">(foreløpig 2 personer × 12 t per dag, man–lør)</span></div>
       ${ukBarn(id).length ? `<div class="uk-sec">Fordeling på delene</div>${ukFordelingHtml(id)}` : '<div class="sub" style="margin-top:6px">Ingen deler ennå. Bruk ✂ Splitt, eller lag en ny aktivitet med denne som overordnet.</div>'}
       <div class="uk-knapper"><button class="btn" data-action="uk-dlg-splitt">✂ Splitt</button><span style="flex:1"></span><button class="btn primary" data-action="uk-dlg-ok">Lukk</button></div>`;
@@ -510,6 +530,7 @@ function ukSoneOk() {
 function ukHl(e) {
   let hl = document.getElementById('uk-hl');
   if (!e) { if (hl) hl.remove(); return; }
+  if (ukDrag) { if (hl) hl.remove(); return; }
   if (e.target.closest && e.target.closest('#uk-hl')) return;   // står på ＋: ikke flytt den
   const time = e.target.closest && e.target.closest('#uk-chart .sv-row .sv-time');
   if (!time || ukBarOf(e.target) || ukDlg) { if (hl && !(e.target.closest && e.target.closest('#uk-hl'))) hl.remove(); return; }
@@ -595,7 +616,51 @@ document.addEventListener('pointerover', e => {
   if (!ukPa() || e.pointerType === 'touch') return;
   ukShowTip(ukBarOf(e.target));
 });
-document.addEventListener('pointermove', e => { if (ukPa() && ui.utkikk.plan) ukHl(e); });
+document.addEventListener('pointermove', e => { if (ukPa() && ui.utkikk.plan) { ukDragFlytt(e); ukHl(e); } });
+
+// Flytting mellom soner (planleggingsmodus): dra en aktivitet opp eller ned til en annen sone, f.eks. fra Kjellerinnkjøring til Rampe.
+// Aktiviteter fra planen får sonen sin i Utkikksplan (planen ellers endres ikke); planleggingsaktiviteter får ny sone.
+let ukDrag = null;
+document.addEventListener('pointerdown', e => {
+  if (!ukPa() || !ui.utkikk.plan || ukDlg || e.button > 0 || e.target.closest('.uk-splitt')) return;
+  const bar = ukBarOf(e.target);
+  if (!bar || !e.target.closest('.uk-bar')) return;
+  ukDrag = {bar, it: ukItems[+bar.dataset.i], y0: e.clientY, x0: e.clientX, moved: false, mal: null};
+});
+function ukDragFlytt(e) {
+  const d = ukDrag;
+  if (!d) return;
+  const dy = e.clientY - d.y0;
+  if (!d.moved && Math.abs(dy) < 6) return;
+  if (!d.moved) { d.moved = true; ukShowTip(null); d.bar.classList.add('uk-drar'); d.bar.style.pointerEvents = 'none'; document.body.classList.add('uk-drar-body'); }
+  d.bar.style.transform = `translateY(${dy}px)`;
+  const under = document.elementFromPoint(e.clientX, e.clientY), rad = under && under.closest('#uk-chart .sv-row');
+  const mal = rad ? rad.dataset.zone : null;
+  if (mal !== d.mal) {
+    document.querySelectorAll('#uk-chart .sv-row.uk-mal').forEach(x => x.classList.remove('uk-mal'));
+    if (rad && mal !== d.it.omrade) rad.classList.add('uk-mal');
+    d.mal = mal;
+  }
+}
+document.addEventListener('pointerup', () => {
+  const d = ukDrag;
+  if (!d) return;
+  ukDrag = null;
+  document.body.classList.remove('uk-drar-body');
+  document.querySelectorAll('#uk-chart .sv-row.uk-mal').forEach(x => x.classList.remove('uk-mal'));
+  if (!d.moved) return;
+  ukSvelg = Date.now();
+  const z = d.mal, it = d.it;
+  if (z && z !== it.omrade) {
+    if (it.p) it.p.omrade = z;
+    else if (z === it.a.omrade) delete UKP.sone[it.id]; else UKP.sone[it.id] = z;
+    // Sørg for at sonen det ble flyttet til, vises åpen.
+    let x = z, n = 0; while (ukSoneInfo && ukSoneInfo.forelder.has(x) && n++ < 10) { x = ukSoneInfo.forelder.get(x); ui.utkikk.sonerApne.add(x); }
+    ukLagre();
+    showToast(`${it.a ? it.id + ' ' : ''}${it.navn} → ${ukSoneInfo ? ukSoneNavn(z, ukSoneInfo.forelder) : z}`);
+  }
+  renderUtkikk();
+});
 document.addEventListener('click', e => {
   if (!ukPa() || Date.now() - ukSvelg < 400) return;
   const st = ui.utkikk;

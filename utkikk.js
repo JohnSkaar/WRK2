@@ -60,35 +60,104 @@ function ukNaturligBredde(st) {
 // En planleggingsaktivitet: {id, navn, mor, omrade, soner, fra, til, timer, laast}. soner: alle sonene den står i (omrade = den første). fra/til er 'ÅÅÅÅ-MM-DDTtt:mm'.
 // «mor» er en aktivitet i planen (eller en annen planleggingsaktivitet). Navnet vises som «Mor - Navn», og timeverket
 // til mora er en fast sum som deles mellom delene; det som ikke er fordelt, ligger igjen på mora. Uten mor blir den grå.
+// ---------- Lagring: ett dokument per post i skyen ----------
+// Modellene i Utkikksplan og Aktivitetsrapportering lagres som ett Firestore-dokument per post (samlingene ukakt, ukmeta,
+// arposter, arendringer, arrapporter). Da overskriver ikke to som lagrer samtidig hverandre: bare dokumentene som faktisk er
+// endret, skrives. Endringer fra andre flettes inn tre-veis mot sist kjente tilstand; endrer begge samme post, vinner den lokale.
+const kanon = v => Array.isArray(v) ? '[' + v.map(kanon).join(',') + ']'
+  : v && typeof v === 'object' ? '{' + Object.keys(v).filter(k => v[k] !== undefined).sort().map(k => JSON.stringify(k) + ':' + kanon(v[k])).join(',') + '}'
+  : JSON.stringify(v === undefined ? null : v);
+function lagSynk(samlinger) {
+  const kjent = {};
+  samlinger.forEach(n => { kjent[n] = new Map(); });
+  return {
+    klar: false,
+    // remote: {samling: [dok]}, lokal: {samling: Map id → kanon-tekst}. Gir flettet lokal tilstand og oppdaterer det kjente.
+    flett(remote, lokal) {
+      const ut = {};
+      samlinger.forEach(n => {
+        const R = new Map((remote[n] || []).map(d => [d.id, kanon(d)])), S = kjent[n], L = new Map(this.klar ? lokal[n] : []);
+        new Set([...R.keys(), ...S.keys()]).forEach(id => {
+          const r = R.get(id), sv = S.get(id);
+          if (r === sv) return;
+          if (L.get(id) === sv) { if (r === undefined) L.delete(id); else L.set(id, r); }
+        });
+        kjent[n] = R; ut[n] = L;
+      });
+      this.klar = true;
+      return ut;
+    },
+    // Det som er endret lokalt siden sist kjente tilstand: [{samling, id, data | null}].
+    endringer(lokal) {
+      const ops = [];
+      samlinger.forEach(n => {
+        const S = kjent[n], L = lokal[n];
+        L.forEach((v, id) => { if (S.get(id) !== v) ops.push({samling: n, id, data: JSON.parse(v)}); });
+        S.forEach((v, id) => { if (!L.has(id)) ops.push({samling: n, id, data: null}); });
+        kjent[n] = new Map(L);
+      });
+      return ops;
+    }
+  };
+}
+const tilKart = liste => new Map(liste.map(d => [d.id, kanon(JSON.parse(JSON.stringify(d)))]));
+const fraKart = m => [...m.values()].map(v => JSON.parse(v));
+
 const UK_KEY = 'wrk2_utkikk', UK_UTEN_MOR = '#8c959f';
 let UKP = null;
+const ukSynk = lagSynk(['ukakt', 'ukmeta']);
+function ukNormaliser(m) {
+  m = m && Array.isArray(m.akt) ? m : {akt: []};
+  ['restLaast', 'sone', 'tid', 'ut'].forEach(k => { if (!m[k] || typeof m[k] !== 'object') m[k] = {}; });
+  // restLaast: id → true (låst rest på mora) · sone: id → [soner] for aktiviteter fra planen som er flyttet i Utkikksplan
+  // tid: id → {fra, til} når de er forlenget/forkortet · ut: id → timer sendt til Aktivitetsrapportering
+  m.akt.forEach((p, i) => { if (p.opprettet === undefined) p.opprettet = i; });
+  return m;
+}
 function ukLast() {
   if (UKP) return UKP;
   try { UKP = JSON.parse(localStorage.getItem(UK_KEY)); } catch (e) { UKP = null; }
-  if (!UKP || !Array.isArray(UKP.akt)) UKP = {akt: [], restLaast: {}};
-  if (!UKP.restLaast) UKP.restLaast = {};
-  if (!UKP.sone) UKP.sone = {};   // aktiviteter fra planen som er flyttet til andre (under)soner i Utkikksplan: id → [soner]
-  if (!UKP.tid) UKP.tid = {};
-  if (!UKP.ut) UKP.ut = {};       // timer som er tatt ut av en mor og sendt til Aktivitetsrapportering: id → timer     // aktiviteter fra planen som er forlenget/forkortet i Utkikksplan: id → {fra, til}
-  return UKP;
+  return (UKP = ukNormaliser(UKP));
+}
+// Modellen som dokumenter: planleggingsaktivitetene i ukakt, og det som hører til en aktivitet (låst rest, soner, tid, uttak) i ukmeta.
+function ukDocs() {
+  const M = ukLast(), meta = new Map();
+  const put = (id, k, v) => { if (!meta.has(id)) meta.set(id, {id}); meta.get(id)[k] = v; };
+  Object.entries(M.restLaast).forEach(([id, v]) => { if (v) put(id, 'restLaast', true); });
+  Object.entries(M.sone).forEach(([id, v]) => { if (v && (!Array.isArray(v) || v.length)) put(id, 'sone', Array.isArray(v) ? v : [v]); });
+  Object.entries(M.tid).forEach(([id, v]) => { if (v) put(id, 'tid', v); });
+  Object.entries(M.ut).forEach(([id, v]) => { if (+v) put(id, 'ut', +v); });
+  return {ukakt: tilKart(M.akt.filter(p => !p.ny)), ukmeta: tilKart([...meta.values()])};
+}
+function ukFraDocs(d) {
+  const utkast = (UKP ? UKP.akt : []).filter(p => p.ny), m = {akt: fraKart(d.ukakt), restLaast: {}, sone: {}, tid: {}, ut: {}};
+  m.akt.sort((a, b) => (a.opprettet || 0) - (b.opprettet || 0) || a.id.localeCompare(b.id));
+  fraKart(d.ukmeta).forEach(x => { if (x.restLaast) m.restLaast[x.id] = true; if (x.sone) m.sone[x.id] = x.sone; if (x.tid) m.tid[x.id] = x.tid; if (x.ut) m.ut[x.id] = x.ut; });
+  UKP = ukNormaliser(m);
+  UKP.akt.push(...utkast);
 }
 let ukLagreT = null;
 function ukLagre() {
   clearTimeout(ukLagreT);
   ukLagreT = setTimeout(() => {
-    const ut = {...UKP, akt: UKP.akt.filter(p => !p.ny)};
-    try { localStorage.setItem(UK_KEY, JSON.stringify(ut)); } catch (e) {}
-    if (typeof CLOUD !== 'undefined' && CLOUD && window.cloudUkLagre) window.cloudUkLagre(JSON.parse(JSON.stringify(ut)));
+    const M = ukLast();
+    try { localStorage.setItem(UK_KEY, JSON.stringify({...M, akt: M.akt.filter(p => !p.ny)})); } catch (e) {}
+    if (typeof CLOUD !== 'undefined' && CLOUD && ukSynk.klar && window.cloudSkrivDocs) {
+      const ops = ukSynk.endringer(ukDocs());
+      if (ops.length) window.cloudSkrivDocs(ops);
+    }
   }, 400);
 }
-// Fra skyen (cloud.js): erstatter planleggingsaktivitetene når en annen økt har lagret, men ikke mens dialogen er åpen.
-window.ukFraSky = m => {
-  if (!m || !Array.isArray(m.akt) || ukDlg) return;
-  if (UKP && JSON.stringify(m) === JSON.stringify({...UKP, akt: UKP.akt.filter(p => !p.ny)})) return;
-  UKP = {restLaast: {}, sone: {}, tid: {}, ut: {}, ...m};
-  try { localStorage.setItem(UK_KEY, JSON.stringify(UKP)); } catch (e) {}
-  if (ukPa()) renderUtkikk();
+// Fra skyen (cloud.js): samlingene ukakt og ukmeta. Endringer fra andre flettes inn; egne ulagrede endringer skrives etterpå.
+window.ukFraSamlinger = remote => {
+  const lokal = ukSynk.klar ? (clearTimeout(ukLagreT), ukDocs()) : null;
+  ukFraDocs(ukSynk.flett(remote, lokal));
+  try { localStorage.setItem(UK_KEY, JSON.stringify({...UKP, akt: UKP.akt.filter(p => !p.ny)})); } catch (e) {}
+  if (lokal) ukLagre();
+  if (ukPa()) { renderUtkikk(); if (ukDlg) ukDlgRender(); }
 };
+// Engangsflytting fra det gamle dokumentet config/utkikk (hele modellen i ett dokument).
+window.ukMigrer = gammel => { UKP = ukNormaliser(JSON.parse(JSON.stringify(gammel))); ukLagre(); if (ukPa()) renderUtkikk(); };
 
 // Tid regnes i timer fra mandag denne uken.
 const ukFra = () => mondayOf(TODAY);
@@ -163,7 +232,7 @@ function ukKnytt(p, morId) {
   if (p.mor) { const r = ukRest(p.mor); if (r < 0) p.timer = Math.max(0, Math.round((p.timer + r) * 10) / 10); }
 }
 let ukNr = 0;
-const ukNyId = () => 'P' + Date.now().toString(36).slice(-5) + (ukNr++);
+const ukNyId = () => 'P' + Date.now().toString(36) + uid().slice(0, 4) + (ukNr++);
 
 // ---------- Soner: hierarki som kan åpnes og lukkes, slik som tidslinjen ----------
 const UK_SONETRE = {
@@ -380,14 +449,14 @@ const ukBarOf = el => {
 
 // ---------- Ny aktivitet og splitt ----------
 function ukNy(omrade, t0, t1, mor) {
-  const p = {id: ukNyId(), navn: '', mor: null, omrade, fra: ukDt(t0), til: ukDt(t1), timer: ukStdTimer(t0, t1), laast: false, ny: true};
+  const p = {id: ukNyId(), navn: '', mor: null, omrade, fra: ukDt(t0), til: ukDt(t1), timer: ukStdTimer(t0, t1), laast: false, ny: true, opprettet: Date.now()};
   ukLast().akt.push(p);
   if (mor) ukKnytt(p, mor);
   return p;
 }
 function ukSplitt(it) {
   const mor = it.p ? (it.p.mor || it.p.id) : it.id, len = it.t1 - it.t0;
-  const p = {id: ukNyId(), navn: 'Ny del', mor, omrade: it.omrade, soner: [...it.soner], fra: ukDt(it.t1), til: ukDt(it.t1 + len), timer: 0, laast: false};
+  const p = {id: ukNyId(), navn: 'Ny del', mor, omrade: it.omrade, soner: [...it.soner], fra: ukDt(it.t1), til: ukDt(it.t1 + len), timer: 0, laast: false, opprettet: Date.now()};
   // Den nye delen får halvparten av timene aktiviteten den splittes fra har igjen.
   p.timer = Math.max(0, Math.round(ukRest(mor) / 2 * 10) / 10);
   ukLast().akt.push(p);

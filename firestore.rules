@@ -49,6 +49,12 @@ service cloud.firestore {
       allow delete: if sys() || (authed() && resource.data.email == email());
       allow list, create, update: if sys();
     }
+    // Utkikksplan og Aktivitetsrapportering: ett dokument per post. Foreløpig bare systemadministrator.
+    match /ukakt/{id} { allow read, write: if sys(); }
+    match /ukmeta/{id} { allow read, write: if sys(); }
+    match /arposter/{id} { allow read, write: if sys(); }
+    match /arendringer/{id} { allow read, write: if sys(); }
+    match /arrapporter/{id} { allow read, write: if sys(); }
     match /config/{docId} {
       allow read: if member();
       allow write: if sys();

@@ -322,8 +322,8 @@ function startSync(uid) {
   unsubs.push(onSnapshot(doc(db, 'config', 'firmaregister'), s => { st.register = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   // Monte Carlo-modellen (kun systemadministrator bruker den). Feil ignoreres; modellen ligger da bare lokalt.
   unsubs.push(onSnapshot(doc(db, 'config', 'montecarlo'), s => { if (s.exists() && window.mcFraSky) window.mcFraSky(s.data().modell); }, () => {}));
-  unsubs.push(onSnapshot(doc(db, 'config', 'utkikk'), s => { if (s.exists() && window.ukFraSky) window.ukFraSky(s.data().plan); }, () => {}));
-  unsubs.push(onSnapshot(doc(db, 'config', 'aktrapp'), s => { if (s.exists() && window.arFraSky) window.arFraSky(s.data().data); }, () => {}));
+  lyttSamlinger(['ukakt', 'ukmeta'], 'utkikk', 'plan', 'ukFraSamlinger', 'ukMigrer');
+  lyttSamlinger(['arposter', 'arendringer', 'arrapporter'], 'aktrapp', 'data', 'arFraSamlinger', 'arMigrer');
   unsubs.push(onSnapshot(doc(db, 'config', 'metoder'), s => { st.metoder = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'firms'), s => { st.firms = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'settings'), s => { st.settings = s.exists() ? s.data() : {}; apply(); }, fail));
@@ -424,8 +424,37 @@ async function importMbRisiko() {
 }
 
 window.cloudMcLagre = m => { if (isSys()) setDoc(doc(db, 'config', 'montecarlo'), {modell: m, tid: new Date().toISOString()}).catch(err => showToast('Monte Carlo-modellen ble ikke lagret: ' + errText(err))); };
-window.cloudUkLagre = m => { if (isSys()) setDoc(doc(db, 'config', 'utkikk'), {plan: m, tid: new Date().toISOString()}).catch(err => showToast('Utkikksplanen ble ikke lagret: ' + errText(err))); };
-window.cloudArLagre = m => { if (isSys()) setDoc(doc(db, 'config', 'aktrapp'), {data: m, tid: new Date().toISOString()}).catch(err => showToast('Aktivitetsrapporteringen ble ikke lagret: ' + errText(err))); };
+// Utkikksplan og Aktivitetsrapportering: ett dokument per post. Første svar fra alle samlingene i gruppa samles før de sendes
+// videre. Er samlingene tomme og det gamle samledokumentet (config/utkikk eller config/aktrapp) har data, flyttes de over én gang;
+// det gamle dokumentet beholdes som sikkerhetskopi og merkes «migrert».
+function lyttSamlinger(samlinger, gammelDok, felt, fraSamlinger, migrer) {
+  const data = {}, fikk = new Set();
+  let gammel = null, harGammel = false, feil = false, forste = true;
+  const send = () => {
+    if (fikk.size < samlinger.length || !harGammel || !window[fraSamlinger]) return;
+    if (feil) return;   // ingen lesetilgang (ikke systemadministrator, eller reglene er ikke publisert)
+    window[fraSamlinger](data);
+    if (forste) {
+      forste = false;
+      if (samlinger.every(n => !data[n].length) && gammel && !gammel.migrert && gammel[felt]) {
+        window[migrer](gammel[felt]);
+        setDoc(doc(db, 'config', gammelDok), {migrert: new Date().toISOString()}, {merge: true}).catch(() => {});
+      }
+    }
+  };
+  samlinger.forEach(n => unsubs.push(onSnapshot(collection(db, n), s => { data[n] = s.docs.map(d => ({...d.data(), id: d.id})); fikk.add(n); send(); },
+    () => { if (!feil && isSys()) showToast(`Fikk ikke lese ${samlinger.join(', ')} – publiser firestore.rules på nytt i Firebase-konsollen.`); feil = true; data[n] = []; fikk.add(n); })));
+  unsubs.push(onSnapshot(doc(db, 'config', gammelDok), s => { if (!harGammel) { gammel = s.exists() ? s.data() : null; harGammel = true; send(); } }, () => { harGammel = true; send(); }));
+}
+// Skriver bare dokumentene som er endret (lagt til, endret eller slettet), i bolker på 400.
+// Reglene bestemmer hvem som får skrive (systemadministrator); rollen sjekkes ikke her, for profilen kan lastes etter samlingene.
+window.cloudSkrivDocs = async ops => {
+  for (let i = 0; i < ops.length; i += 400) {
+    const b = writeBatch(db);
+    ops.slice(i, i + 400).forEach(o => o.data ? b.set(doc(db, o.samling, o.id), o.data) : b.delete(doc(db, o.samling, o.id)));
+    try { await b.commit(); } catch (err) { showToast('Lagringen feilet: ' + errText(err)); }
+  }
+};
 
 async function importAnsvarRydd() {
   const atFør = new Map(ATS.map(t => [t.id, stable(toATDoc(t))])), aktFør = new Map(DATA.map(a => [a.id, stable(toDoc(a))]));

@@ -5,29 +5,44 @@
 const AR_KEY = 'wrk2_aktrapp';
 const AR_VURD = [['', 'Ikke vurdert'], ['faseplan', 'Rapporteres til faseplan (timeverk som ikke er med)'], ['endring', 'Opprettes som endring']];
 let AR = null;
+const arSynk = lagSynk(['arposter', 'arendringer', 'arrapporter']);
+const arNorm = m => {
+  m = m && Array.isArray(m.poster) ? m : {poster: []};
+  m.endringer = m.endringer || []; m.rapporter = m.rapporter || [];
+  m.poster.sort((a, b) => String(b.tid).localeCompare(String(a.tid)));
+  m.rapporter.sort((a, b) => String(b.tid).localeCompare(String(a.tid)));
+  m.endringer.sort((a, b) => String(a.nr).localeCompare(String(b.nr)));
+  return m;
+};
 function arLast() {
   if (AR) return AR;
   try { AR = JSON.parse(localStorage.getItem(AR_KEY)); } catch (e) { AR = null; }
-  if (!AR || !Array.isArray(AR.poster)) AR = {poster: [], endringer: [], rapporter: []};
-  AR.endringer = AR.endringer || []; AR.rapporter = AR.rapporter || [];
-  return AR;
+  return (AR = arNorm(AR));
 }
+// Én post, én endringstittel og én rapport per dokument i skyen (se lagSynk i utkikk.js).
+const arDocs = () => { const R = arLast(); return {arposter: tilKart(R.poster), arendringer: tilKart(R.endringer), arrapporter: tilKart(R.rapporter)}; };
 let arLagreT = null;
 function arLagre() {
   clearTimeout(arLagreT);
   arLagreT = setTimeout(() => {
     try { localStorage.setItem(AR_KEY, JSON.stringify(AR)); } catch (e) {}
-    if (typeof CLOUD !== 'undefined' && CLOUD && window.cloudArLagre) window.cloudArLagre(JSON.parse(JSON.stringify(AR)));
+    if (typeof CLOUD !== 'undefined' && CLOUD && arSynk.klar && window.cloudSkrivDocs) {
+      const ops = arSynk.endringer(arDocs());
+      if (ops.length) window.cloudSkrivDocs(ops);
+    }
   }, 300);
 }
-window.arFraSky = m => {
-  if (!m || !Array.isArray(m.poster)) return;
-  if (AR && JSON.stringify(m) === JSON.stringify(AR)) return;
-  AR = {endringer: [], rapporter: [], ...m};
+window.arFraSamlinger = remote => {
+  const lokal = arSynk.klar ? (clearTimeout(arLagreT), arDocs()) : null;
+  const d = arSynk.flett(remote, lokal);
+  AR = arNorm({poster: fraKart(d.arposter), endringer: fraKart(d.arendringer), rapporter: fraKart(d.arrapporter)});
   try { localStorage.setItem(AR_KEY, JSON.stringify(AR)); } catch (e) {}
+  if (lokal) arLagre();
   const a = document.activeElement;
   if (arPa() && !(a && a.closest && a.closest('#ar-root') && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName))) renderAktrapp();
 };
+// Engangsflytting fra det gamle dokumentet config/aktrapp.
+window.arMigrer = gammel => { AR = arNorm(JSON.parse(JSON.stringify(gammel))); arLagre(); if (arPa()) renderAktrapp(); };
 const arPa = () => typeof currentTab !== 'undefined' && currentTab === 'aktrapp';
 const arNr = (pre, liste) => pre + '-' + String(liste.reduce((n, x) => Math.max(n, +String(x.nr || '').split('-').pop() || 0), 0) + 1).padStart(3, '0');
 const arT = t => `${String(Math.round((+t || 0) * 10) / 10).replace('.', ',')} t`;

@@ -325,6 +325,7 @@ function startSync(uid) {
   lyttSamlinger(['ukakt', 'ukmeta'], 'utkikk', 'plan', 'ukFraSamlinger', 'ukMigrer');
   lyttSamlinger(['arposter', 'arendringer', 'arrapporter', 'artilfort'], 'aktrapp', 'data', 'arFraSamlinger', 'arMigrer');
   lyttSamlinger(['sonemod'], 'sonemod', 'data', 'smFraSamlinger', 'smMigrer');
+  lyttSamlinger(['akttil'], 'akttil', 'data', 'at2FraSamlinger', 'at2Migrer');
   unsubs.push(onSnapshot(doc(db, 'config', 'metoder'), s => { st.metoder = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'firms'), s => { st.firms = s.exists() ? (s.data().list || []) : []; apply(); }, fail));
   unsubs.push(onSnapshot(doc(db, 'config', 'settings'), s => { st.settings = s.exists() ? s.data() : {}; apply(); }, fail));

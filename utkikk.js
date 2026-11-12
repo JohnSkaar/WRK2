@@ -9,11 +9,12 @@ let ukItems = [], ukLeaves = [];
 const ukKl = h => String(Math.floor(h)).padStart(2, '0') + (h % 1 ? ':' + String(Math.round(h % 1 * 60)).padStart(2, '0') : '');
 
 // Tidslinjen er en liste med blader (minste synlige enhet) i rekkefølge, hver med tid i timer fra første mandag.
-function ukBygg(from, skala) {
-  const st = ui.utkikk, leaves = [], hode = {uke: [], dag: [], periode: [], time: []};
+// Brukes også av Aktivitetstillatelse (egen tilstand og 3 uker).
+function ukBygg(from, skala, st = ui.utkikk, uker = UK_UKER) {
+  const leaves = [], hode = {uke: [], dag: [], periode: [], time: []};
   let x = 0;
   const blad = (t0, t1, w, niva, d) => { leaves.push({t0, t1, x0: x, w: w * skala, niva, d}); x += w * skala; };
-  for (let i = 0; i < UK_UKER; i++) {
+  for (let i = 0; i < uker; i++) {
     const wk = addDays(from, i * 7), xu = x;
     if (!st.uker.has(wk)) blad(i * 168, (i + 1) * 168, UK_BREDDE.uke, 'uke', wk);
     else for (let j = 0; j < 7; j++) {
@@ -41,9 +42,9 @@ function ukX(t) {
   for (const l of L) if (t <= l.t1) return l.x0 + (t - l.t0) / (l.t1 - l.t0) * l.w;
   const s = L[L.length - 1]; return s.x0 + s.w;
 }
-function ukNaturligBredde(st) {
+function ukNaturligBredde(st, uker = UK_UKER) {
   let w = 0;
-  for (let i = 0; i < UK_UKER; i++) {
+  for (let i = 0; i < uker; i++) {
     const wk = addDays(mondayOf(TODAY), i * 7);
     if (!st.uker.has(wk)) { w += UK_BREDDE.uke; continue; }
     for (let j = 0; j < 7; j++) {

@@ -108,7 +108,7 @@ let UKP = null;
 const ukSynk = lagSynk(['ukakt', 'ukmeta']);
 function ukNormaliser(m) {
   m = m && Array.isArray(m.akt) ? m : {akt: []};
-  ['restLaast', 'sone', 'tid', 'ut'].forEach(k => { if (!m[k] || typeof m[k] !== 'object') m[k] = {}; });
+  ['restLaast', 'sone', 'tid', 'ut', 'skjult'].forEach(k => { if (!m[k] || typeof m[k] !== 'object') m[k] = {}; });
   // restLaast: id → true (låst rest på mora) · sone: id → [soner] for aktiviteter fra planen som er flyttet i Utkikksplan
   // tid: id → {fra, til} når de er forlenget/forkortet · ut: id → timer sendt til Aktivitetsrapportering
   m.akt.forEach((p, i) => { if (p.opprettet === undefined) p.opprettet = i; });
@@ -127,12 +127,13 @@ function ukDocs() {
   Object.entries(M.sone).forEach(([id, v]) => { if (v && (!Array.isArray(v) || v.length)) put(id, 'sone', Array.isArray(v) ? v : [v]); });
   Object.entries(M.tid).forEach(([id, v]) => { if (v) put(id, 'tid', v); });
   Object.entries(M.ut).forEach(([id, v]) => { if (+v) put(id, 'ut', +v); });
+  Object.entries(M.skjult).forEach(([id, v]) => { if (v) put(id, 'skjult', true); });
   return {ukakt: tilKart(M.akt.filter(p => !p.ny)), ukmeta: tilKart([...meta.values()])};
 }
 function ukFraDocs(d) {
-  const utkast = (UKP ? UKP.akt : []).filter(p => p.ny), m = {akt: fraKart(d.ukakt), restLaast: {}, sone: {}, tid: {}, ut: {}};
+  const utkast = (UKP ? UKP.akt : []).filter(p => p.ny), m = {akt: fraKart(d.ukakt), restLaast: {}, sone: {}, tid: {}, ut: {}, skjult: {}};
   m.akt.sort((a, b) => (a.opprettet || 0) - (b.opprettet || 0) || a.id.localeCompare(b.id));
-  fraKart(d.ukmeta).forEach(x => { if (x.restLaast) m.restLaast[x.id] = true; if (x.sone) m.sone[x.id] = x.sone; if (x.tid) m.tid[x.id] = x.tid; if (x.ut) m.ut[x.id] = x.ut; });
+  fraKart(d.ukmeta).forEach(x => { if (x.restLaast) m.restLaast[x.id] = true; if (x.sone) m.sone[x.id] = x.sone; if (x.tid) m.tid[x.id] = x.tid; if (x.ut) m.ut[x.id] = x.ut; if (x.skjult) m.skjult[x.id] = true; });
   UKP = ukNormaliser(m);
   UKP.akt.push(...utkast);
 }
@@ -277,7 +278,7 @@ function renderUtkikk() {
   ukLeaves = leaves;
   const tGrense = UK_FARGE_UKER * 168, xGrense = ukX(tGrense);
 
-  const items = DATA.filter(a => !a.generell && matches(a, st) && a.startdato <= to && endDate(a) >= from).map(a => {
+  const items = DATA.filter(a => !a.generell && !ukLast().skjult[a.id] && matches(a, st) && a.startdato <= to && endDate(a) >= from).map(a => {
     const [t0, t1] = ukDataTid(a), soner = ukSonerAv(a.id);
     return {a, s: totalStatus(a), id: a.id, omrade: soner[0], soner, t0, t1, navn: a.navn, farge: firmColor(a.firma), start: a.startdato, ferdig: a.status === 'Utført'};
   }).filter(({s}) => !st.lys || (st.lys === 'avvik' ? s.lys === 'rod' || s.lys === 'gul' : s.lys === st.lys));
@@ -386,7 +387,7 @@ function renderUtkikk() {
     <span><span class="sv-lys ikke"></span> Grå – ikke ferdig vurdert</span><span><span class="sv-lys gronn"></span> Grønn – alt avklart</span>
     ${firmsShown.length ? `<span style="margin-left:10px"><b>Firma:</b></span>${firmsShown.map(f => firmBadge(f)).join(' ')}` : ''}
     <span class="muted">${st.farg ? '' : 'Grå stolpe = etter 8 uker · '}Blek stolpe = utført · ◂ = startet før denne uken · trykk på uke, dag eller periode i overskriften for å zoome · ▸ ved en sone viser undersonene</span>
-    ${st.plan ? `<span class="uk-planhint">🛠 <b>Planleggingsmodus:</b> pek i planen og trykk ＋ for ny aktivitet · dobbeltrykk på en aktivitet for detaljer og timeverk · ✂ splitter · Ctrl + trykk på soner og Enter for å velge soner · stiplet ramme = planleggingsaktivitet, grå = uten overordnet aktivitet</span>` : ''}`;
+    ${st.plan ? `<span class="uk-planhint">🛠 <b>Planleggingsmodus:</b> pek i planen og trykk ＋ for ny aktivitet · dobbeltrykk på en aktivitet for detaljer og timeverk · ✂ splitter · Ctrl + trykk på soner og Enter for å velge soner · stiplet ramme = planleggingsaktivitet, grå = uten overordnet aktivitet${Object.keys(ukLast().skjult).length ? ` · <button class="link-btn" data-action="uk-gjenopprett">↺ Hent tilbake ${Object.keys(ukLast().skjult).length} slettet${Object.keys(ukLast().skjult).length === 1 ? '' : 'e'} fra planen</button>` : ''}</span>` : ''}`;
   ukSonebar();
 }
 
@@ -514,7 +515,7 @@ function ukDlgRender(plasser) {
       <div class="uk-tim"><b>Timeverk:</b> ${fmtTimer(ukStdTimer(t0, t1))} <span class="sub">(foreløpig 2 personer × 12 t per dag, man–lør)</span></div>
       ${ukSoneChips(id)}
       ${ukBarn(id).length ? `<div class="uk-sec">Timene deles med</div>${ukFordelingHtml(id, id)}` : '<div class="sub" style="margin-top:6px">Ingen deler ennå. Bruk ✂ Splitt, eller lag en ny aktivitet med denne som overordnet.</div>'}
-      <div class="uk-knapper"><button class="btn" data-action="uk-dlg-splitt">✂ Splitt</button><span style="flex:1"></span><button class="btn primary" data-action="uk-dlg-ok">Lukk</button></div>`;
+      ${ukDlg.slett ? ukSlettHtml(id) : '<div class="uk-knapper"><button class="btn" data-action="uk-dlg-splitt">✂ Splitt</button><button class="btn" data-action="uk-dlg-slett">🗑 Slett</button><span style="flex:1"></span><button class="btn primary" data-action="uk-dlg-ok">Lukk</button></div>'}`;
   } else {
     const morTxt = p.mor ? ukIdTekst(p.mor) + ukNavn(p.mor) : '';
     html = `<h4>${p.ny ? 'Ny aktivitet' : 'Planleggingsaktivitet'}</h4>
@@ -531,7 +532,7 @@ function ukDlgRender(plasser) {
         <span class="sub">Timene er ikke bundet til timene i døgnet.</span></div>
       ${p.mor ? `<div class="uk-sec">Timene deles med</div>${ukFordelingHtml(p.mor, p.id)}` : ''}
       ${ukBarn(p.id).length ? `<div class="uk-sec">Delt videre med</div>${ukFordelingHtml(p.id, p.id)}` : ''}
-      ${ukDlg.slett ? ukSlettHtml(p) : `<div class="uk-knapper">${p.ny ? '' : '<button class="btn" data-action="uk-dlg-splitt">✂ Splitt</button><button class="btn" data-action="uk-dlg-slett">🗑 Slett</button>'}<span style="flex:1"></span>
+      ${ukDlg.slett ? ukSlettHtml(p.id) : `<div class="uk-knapper">${p.ny ? '' : '<button class="btn" data-action="uk-dlg-splitt">✂ Splitt</button><button class="btn" data-action="uk-dlg-slett">🗑 Slett</button>'}<span style="flex:1"></span>
         ${p.ny ? '<button class="btn" data-action="uk-dlg-avbryt">Avbryt</button>' : ''}<button class="btn primary" data-action="uk-dlg-ok">${p.ny ? 'Opprett (Enter)' : 'Ferdig (Enter)'}</button></div>`}`;
   }
   // Fokus beholdes i samme felt når dialogen tegnes på nytt.
@@ -619,6 +620,7 @@ function ukAction(action, btn) {
     const p = ukNy(z, l.t0, l.t1);
     ukHl(null); renderUtkikk(); ukApne(p.id, true); return;
   }
+  if (action === 'uk-gjenopprett') { const n = Object.keys(UKP.skjult).length; UKP.skjult = {}; ukLagre(); renderUtkikk(); showToast(`${n} aktivitet${n === 1 ? '' : 'er'} fra planen er hentet tilbake.`); return; }
   if (!ukDlg) return;
   if (action === 'uk-dlg-ok') { ukLukk(true); return; }
   if (action === 'uk-dlg-fjernsone') { ukSettSoner(ukDlg.id, ukSonerAv(ukDlg.id).filter(z => z !== btn.dataset.sone)); ukLagre(); renderUtkikk(); ukDlgRender(); return; }
@@ -627,59 +629,81 @@ function ukAction(action, btn) {
   if (action === 'uk-dlg-splitt') { const it = ukItems.find(x => x.id === ukDlg.id); if (it) { ukLukk(true); ukSplitt(it); } return; }
   if (action === 'uk-dlg-slett') { ukDlg.slett = true; ukDlg.mottak = null; ukDlgRender(); return; }
   if (action === 'uk-slett-avbryt') { ukDlg.slett = false; ukDlgRender(); return; }
-  if (action === 'uk-slett-ok') { ukSlett(ukPlan(ukDlg.id), ukDlg.mottak || ukSlettValg(ukPlan(ukDlg.id)).std); return; }
+  if (action === 'uk-slett-ok') { ukSlett(ukDlg.id, ukDlg.mottak || ukSlettValg(ukDlg.id).std); return; }
 }
 
 // ---------- Sletting ----------
 // Timene til en slettet del arves av de andre i samme gruppe (de åpne 🔓, inkludert mora). Er alle låst, må en velge
 // hvem som skal få dem – eller sende dem til Aktivitetsrapportering. Har den deler under seg, flyttes de opp til mora,
 // og det er bare timene den selv har igjen som må plasseres.
-function ukSlettValg(p) {
-  const timer = ukBarn(p.id).length ? Math.max(0, ukRest(p.id)) : +p.timer || 0, valg = [];
+// En aktivitet fra planen kan også slettes i Utkikksplan: den skjules her (planen ellers endres ikke). Delene den er splittet i,
+// beholder koblingen og navnet; timene den har igjen, må fordeles på delene eller sendes til Aktivitetsrapportering.
+function ukSlettValg(id) {
+  const p = ukPlan(id), a = !p && actById(id), barn = ukBarn(id), valg = [];
+  const timer = barn.length || a ? Math.max(0, ukRest(id)) : +p.timer || 0;
   let std = null;
-  if (p.mor) {
-    const deler = [...ukBarn(p.mor).filter(c => c !== p).map(c => ({key: c.id, navn: c.navn || '(uten navn)', laast: !!c.laast})),
-      {key: 'rest:' + p.mor, navn: ukIdTekst(p.mor) + ukNavn(p.mor), laast: !!ukLast().restLaast[p.mor]}];
-    const apne = deler.filter(d => !d.laast);
-    if (apne.length) { valg.push({key: 'apne', txt: `Fordel på de åpne (🔓): ${apne.map(d => d.navn).join(', ')}`}); std = 'apne'; }
-    deler.forEach(d => valg.push({key: d.key, txt: `Gi alle timene til ${d.navn}${d.laast ? ' 🔒 (låsen overstyres)' : ''}`}));
-  } else { valg.push({key: 'bort', txt: 'Slett timene (aktiviteten har ingen overordnet aktivitet)'}); std = 'bort'; }
+  const mor = p && p.mor, morSkjult = mor && !!ukLast().skjult[mor];
+  // Hvem kan arve timene: søsknene (og mora, hvis den ikke selv er slettet) – eller, for en aktivitet fra planen, delene under den.
+  const deler = mor ? [...ukBarn(mor).filter(c => c !== p).map(c => ({key: c.id, navn: c.navn || '(uten navn)', laast: !!c.laast})),
+    ...(morSkjult ? [] : [{key: 'rest:' + mor, navn: ukIdTekst(mor) + ukNavn(mor), laast: !!ukLast().restLaast[mor]}])]
+    : a ? barn.map(c => ({key: c.id, navn: c.navn || '(uten navn)', laast: !!c.laast})) : [];
+  const apne = deler.filter(d => !d.laast);
+  if (apne.length) { valg.push({key: 'apne', txt: `Fordel på de åpne (🔓): ${apne.map(d => d.navn).join(', ')}`}); std = 'apne'; }
+  deler.forEach(d => valg.push({key: d.key, txt: `Gi alle timene til ${d.navn}${d.laast ? ' 🔒 (låsen overstyres)' : ''}`}));
+  if (p && !mor) { valg.push({key: 'bort', txt: 'Slett timene (aktiviteten har ingen overordnet aktivitet)'}); std = std || 'bort'; }
   valg.push({key: 'rapp', txt: 'Send til Aktivitetsrapportering (vurderes der: faseplan eller endring)'});
-  return {timer, valg, std};
+  // Fra planen uten noen å gi timene til: de må til Aktivitetsrapportering.
+  if (a && !deler.length) std = 'rapp';
+  return {timer, valg, std, apne};
 }
-function ukSlettHtml(p) {
-  const {timer, valg, std} = ukSlettValg(p), valgt = ukDlg.mottak || std, barn = ukBarn(p.id);
-  return `<div class="uk-slett"><b>Slette «${esc(ukNavn(p.id))}»?</b>
-    ${barn.length ? `<div class="sub">${barn.length} del${barn.length === 1 ? '' : 'er'} under den flyttes opp${p.mor ? ' til ' + esc(ukNavn(p.mor)) : ''} og beholder timene sine.</div>` : ''}
+function ukSlettHtml(id) {
+  const {timer, valg, std} = ukSlettValg(id), valgt = ukDlg.mottak || std, barn = ukBarn(id), p = ukPlan(id), a = !p && actById(id);
+  return `<div class="uk-slett"><b>Slette «${esc(ukIdTekst(id) + ukNavn(id))}»${a ? ' fra Utkikksplan' : ''}?</b>
+    ${a ? '<div class="sub">Aktiviteten kommer fra planen. Den skjules bare i Utkikksplan og kan hentes tilbake; den vanlige planen endres ikke.</div>' : ''}
+    ${barn.length ? `<div class="sub">${barn.length} del${barn.length === 1 ? '' : 'er'} under den ${a ? 'beholder navnet og timene sine' : `flyttes opp${p.mor ? ' til ' + esc(ukNavn(p.mor)) : ''} og beholder timene sine`}.</div>` : ''}
     ${timer > 0 ? `<div style="margin:6px 0 3px">Hvor skal timene (<b>${fmtTimer(timer)}</b>) gå?</div>
       ${valg.map(v => `<label class="uk-valg"><input type="radio" name="uk-mottak" value="${esc(v.key)}" ${v.key === valgt ? 'checked' : ''}> ${esc(v.txt)}</label>`).join('')}
-      ${!std ? '<div class="sub warn">Alle i gruppen er låst. Velg hvor timene skal gå før aktiviteten kan slettes.</div>' : ''}` : '<div class="sub">Aktiviteten har ingen timer.</div>'}
+      ${!std ? '<div class="sub warn">Alle er låst. Velg hvor timene skal gå før aktiviteten kan slettes.</div>' : ''}` : '<div class="sub">Aktiviteten har ingen timer igjen.</div>'}
     <div class="uk-knapper"><button class="btn" data-action="uk-slett-avbryt">Avbryt</button><span style="flex:1"></span>
       <button class="btn danger" data-action="uk-slett-ok" ${timer > 0 && !valgt ? 'disabled' : ''}>🗑 Slett</button></div></div>`;
 }
-function ukSlett(p, mottak) {
-  if (!p) return;
-  const {timer} = ukSlettValg(p), mor = p.mor, navn = ukNavn(p.id), soner = ukSonerAv(p.id);
+function ukSlett(id, mottak) {
+  const p = ukPlan(id), a = !p && actById(id);
+  if (!p && !a) return;
+  const {timer} = ukSlettValg(id), mor = p ? p.mor : null, navn = ukIdTekst(id) + ukNavn(id), soner = ukSonerAv(id);
   if (timer > 0 && !mottak) return;
-  ukBarn(p.id).forEach(c => { c.mor = mor || null; });
-  // Timer som alt er sendt til rapportering fra denne, følger med opp til mora.
-  if (mor && UKP.ut[p.id]) UKP.ut[mor] = (+UKP.ut[mor] || 0) + (+UKP.ut[p.id]);
-  UKP.akt = UKP.akt.filter(x => x !== p); delete UKP.restLaast[p.id]; delete UKP.ut[p.id];
-  // Når p er borte, havner timene dens automatisk hos mora (det mora har igjen); derfra flyttes de dit brukeren valgte.
+  const r1 = x => Math.round(x * 10) / 10;
   let hvor = '';
-  if (timer > 0 && mor) {
-    if (mottak === 'apne') {
-      const apne = ukBarn(mor).filter(c => !c.laast), restApen = !ukLast().restLaast[mor], n = apne.length + (restApen ? 1 : 0);
-      apne.forEach(c => { c.timer = Math.round(((+c.timer || 0) + timer / n) * 10) / 10; });
-      hvor = 'fordelt på de åpne';
-    } else if (mottak === 'rapp') { UKP.ut[mor] = Math.round(((+UKP.ut[mor] || 0) + timer) * 10) / 10; hvor = 'sendt til Aktivitetsrapportering'; }
-    else if (!mottak.startsWith('rest:')) { const c = ukPlan(mottak); if (c) c.timer = Math.round(((+c.timer || 0) + timer) * 10) / 10; hvor = 'gitt til ' + (c ? c.navn : ''); }
-    else hvor = 'gitt til ' + ukNavn(mor);
-  } else if (timer > 0 && mottak === 'rapp') hvor = 'sendt til Aktivitetsrapportering';
-  if (timer > 0 && mottak === 'rapp' && window.arNyPost) window.arNyPost({akt: navn, aktId: p.id, mor: mor || '', morNavn: mor ? ukIdTekst(mor) + ukNavn(mor) : '', timer, soner, fra: p.fra, til: p.til});
-  if (typeof logg === 'function') logg('Utkikksplan: slettet aktivitet', mor || '', `${navn}${timer > 0 ? ` – ${fmtTimer(timer)} ${hvor}` : ''}`);
+  if (a) {
+    // Aktivitet fra planen: skjules; det den har igjen, går til delene eller til rapportering (trekkes da ut av summen).
+    if (timer > 0) {
+      if (mottak === 'apne') { const apne = ukBarn(id).filter(c => !c.laast); apne.forEach(c => { c.timer = r1((+c.timer || 0) + timer / apne.length); }); hvor = 'fordelt på de åpne delene'; }
+      else if (mottak === 'rapp') { UKP.ut[id] = r1((+UKP.ut[id] || 0) + timer); hvor = 'sendt til Aktivitetsrapportering'; }
+      else { const c = ukPlan(mottak); if (c) c.timer = r1((+c.timer || 0) + timer); hvor = 'gitt til ' + (c ? c.navn : ''); }
+    }
+    UKP.skjult[id] = true;
+  } else {
+    ukBarn(id).forEach(c => { c.mor = mor || null; });
+    // Timer som alt er sendt til rapportering fra denne, følger med opp til mora.
+    if (mor && UKP.ut[id]) UKP.ut[mor] = (+UKP.ut[mor] || 0) + (+UKP.ut[id]);
+    UKP.akt = UKP.akt.filter(x => x !== p); delete UKP.restLaast[id]; delete UKP.ut[id];
+    // Når p er borte, havner timene dens automatisk hos mora (det mora har igjen); derfra flyttes de dit brukeren valgte.
+    if (timer > 0 && mor) {
+      if (mottak === 'apne') {
+        const apne = ukBarn(mor).filter(c => !c.laast), restApen = !ukLast().restLaast[mor] && !ukLast().skjult[mor], n = apne.length + (restApen ? 1 : 0);
+        apne.forEach(c => { c.timer = r1((+c.timer || 0) + timer / n); });
+        hvor = 'fordelt på de åpne';
+      } else if (mottak === 'rapp') { UKP.ut[mor] = r1((+UKP.ut[mor] || 0) + timer); hvor = 'sendt til Aktivitetsrapportering'; }
+      else if (!mottak.startsWith('rest:')) { const c = ukPlan(mottak); if (c) c.timer = r1((+c.timer || 0) + timer); hvor = 'gitt til ' + (c ? c.navn : ''); }
+      else hvor = 'gitt til ' + ukNavn(mor);
+    } else if (timer > 0 && mottak === 'rapp') hvor = 'sendt til Aktivitetsrapportering';
+  }
+  const morRap = a ? id : mor;
+  if (timer > 0 && mottak === 'rapp' && window.arNyPost) window.arNyPost({akt: navn, aktId: id, mor: morRap || '', morNavn: morRap && morRap !== id ? ukIdTekst(morRap) + ukNavn(morRap) : '', timer, soner,
+    fra: p ? p.fra : ukDt(ukDataTid(a)[0]), til: p ? p.til : ukDt(ukDataTid(a)[1])});
+  if (typeof logg === 'function') logg('Utkikksplan: slettet aktivitet', a ? id : (mor || ''), `${navn}${a ? ' (skjult i Utkikksplan)' : ''}${timer > 0 ? ` – ${fmtTimer(timer)} ${hvor}` : ''}`);
   ukDlg = null; document.getElementById('uk-dlg').hidden = true; ukLagre(); renderUtkikk();
-  showToast(`«${navn}» er slettet${timer > 0 ? ` – ${fmtTimer(timer)} ${hvor}` : ''}.`);
+  showToast(`«${navn}» er slettet${a ? ' fra Utkikksplan' : ''}${timer > 0 ? ` – ${fmtTimer(timer)} ${hvor}` : ''}.`);
 }
 function ukSoneOk() {
   const st = ui.utkikk;

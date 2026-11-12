@@ -699,7 +699,11 @@ function ukSlett(id, mottak) {
     } else if (timer > 0 && mottak === 'rapp') hvor = 'sendt til Aktivitetsrapportering';
   }
   const morRap = a ? id : mor;
-  if (timer > 0 && mottak === 'rapp' && window.arNyPost) window.arNyPost({akt: navn, aktId: id, mor: morRap || '', morNavn: morRap && morRap !== id ? ukIdTekst(morRap) + ukNavn(morRap) : '', timer, soner,
+  // Avvik i Aktivitetsrapportering: alltid når en aktivitet fra planen slettes (også uten timer – «slett, skal ikke utføres»),
+  // og når timer fra en planleggingsaktivitet sendes dit.
+  const tilRapp = timer > 0 && mottak === 'rapp';
+  if ((tilRapp || a) && window.arNyPost) window.arNyPost({akt: navn, aktId: id, mor: morRap || '', morNavn: morRap && morRap !== id ? ukIdTekst(morRap) + ukNavn(morRap) : '', timer: tilRapp ? timer : 0, soner,
+    hvor: !tilRapp && timer > 0 ? `${fmtTimer(timer)} ${hvor}` : '',
     fra: p ? p.fra : ukDt(ukDataTid(a)[0]), til: p ? p.til : ukDt(ukDataTid(a)[1])});
   if (typeof logg === 'function') logg('Utkikksplan: slettet aktivitet', a ? id : (mor || ''), `${navn}${a ? ' (skjult i Utkikksplan)' : ''}${timer > 0 ? ` – ${fmtTimer(timer)} ${hvor}` : ''}`);
   ukDlg = null; document.getElementById('uk-dlg').hidden = true; ukLagre(); renderUtkikk();

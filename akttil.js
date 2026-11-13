@@ -94,7 +94,7 @@ function renderAkttil() {
     at2Ui.uker.add(mondayOf(TODAY));
   }
   const akt = at2Aktiviteter(), v = at2Ui.valgt;
-  const zoom = at2Ui.zoom && smSone(at2Ui.zoom), C = smCeller();
+  const zoom = at2Ui.zoom && smSone(at2Ui.zoom);
   const omraader = zoom ? smBarn(zoom.id) : at2Rot();
   const zoomSti = zoom ? smSti(zoom) : null;
   // Aktivitetene innenfor sonen det er zoomet inn på (alle når det ikke er zoomet), fordelt på områdene som vises.
@@ -105,33 +105,15 @@ function renderAkttil() {
   const valgtAkt = at2Ui.akt && synlige.find(x => x.id === at2Ui.akt);
   if (at2Ui.akt && !valgtAkt) at2Ui.akt = null;
   const til = valgtAkt ? at2Til(valgtAkt.id) : null, merket = new Set(til ? til.soner : []);
-  // Utsnitt: rutene til sonen det er zoomet inn på, med litt luft rundt.
-  const celler = zoom ? smAlleCeller(zoom.id).map(id => C.find(c => c.id === id)).filter(Boolean) : C;
-  let box = [0, 0, MAP_W, MAP_H];
-  if (zoom && celler.length) {
-    const x0 = Math.min(...celler.map(c => c.x0)), x1 = Math.max(...celler.map(c => c.x1)), y0 = Math.min(...celler.map(c => c.y0)), y1 = Math.max(...celler.map(c => c.y1));
-    const pad = Math.max(30, (x1 - x0) * .08);
-    box = [x0 - pad, y0 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad];
-    // Ikke smalere enn 4:3, så kartet ikke blir høyt og smalt.
-    if (box[2] / box[3] < 4 / 3) { const w = box[3] * 4 / 3; box[0] -= (w - box[2]) / 2; box[2] = w; }
-  }
+  // Utsnitt rundt sonen det er zoomet inn på; grunnkartet og omrissene kommer fra Sonemodul.
+  const box = zoom ? smUtsnitt(smGeom(zoom.id)) : [0, 0, MAP_W, MAP_H];
   const vb = box.join(' ');
   const pst = ([x, y]) => [(x - box[0]) / box[2] * 100, (y - box[1]) / box[3] * 100];
-  // Områdene tegnes med fargen sin; merkede soner for valgt aktivitet får aktivitetens farge.
-  const omrCeller = omraader.map(o => ({o, sti: smSti(o), celler: smAlleCeller(o.id)}));
-  const eier = new Map();
-  omrCeller.forEach(({o, celler: cs}) => cs.forEach(id => { if (!eier.has(id) || smBarn(o.id).length) eier.set(id, o); }));
-  // Innzoomet: bygningene tegnes enkelt med tynne streker og aksene langs kanten (strekene i AT-kartet blir for grove forstørret).
-  const fs = box[2] / 70;
-  const grunn = !zoom ? zoneSvg({}) : `<svg viewBox="${box.join(' ')}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><rect x="${box[0]}" y="${box[1]}" width="${box[2]}" height="${box[3]}" fill="#fbfcf8"/>
-    ${ZONES.map(z => `<polygon points="${z.pts.map(q => q.join(',')).join(' ')}" fill="${z.fill}" stroke="#8a8a8a" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`).join('')}
-    ${[...AX_TOP, ...AX_S].filter(([, x]) => x > box[0] && x < box[0] + box[2]).map(([t, x]) => `<line x1="${x}" y1="${box[1]}" x2="${x}" y2="${box[1] + box[3]}" stroke="#c8c8c8" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/><text x="${x}" y="${box[1] + fs * 1.2}" font-size="${fs}" text-anchor="middle" fill="#8c959f" font-family="Arial">${t}</text>`).join('')}
-    ${[...AX_ROWS, ...AX_ROWS_R].filter(([, y]) => y > box[1] && y < box[1] + box[3]).map(([t, y]) => `<line x1="${box[0]}" y1="${y}" x2="${box[0] + box[2]}" y2="${y}" stroke="#c8c8c8" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/><text x="${box[0] + fs * .4}" y="${y - fs * .25}" font-size="${fs}" fill="#8c959f" font-family="Arial">${t}</text>`).join('')}</svg>`;
-  const ruter = [...eier.entries()].map(([id, o]) => {
-    const c = C.find(q => q.id === id); if (!c) return '';
-    const erMerket = merket.has(o.id), n = iOmr(o).length;
-    return `<rect class="at2-c${erMerket ? ' merket' : ''}" data-at2sone="${o.id}" x="${c.x0}" y="${c.y0}" width="${c.x1 - c.x0}" height="${c.y1 - c.y0}" vector-effect="non-scaling-stroke" style="fill:${erMerket ? valgtAkt.farge : o.farge};fill-opacity:${erMerket ? .6 : n ? .28 : .1}"><title>${esc(smSti(o))}</title></rect>`;
-  }).join('');
+  const omrGeo = omraader.map(o => ({o, sti: smSti(o), polys: smGeom(o.id)}));
+  const grunn = smGrunnSvg(box);
+  // Områdene tegnes med omrisset sitt (eller undersonenes); farget sterkere når det er aktiviteter der.
+  const ruter = omrGeo.map(({o, polys}) => { const n = iOmr(o).length;
+    return polys.map(pts => `<polygon class="at2-c" data-at2sone="${o.id}" points="${pts.map(q => q.join(',')).join(' ')}" vector-effect="non-scaling-stroke" style="fill:${o.farge};fill-opacity:${n ? .28 : .1};stroke:${o.farge}"><title>${esc(smSti(o))}</title></polygon>`).join(''); }).join('');
   // Tegnede områder: den valgte aktivitetens fylt i fargen dens, de andres som tynn stiplet kant.
   const pkt = box[2] / 160;
   const omrSvg = synlige.flatMap(x => ((at2Til(x.id) || {}).omrader || []).map(o => ({x, o}))).map(({x, o}) => {
@@ -140,16 +122,15 @@ function renderAkttil() {
   }).join('') + (at2Ui.tegn ? `<polyline points="${at2Ui.tegn.pts.map(q => q.join(',')).join(' ')}${at2Ui.tegn.pts.length > 2 ? ' ' + at2Ui.tegn.pts[0].join(',') : ''}" fill="${valgtAkt ? valgtAkt.farge : '#1f6feb'}" fill-opacity=".2" stroke="${valgtAkt ? valgtAkt.farge : '#1f6feb'}" stroke-width="2" stroke-dasharray="8 5" vector-effect="non-scaling-stroke" style="pointer-events:none"/>`
     + at2Ui.tegn.pts.map(q => `<circle cx="${q[0]}" cy="${q[1]}" r="${pkt}" fill="#fff" stroke="#24292f" stroke-width="1.5" vector-effect="non-scaling-stroke" style="pointer-events:none"/>`).join('') : '')
     // Sonen aktiviteten har i Utkikksplan, markert med kant når den er valgt (der den holder seg).
-    + (valgtAkt ? [...(at2Tillatt(valgtAkt) || [])].map(id => C.find(c => c.id === id)).filter(Boolean).map(c => `<rect x="${c.x0}" y="${c.y0}" width="${c.x1 - c.x0}" height="${c.y1 - c.y0}" fill="none" stroke="${valgtAkt.farge}" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>`).join('') : '');
+    + (valgtAkt ? (at2Tillatt(valgtAkt) || []).map(pts => `<polygon points="${pts.map(q => q.join(',')).join(' ')}" fill="none" stroke="${valgtAkt.farge}" stroke-width="2.5" stroke-dasharray="7 4" vector-effect="non-scaling-stroke" style="pointer-events:none"/>`).join('') : '');
   // Aktiviteter som er dratt på plass, står der de er plassert (og ikke i lappene midt i sonen).
   const plassert = new Set(synlige.filter(x => { const t = at2Til(x.id); return t && t.pos; }).map(x => x.id));
   const lapp = (x, ekstra = '') => `<div class="at2-lapp${valgtAkt && valgtAkt.id === x.id ? ' valgt' : ''}${at2Til(x.id) ? ' har' : ''}${ekstra}" data-action="at2-akt" data-at2drag="${esc(x.id)}" data-id="${esc(x.id)}" style="border-left-color:${x.farge}" title="${esc((x.a ? x.id + ' ' : '') + x.navn)} – dra for å plassere innenfor sonen">${x.a ? `<b>${esc(x.id)}</b> ` : ''}${esc(x.navn.length > 26 ? x.navn.slice(0, 25) + '…' : x.navn)}</div>`;
   const plasserte = synlige.filter(x => plassert.has(x.id)).map(x => { const [px, py] = pst(at2Til(x.id).pos);
     return px < 0 || px > 100 || py < 0 || py > 100 ? '' : `<div class="at2-pin" style="left:${px}%;top:${py}%">${lapp(x, ' pin')}</div>`; }).join('');
-  const sentrum = cs => { const l = cs.map(id => C.find(c => c.id === id)).filter(Boolean); return l.length ? [l.reduce((n, c) => n + c.cx, 0) / l.length, l.reduce((n, c) => n + c.cy, 0) / l.length] : null; };
   // Aktivitetene står som lapper midt i området sitt (maks 4, så «+N»).
-  const lapper = omrCeller.map(({o, celler: cs}) => {
-    const s = sentrum(cs); if (!s) return '';
+  const lapper = omrGeo.map(({o, polys}) => {
+    const s = smSentrum(polys); if (!s) return '';
     const l = iOmr(o).filter(x => !plassert.has(x.id)), [px, py] = pst(s), alle = iOmr(o).length;
     return `<div class="at2-omr" style="left:${px}%;top:${py}%">
       <button class="at2-omrnavn" data-action="at2-zoom" data-id="${o.id}" title="${smBarn(o.id).length ? 'Zoom inn på ' + esc(o.navn) : esc(o.navn)}">${esc(o.navn)}${smBarn(o.id).length ? ' 🔍' : ''}${alle ? ` <b>${alle}</b>` : ''}</button>
@@ -164,7 +145,7 @@ function renderAkttil() {
       <div><b>${x.a ? esc(x.id) + ' ' : ''}${esc(x.navn)}</b></div>
       <div class="sub">${esc(x.soner.map(z => z.split(' / ').pop()).join(', '))}${x.firma ? ' · ' + esc(x.firma) : ''}${x.at.length ? ' · AT ' + esc(x.at.join(', ')) : ' · ⚠ mangler AT'}</div>
       <div class="at2-status">${t && t.soner.length ? `✅ Tillatelse: ${esc(sonerTxt)}` : t && t.pos ? '📍 Plassert, ikke tegnet' : '<span class="sub">Ikke plassert eller tegnet</span>'}</div>
-      ${valgtAkt && valgtAkt.id === x.id && t && (t.omrader || []).length ? `<div class="at2-omrliste">${t.omrader.map((o, i) => `<div>Område ${i + 1}: ${esc(o.soner.map(z => { const sz = smSone(z), d = (o.dekning || {})[z]; return (sz ? sz.navn : '?') + (d ? ` (${d[0]}/${d[1]} ruter)` : ''); }).join(', ') || 'ingen soner')} <button class="link-btn" data-action="at2-fjern-omr" data-i="${i}">✕ fjern</button></div>`).join('')}</div>` : ''}
+      ${valgtAkt && valgtAkt.id === x.id && t && (t.omrader || []).length ? `<div class="at2-omrliste">${t.omrader.map((o, i) => `<div>Område ${i + 1}: ${esc(o.soner.map(z => { const sz = smSone(z), d = (o.dekning || {})[z]; return (sz ? sz.navn : '?') + (d ? ` (${d[1] === 100 ? d[0] + ' %' : d[0] + '/' + d[1] + ' ruter'})` : ''); }).join(', ') || 'ingen soner')} <button class="link-btn" data-action="at2-fjern-omr" data-i="${i}">✕ fjern</button></div>`).join('')}</div>` : ''}
       ${valgtAkt && valgtAkt.id === x.id && t && t.pos ? `<div class="at2-omrliste">📍 Plassert${t.posSone && smSone(t.posSone) ? ' i ' + esc(smSone(t.posSone).navn) : ''} <button class="link-btn" data-action="at2-fjern-pos">✕ fjern plassering</button></div>` : ''}</div>`; };
   root.innerHTML = `<div class="panel">
     <h2>Aktivitetstillatelse <span class="readonly-tag">Prøve – AT-numrene er som før</span></h2>
@@ -191,27 +172,28 @@ function renderAkttil() {
 }
 
 // ----- handlinger -----
-// Rutene i sonen(e) aktiviteten har i Utkikksplan. Teksten holder seg der, og tegnede områder regnes bare innenfor.
-// null når sonen ikke finnes i Sonemodul (da er det ingen begrensning).
+// Området til sonen(e) aktiviteten har i Utkikksplan (omriss fra Sonemodul). Teksten holder seg der, og tegnede områder
+// regnes bare innenfor. null når sonen ikke finnes eller ikke er tegnet i Sonemodul (da er det ingen begrensning).
 function at2Tillatt(x) {
   const soner = smLast().soner.filter(s => s.fase === at2Fase().id && x.soner.includes(smSti(s)));
-  if (!soner.length) return null;
-  const ut = new Set(soner.flatMap(s => smAlleCeller(s.id)));
-  return ut.size ? ut : null;
+  const polys = soner.flatMap(s => smGeom(s.id));
+  return polys.length ? polys : null;
 }
 function at2Blader() {
   const zoom = at2Ui.zoom && smSone(at2Ui.zoom);
   return (zoom ? smUnder(zoom.id) : smLast().soner.filter(s => s.fase === at2Fase().id).map(s => s.id)).map(smSone).filter(s => s && !smBarn(s.id).length);
 }
-// Det tegnede området gjøres om til sonene det dekker: rutene som har midtpunktet inne i området (eller et hjørnepunkt i seg),
-// og de minste sonene (finsonene) innenfor sonen det er zoomet inn på – og innenfor aktivitetens sone fra Utkikksplan.
+// Det tegnede området gjøres om til sonene det dekker. Området prøves med et fint rutenett av punkter: en finsone er med når
+// noen av punktene dens ligger inne i det tegnede (og innenfor aktivitetens sone fra Utkikksplan); dekningen er andelen av sonen.
 function at2Dekning(pts, x) {
-  const C = smCeller(), zoom = at2Ui.zoom && smSone(at2Ui.zoom), tillatt = x ? at2Tillatt(x) : null;
-  const omfang = new Set((zoom ? smAlleCeller(zoom.id) : C.map(c => c.id)).filter(id => !tillatt || tillatt.has(id)));
-  const inne = new Set(C.filter(c => omfang.has(c.id) && (smInne(c.cx, c.cy, pts) || pts.some(([px, py]) => px >= c.x0 && px <= c.x1 && py >= c.y0 && py <= c.y1))).map(c => c.id));
-  const dekning = {};
-  at2Blader().forEach(s => { const cs = (s.celler || []).filter(id => omfang.has(id)), n = cs.filter(id => inne.has(id)).length; if (n) dekning[s.id] = [n, cs.length]; });
-  return {soner: Object.keys(dekning), dekning, ruter: inne.size};
+  const zoom = at2Ui.zoom && smSone(at2Ui.zoom), tillatt = x ? at2Tillatt(x) : null, dekning = {};
+  const blader = at2Blader().filter(b => (b.pts || []).length > 2);
+  const b = smBbox(zoom ? smGeom(zoom.id) : blader.map(q => q.pts)) || [0, 0, MAP_W, MAP_H], steg = Math.max(1.5, (b[2] - b[0]) / 120);
+  blader.forEach(sone => {
+    const pr = smProver([sone.pts], steg), inne = pr.filter(([px, py]) => smInne(px, py, pts) && (!tillatt || tillatt.some(t => smInne(px, py, t))));
+    if (inne.length) dekning[sone.id] = [Math.max(1, Math.round(inne.length / pr.length * 100)), 100];
+  });
+  return {soner: Object.keys(dekning), dekning};
 }
 function at2TilFor(x) {
   const M = at2Last(), tid = at2Nokkel(), u = me();
@@ -230,7 +212,7 @@ function at2TegnFerdig() {
   const x = at2Ui.akt, d = at2Ui.tegn, akt = at2Aktiviteter().find(q => q.id === x);
   if (!x || !d || d.pts.length < 3) return;
   const rr = v => Math.round(v * 10) / 10, pts = d.pts.map(([a, b]) => [rr(a), rr(b)]), dk = at2Dekning(pts, akt), t = at2TilFor(x);
-  t.omrader.push({id: uid(), pts, soner: dk.soner, dekning: dk.dekning, ruter: dk.ruter});
+  t.omrader.push({id: uid(), pts, soner: dk.soner, dekning: dk.dekning});
   at2Oppdater(t);
   at2Ui.tegn = null;
   const navn = dk.soner.map(z => (smSone(z) || {}).navn).join(', ');
@@ -238,32 +220,22 @@ function at2TegnFerdig() {
   showToast(dk.soner.length ? `Området dekker ${navn}.` : 'Området dekker ingen soner innenfor aktivitetens sone – tegn innenfor den stiplede kanten.');
   at2Lagre(); renderAkttil();
 }
-// Plasser teksten innenfor sonen fra Utkikksplan: slippes den utenfor, flyttes den til nærmeste rute i sonen.
+// Plasser teksten innenfor sonen fra Utkikksplan: slippes den utenfor, flyttes den til nærmeste punkt inne i sonen.
 function at2Plasser(x, pos) {
-  const C = smCeller(), akt = at2Aktiviteter().find(q => q.id === x), tillatt = akt ? at2Tillatt(akt) : null;
-  let c = C.find(q => pos[0] >= q.x0 && pos[0] <= q.x1 && pos[1] >= q.y0 && pos[1] <= q.y1 && (!tillatt || tillatt.has(q.id)));
-  if (!c && tillatt) {
-    c = C.filter(q => tillatt.has(q.id)).sort((a, b) => Math.hypot(a.cx - pos[0], a.cy - pos[1]) - Math.hypot(b.cx - pos[0], b.cy - pos[1]))[0];
-    if (c) { pos = [Math.min(c.x1 - 4, Math.max(c.x0 + 4, pos[0])), Math.min(c.y1 - 4, Math.max(c.y0 + 4, pos[1]))]; showToast('Aktiviteten holder seg i sonen sin fra Utkikksplan.'); }
+  const akt = at2Aktiviteter().find(q => q.id === x), tillatt = akt ? at2Tillatt(akt) : null;
+  if (tillatt && !tillatt.some(t => smInne(pos[0], pos[1], t))) {
+    const b = smBbox(tillatt), pr = smProver(tillatt, Math.max(2, (b[2] - b[0]) / 60));
+    const nar = pr.sort((u, v) => Math.hypot(u[0] - pos[0], u[1] - pos[1]) - Math.hypot(v[0] - pos[0], v[1] - pos[1]))[0];
+    if (nar) { pos = nar; showToast('Aktiviteten holder seg i sonen sin fra Utkikksplan.'); }
   }
-  const sone = c ? at2Blader().find(s => (s.celler || []).includes(c.id)) || smLast().soner.find(s => s.fase === at2Fase().id && !smBarn(s.id).length && (s.celler || []).includes(c.id)) : null;
+  // Finsonen der teksten står (blant sonene som vises, ellers i hele fasen).
+  const finn = l => l.find(q => (q.pts || []).length > 2 && smInne(pos[0], pos[1], q.pts));
+  const sone = finn(at2Blader()) || finn(smLast().soner.filter(q => q.fase === at2Fase().id && !smBarn(q.id).length));
   const t = at2TilFor(x);
   t.pos = [Math.round(pos[0]), Math.round(pos[1])]; t.posSone = sone ? sone.id : '';
   at2Oppdater(t);
   at2Ui.akt = x;
   if (typeof logg === 'function') logg('Aktivitetstillatelse', ukErData(x) ? x : '', `${ukIdTekst(x) + ukNavn(x)} ${ukTidTekst(at2Ui.valgt.t0, at2Ui.valgt.t1)}: plassert${sone ? ' i ' + smSti(sone) : ''}`);
-  at2Lagre(); renderAkttil();
-}
-function at2SettSone(soneId) {
-  const x = at2Ui.akt; if (!x || !at2Ui.valgt) return;
-  const M = at2Last(), tid = at2Nokkel(), u = me();
-  let t = M.til.find(q => q.aktId === x && q.tid === tid);
-  if (!t) { t = {id: (tid + '_' + x).replace(/[^\w:-]/g, '_'), aktId: x, tid, soner: [], merknad: '', av: u.name || '', endret: ''}; M.til.push(t); }
-  t.soner = t.soner.includes(soneId) ? t.soner.filter(z => z !== soneId) : [...t.soner, soneId];
-  t.endret = new Date().toISOString(); t.av = u.name || '';
-  if (!t.soner.length && !t.merknad) M.til = M.til.filter(q => q !== t);
-  const s = smSone(soneId);
-  if (typeof logg === 'function') logg('Aktivitetstillatelse', ukErData(x) ? x : '', `${ukIdTekst(x) + ukNavn(x)} ${ukTidTekst(at2Ui.valgt.t0, at2Ui.valgt.t1)}: ${t.soner.includes(soneId) ? 'la til' : 'fjernet'} ${s ? smSti(s) : soneId}`);
   at2Lagre(); renderAkttil();
 }
 function at2Action(action, btn) {
